@@ -43,6 +43,7 @@ function quantlab_lead_save(array $input): array
             date('Y-m-d H:i:s'),
         ]);
         $lead['id'] = (int) $pdo->lastInsertId();
+        quantlab_lead_notify($lead);
         return $lead;
     }
 
@@ -58,7 +59,22 @@ function quantlab_lead_save(array $input): array
     $lead['id'] = count($rows) + 1;
     $rows[] = $lead;
     file_put_contents($path, json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
+    quantlab_lead_notify($lead);
     return $lead;
+}
+
+function quantlab_lead_notify(array $lead): void
+{
+    if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
+        return;
+    }
+    try {
+        quantlab_lead_mail($lead);
+    } catch (Throwable $e) {
+        if (function_exists('quantlab_mail_status')) {
+            quantlab_mail_status(false, $e->getMessage());
+        }
+    }
 }
 
 function quantlab_lead_rate_limited_db(PDO $pdo, string $ip): bool

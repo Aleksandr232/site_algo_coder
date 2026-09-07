@@ -65,6 +65,7 @@ foreach ($posts as $i => $item) {
         '@type' => 'Organization',
         'name' => 'AM QuantLab',
         'url' => $canonical,
+        'email' => quantlab_site_email(),
         'description' => 'Разработка торговых алгоритмов, роботов и финтех-сервисов под Финам, Bybit, OKX и Binance.',
     ]) ?>
     <?php if ($blogList): ?>
@@ -805,9 +806,14 @@ foreach ($posts as $i => $item) {
               Разработка торгового алгоритма — <strong>от 20 000 ₽</strong>,
               сроки — <strong>от 2 дней</strong> в зависимости от сложности.
             </p>
-            <a class="tg" href="https://t.me/where_is_Lebowskis_money" target="_blank" rel="noopener">
-              Telegram · рынок и алгоритмы
-            </a>
+            <div class="contact-direct">
+              <a class="tg" href="mailto:<?= quantlab_h(quantlab_site_email()) ?>">
+                <?= quantlab_h(quantlab_site_email()) ?>
+              </a>
+              <a class="tg" href="https://t.me/where_is_Lebowskis_money" target="_blank" rel="noopener">
+                Telegram · рынок и алгоритмы
+              </a>
+            </div>
           </div>
           <form class="glass pad form" id="lead-form" action="/api/lead.php" method="post">
             <label class="hp" aria-hidden="true">
@@ -864,6 +870,7 @@ foreach ($posts as $i => $item) {
           <a href="/blog/">Блог</a>
           <a href="#case">Кейсы</a>
           <a href="#contact">Контакт</a>
+          <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
           <a href="#privacy" data-privacy>Политика конфиденциальности</a>
         </p>
         <p class="disclaimer">

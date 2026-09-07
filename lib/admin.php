@@ -120,6 +120,22 @@ function quantlab_admin_storage_note(): string
     return '<p class="admin-storage admin-storage-warn">Хранение: файлы JSON. База MySQL создастся сама при первом успешном подключении.</p>';
 }
 
+function quantlab_admin_mail_note(): string
+{
+    if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
+        return '<p class="admin-storage admin-storage-warn">Почта: задайте SMTP_PASSWORD в .env для ящика на Timeweb.</p>';
+    }
+    $status = function_exists('quantlab_mail_status') ? quantlab_mail_status() : [];
+    $to = quantlab_env('SMTP_TO');
+    if (!empty($status['ok'])) {
+        return '<p class="admin-storage">Почта: SMTP Timeweb → ' . quantlab_h($to) . '</p>';
+    }
+    if (!empty($status['error'])) {
+        return '<p class="admin-storage admin-storage-warn">Почта не ушла: ' . quantlab_h((string) $status['error']) . '</p>';
+    }
+    return '<p class="admin-storage">Почта: SMTP готов, письма уйдут с новой заявки на ' . quantlab_h($to) . '</p>';
+}
+
 function quantlab_admin_end(string $extraJs = ''): void
 {
     ?>

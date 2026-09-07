@@ -20,6 +20,7 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
             <h1>Заявки с формы</h1>
             <p class="lead">Клиенты с главной страницы. <?= count($leads) ?> шт.</p>
             <?= quantlab_admin_storage_note() ?>
+            <?= quantlab_admin_mail_note() ?>
           </div>
           <a class="btn btn-ghost" href="/admin/">К статьям</a>
         </div>

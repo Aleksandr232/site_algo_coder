@@ -12,7 +12,7 @@
     '<div class="prose modal-prose">' +
     "<p>Настоящая политика описывает, как AM QuantLab обрабатывает персональные данные посетителей сайта и заявок на разработку торговых алгоритмов, роботов и финтех-сервисов.</p>" +
     "<h3>1. Кто обрабатывает данные</h3>" +
-    "<p>Оператор — AM QuantLab. По вопросам обработки данных пишите в Telegram: <a href=\"https://t.me/where_is_Lebowskis_money\" target=\"_blank\" rel=\"noopener\">@where_is_Lebowskis_money</a>.</p>" +
+    "<p>Оператор — AM QuantLab. По вопросам обработки данных пишите на <a href=\"mailto:info@amquantlab.ru\">info@amquantlab.ru</a> или в Telegram: <a href=\"https://t.me/where_is_Lebowskis_money\" target=\"_blank\" rel=\"noopener\">@where_is_Lebowskis_money</a>.</p>" +
     "<h3>2. Какие данные собираем</h3>" +
     "<p>Если вы оставляете заявку, мы можем получить имя, Telegram или email, выбранный рынок и текст задачи. При переписке в Telegram обрабатываются данные, которые вы сами отправляете.</p>" +
     "<h3>3. Зачем обрабатываем</h3>" +

@@ -9,6 +9,7 @@ window.COMON_STRATEGY = {
   title: "Юань Тренд 2-5-15",
   author: "Джонни",
   telegram: "https://t.me/where_is_Lebowskis_money",
+  email: "info@amquantlab.ru",
   createdAt: "2026-04-08",
   url: "https://www.comon.ru/strategies/131208",
   instrument: "Фьючерс на юань (MOEX)",

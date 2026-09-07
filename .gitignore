@@ -1,6 +1,7 @@
 .env
 data/leads.json
 data/db-status.json
+data/mail-status.json
 node_modules/
 uploads/blog/*
 !uploads/blog/.gitkeep

@@ -25,6 +25,12 @@ function quantlab_site_url(): string
     return rtrim(quantlab_request_origin(), '/');
 }
 
+function quantlab_site_email(): string
+{
+    $email = quantlab_env('SITE_EMAIL', quantlab_env('SMTP_FROM', 'info@amquantlab.ru'));
+    return $email !== '' ? $email : 'info@amquantlab.ru';
+}
+
 function quantlab_public_path(string $path): string
 {
     $path = '/' . trim($path, '/');
@@ -256,6 +262,7 @@ function quantlab_render_end(): void
           <a href="/blog/">Блог</a>
           <a href="/#case">Кейсы</a>
           <a href="/#contact">Контакт</a>
+          <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
           <a href="#privacy" data-privacy>Политика конфиденциальности</a>
         </p>
         <p class="disclaimer">
