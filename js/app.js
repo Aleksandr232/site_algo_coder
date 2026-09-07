@@ -540,7 +540,7 @@
     if (!form || !note) return;
     if (new URLSearchParams(location.search).get("sent") === "1") {
       note.hidden = false;
-      note.textContent = "Заявка сохранена. Напишите в Telegram — так быстрее всего ответить.";
+      note.textContent = "Скоро мы с вами свяжемся";
     }
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -548,15 +548,10 @@
       if ((data.get("website") || "").toString().trim()) {
         return;
       }
-      const text = [
-        "Заявка AM QuantLab",
-        "Имя: " + data.get("name"),
-        "Контакт: " + data.get("contact"),
-        "Рынок: " + data.get("market"),
-        "Задача: " + data.get("message"),
-      ].join("\n");
+      const button = form.querySelector('button[type="submit"]');
       note.hidden = false;
       note.textContent = "Отправляем заявку…";
+      if (button) button.disabled = true;
       try {
         const res = await fetch("/api/lead.php", {
           method: "POST",
@@ -568,18 +563,15 @@
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || json.ok === false) {
-          throw new Error(json.error || json.message || "Не удалось сохранить заявку");
+          throw new Error(json.error || json.message || "Не удалось отправить заявку");
         }
-        note.textContent = "Заявка сохранена. Напишите в Telegram — так быстрее всего ответить.";
+        note.textContent = "Скоро мы с вами свяжемся";
+        form.reset();
       } catch (err) {
-        note.textContent = (err && err.message) || "Не удалось сохранить заявку. Напишите в Telegram.";
+        note.textContent = (err && err.message) || "Не удалось отправить заявку. Попробуйте ещё раз.";
+      } finally {
+        if (button) button.disabled = false;
       }
-      window.open(
-        "https://t.me/where_is_Lebowskis_money?text=" + encodeURIComponent(text),
-        "_blank",
-        "noopener"
-      );
-      form.reset();
     });
   }
 

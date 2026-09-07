@@ -848,9 +848,7 @@ foreach ($posts as $i => $item) {
               Отправляя заявку, вы соглашаетесь с
               <a href="#privacy" data-privacy>политикой конфиденциальности</a>.
             </p>
-            <p class="form-note" id="form-note" <?= $formSent ? '' : 'hidden' ?>>
-              <?= $formSent ? 'Заявка сохранена. Напишите в Telegram — так быстрее всего ответить.' : 'Заявка собрана. Напишите в Telegram — так быстрее всего ответить.' ?>
-            </p>
+            <p class="form-note" id="form-note" <?= $formSent ? '' : 'hidden' ?>>Скоро мы с вами свяжемся</p>
           </form>
         </div>
       </section>
