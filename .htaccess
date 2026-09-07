@@ -40,5 +40,6 @@ ErrorDocument 404 /404.php
 
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !\.(css|js|mjs|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|txt|xml|json)$ [NC]
   RewriteRule ^ 404.php [L]
 </IfModule>

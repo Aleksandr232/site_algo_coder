@@ -83,9 +83,7 @@ function quantlab_admin_start(string $title): void
     <?php quantlab_head_verification(); ?>
     <link rel="canonical" href="<?= quantlab_h(quantlab_abs_url('/admin/')) ?>" />
     <link rel="icon" href="<?= quantlab_icon_href() ?>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body class="page-inner page-admin">

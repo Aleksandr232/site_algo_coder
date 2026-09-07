@@ -26,10 +26,15 @@ function quantlab_db_ident(string $name): string
 
 function quantlab_db_connect(string $dsn, string $user, string $pass): PDO
 {
-    return new PDO($dsn, $user, $pass, [
+    $opts = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
+        PDO::ATTR_TIMEOUT => 2,
+    ];
+    if (defined('PDO::MYSQL_ATTR_CONNECT_TIMEOUT')) {
+        $opts[PDO::MYSQL_ATTR_CONNECT_TIMEOUT] = 2;
+    }
+    return new PDO($dsn, $user, $pass, $opts);
 }
 
 function quantlab_db(): ?PDO
@@ -48,17 +53,24 @@ function quantlab_db(): ?PDO
     $pass = quantlab_env('MYSQL_PASSWORD');
     try {
         $name = quantlab_db_ident(quantlab_env('MYSQL_DATABASE'));
-        $base = 'mysql:host=' . $host . ';port=' . $port . ';charset=utf8mb4';
-        $full = $base . ';dbname=' . $name;
+        $full = 'mysql:host=' . $host . ';port=' . $port . ';dbname=' . $name . ';charset=utf8mb4';
         try {
-            $server = quantlab_db_connect($base, $user, $pass);
+            $pdo = quantlab_db_connect($full, $user, $pass);
+        } catch (Throwable $e) {
+            $code = $e instanceof PDOException ? (int) $e->errorInfo[1] : 0;
+            if ($code !== 1049) {
+                throw $e;
+            }
+            $server = quantlab_db_connect(
+                'mysql:host=' . $host . ';port=' . $port . ';charset=utf8mb4',
+                $user,
+                $pass
+            );
             $server->exec(
                 'CREATE DATABASE IF NOT EXISTS `' . $name . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
             );
-        } catch (Throwable $e) {
-            // На хостинге часто нет права CREATE DATABASE — тогда нужна уже существующая база.
+            $pdo = quantlab_db_connect($full, $user, $pass);
         }
-        $pdo = quantlab_db_connect($full, $user, $pass);
         quantlab_db_migrate($pdo);
         quantlab_db_last_error('');
         quantlab_db_write_status(true, '', quantlab_db_tables($pdo));

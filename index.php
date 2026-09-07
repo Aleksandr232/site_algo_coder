@@ -77,12 +77,7 @@ foreach ($posts as $i => $item) {
     ]) ?>
     <?php endif; ?>
     <link rel="icon" href="<?= quantlab_icon_href() ?>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>

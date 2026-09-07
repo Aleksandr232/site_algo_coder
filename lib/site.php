@@ -124,6 +124,22 @@ function quantlab_icon_href(): string
     return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2306080d'/%3E%3Cpath d='M7 22 L13 10 L19 18 L25 8' fill='none' stroke='%233dffa4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 }
 
+function quantlab_font_href(): string
+{
+    return 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap';
+}
+
+function quantlab_font_links(): void
+{
+    $href = quantlab_h(quantlab_font_href());
+    ?>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="<?= $href ?>" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="<?= $href ?>" /></noscript>
+    <?php
+}
+
 function quantlab_head_verification(): void
 {
     $yandex = quantlab_env('YANDEX_VERIFICATION');
@@ -203,9 +219,7 @@ function quantlab_render_start(array $meta): void
     <meta property="article:modified_time" content="<?= quantlab_h($modified) ?>" />
     <?php endif; ?>
     <link rel="icon" href="<?= quantlab_icon_href() ?>" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
     <?= $extraHead ?>
   </head>
