@@ -397,7 +397,7 @@ function quantlab_blog_save(array $input, ?string $currentSlug = null): array
         'body' => (string) ($input['body'] ?? ''),
         'image' => $image,
         'keywords' => quantlab_blog_normalize_keywords((string) ($input['keywords'] ?? '')),
-        'seo_title' => trim((string) ($input['seo_title'] ?? '')),
+        'seo_title' => $title,
         'seo_description' => trim((string) ($input['seo_description'] ?? '')),
         'status' => $status,
         'created_at' => $existing['created_at'] ?? $now,
@@ -559,8 +559,8 @@ function quantlab_inline_md(string $text): string
 
 function quantlab_post_seo_title(array $post): string
 {
-    $title = trim((string) ($post['seo_title'] ?? ''));
-    return $title !== '' ? $title : ((string) ($post['title'] ?? 'Статья') . ' — AM QuantLab');
+    $title = trim((string) ($post['title'] ?? ''));
+    return $title !== '' ? $title : 'Статья';
 }
 
 function quantlab_post_seo_description(array $post): string

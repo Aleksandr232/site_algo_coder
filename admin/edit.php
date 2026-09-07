@@ -36,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'body' => $_POST['body'] ?? '',
             'image' => $image,
             'keywords' => $_POST['keywords'] ?? '',
-            'seo_title' => $_POST['seo_title'] ?? '',
             'seo_description' => $_POST['seo_description'] ?? '',
             'status' => !empty($_POST['published']) ? 'published' : 'draft',
         ], $post['slug'] ?? null);
@@ -138,10 +137,6 @@ JS;
             Keywords
             <input type="text" name="keywords" value="<?= quantlab_h($post['keywords'] ?? '') ?>" placeholder="торговые роботы, bybit, api, финтех" />
             <span class="field-hint">Через запятую. Попадут в meta keywords и разметку статьи.</span>
-          </label>
-          <label>
-            SEO-заголовок
-            <input type="text" name="seo_title" value="<?= quantlab_h($post['seo_title'] ?? '') ?>" placeholder="Если пусто — заголовок статьи + AM QuantLab" />
           </label>
           <label>
             SEO-описание
