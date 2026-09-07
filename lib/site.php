@@ -142,7 +142,7 @@ function quantlab_font_links(): void
 
 function quantlab_head_verification(): void
 {
-    $yandex = quantlab_env('YANDEX_VERIFICATION');
+    $yandex = quantlab_env('YANDEX_VERIFICATION', 'd94405cb4c18d9e3');
     $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
     if ($yandex !== '') {
         echo '    <meta name="yandex-verification" content="' . quantlab_h($yandex) . '" />' . "\n";
@@ -169,7 +169,7 @@ function quantlab_render_start(array $meta): void
     $modified = trim((string) ($meta['modified_at'] ?? ''));
     $active = (string) ($meta['active'] ?? '');
     $extraHead = (string) ($meta['extra_head'] ?? '');
-    $yandex = quantlab_env('YANDEX_VERIFICATION');
+    $yandex = quantlab_env('YANDEX_VERIFICATION', 'd94405cb4c18d9e3');
     $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
 
     header('Content-Type: text/html; charset=utf-8');

@@ -12,7 +12,7 @@ $description = 'AM QuantLab пишет торговых роботов для Ф
 $canonical = quantlab_abs_url('/');
 $posts = array_slice(quantlab_blog_published(), 0, 3);
 $formSent = (string) ($_GET['sent'] ?? '') === '1';
-$yandex = quantlab_env('YANDEX_VERIFICATION');
+$yandex = quantlab_env('YANDEX_VERIFICATION', 'd94405cb4c18d9e3');
 $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
 $year = date('Y');
 
