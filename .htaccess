@@ -1,0 +1,39 @@
+Options -Indexes
+DirectoryIndex index.html index.php
+
+<Files ".env">
+  Require all denied
+</Files>
+<FilesMatch "^\.env">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteRule ^lib/ - [F,L]
+  RewriteRule ^data/ - [F,L]
+  RewriteRule ^router\.php$ - [F,L]
+
+  RewriteRule ^api/comon/([0-9]+)/profit/?$ api/comon.php?id=$1&kind=profit [L,QSA]
+  RewriteRule ^api/comon/([0-9]+)/?$ api/comon.php?id=$1 [L,QSA]
+  RewriteRule ^api/bybit/case/?$ api/bybit.php [L,QSA]
+
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
+  RewriteRule ^robots\.txt$ robots.php [L]
+  RewriteRule ^rss\.xml$ rss.php [L]
+
+  RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
+  RewriteRule ^index\.html$ / [R=301,L]
+
+  RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]
+  RewriteRule ^ / [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+(.+?)/index\.php[\s?] [NC]
+  RewriteRule ^ /%1/ [R=301,L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_URI} !/$
+  RewriteCond %{REQUEST_URI} !\.
+  RewriteRule ^(.*)$ /$1/ [R=301,L]
+</IfModule>

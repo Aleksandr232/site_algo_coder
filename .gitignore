@@ -1,0 +1,6 @@
+.env
+data/leads.json
+node_modules/
+uploads/blog/*
+!uploads/blog/.gitkeep
+!uploads/blog/.htaccess
