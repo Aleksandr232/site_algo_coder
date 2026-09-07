@@ -61,12 +61,64 @@ function quantlab_db(): ?PDO
         $pdo = quantlab_db_connect($full, $user, $pass);
         quantlab_db_migrate($pdo);
         quantlab_db_last_error('');
+        quantlab_db_write_status(true, '', quantlab_db_tables($pdo));
         return $pdo;
     } catch (Throwable $e) {
         quantlab_db_last_error($e->getMessage());
+        quantlab_db_write_status(false, $e->getMessage(), []);
         $pdo = null;
         return null;
     }
+}
+
+function quantlab_db_tables(PDO $pdo): array
+{
+    $rows = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_NUM);
+    $names = [];
+    foreach ($rows ?: [] as $row) {
+        if (!empty($row[0])) {
+            $names[] = (string) $row[0];
+        }
+    }
+    return $names;
+}
+
+function quantlab_db_write_status(bool $ok, string $error, array $tables): void
+{
+    $dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+    }
+    file_put_contents(
+        $dir . DIRECTORY_SEPARATOR . 'db-status.json',
+        json_encode([
+            'ok' => $ok,
+            'error' => $error,
+            'tables' => $tables,
+            'at' => date('c'),
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+        LOCK_EX
+    );
+}
+
+function quantlab_db_status(): array
+{
+    $pdo = quantlab_db();
+    if ($pdo) {
+        $tables = quantlab_db_tables($pdo);
+        return [
+            'ok' => true,
+            'error' => '',
+            'tables' => $tables,
+            'ready' => !array_diff(['posts', 'post_redirects', 'leads'], $tables),
+        ];
+    }
+    return [
+        'ok' => false,
+        'error' => quantlab_db_last_error() ?: 'Нет подключения к MySQL',
+        'tables' => [],
+        'ready' => false,
+    ];
 }
 
 

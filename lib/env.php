@@ -22,7 +22,7 @@ function quantlab_load_env(): void
         }
         $key = trim(substr($line, 0, $eq));
         $value = trim(substr($line, $eq + 1));
-        if ($key !== '' && getenv($key) === false) {
+        if ($key !== '') {
             putenv($key . '=' . $value);
             $_ENV[$key] = $value;
         }

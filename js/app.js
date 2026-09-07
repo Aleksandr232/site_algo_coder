@@ -624,6 +624,7 @@
   mountForm();
   loadLive();
   loadBybit();
+  fetch("/api/boot.php", { cache: "no-store" }).catch(() => {});
 
   $("#parsed-stamp").addEventListener("click", () => {
     loadLive();

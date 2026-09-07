@@ -664,6 +664,7 @@ function quantlab_robots_txt(): string
         . "Disallow: /admin/\n"
         . "Disallow: /lib/\n"
         . "Disallow: /api/\n"
+        . "Disallow: /install.php\n"
         . "Disallow: /data/blog/\n"
         . "Disallow: /router.php\n"
         . "\n"

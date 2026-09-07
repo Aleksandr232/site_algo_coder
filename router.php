@@ -37,7 +37,8 @@ if ($uri !== '/' && substr($uri, -1) !== '/' && pathinfo($uri, PATHINFO_EXTENSIO
 
 $dir = $root . str_replace('/', DIRECTORY_SEPARATOR, rtrim($uri, '/'));
 if ($uri === '/') {
-    return false;
+    require $root . DIRECTORY_SEPARATOR . 'index.php';
+    return true;
 }
 if (is_dir($dir)) {
     if (is_file($dir . DIRECTORY_SEPARATOR . 'index.php')) {
