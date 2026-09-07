@@ -1654,6 +1654,30 @@ button.parsed-stamp.is-loading {
   margin-top: 28px;
 }
 
+.home-blog-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.home-blog-list .blog-card h3 {
+  margin: 6px 0 10px;
+  font-size: 22px;
+}
+
+.home-blog-list .blog-card h3 a:hover {
+  color: var(--accent);
+}
+
+.home-blog-more {
+  margin-top: 22px;
+}
+
+@media (max-width: 900px) {
+  .home-blog-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 .blog-card h2 {
   margin: 6px 0 10px;
   font-size: 28px;

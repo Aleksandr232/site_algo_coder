@@ -1,0 +1,6 @@
+{
+    "ok": false,
+    "error": "SQLSTATE[HY000] [1045] Access denied for user 'cz19567_quant'@'localhost' (using password: YES)",
+    "tables": [],
+    "at": "2026-09-07T20:39:23+00:00"
+}
