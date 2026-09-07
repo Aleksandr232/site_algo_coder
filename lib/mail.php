@@ -15,7 +15,20 @@ function quantlab_smtp_port(): int
 
 function quantlab_smtp_to(): string
 {
-    return quantlab_env('SMTP_TO', 'mealeksandr68@gmail.com');
+    return quantlab_env('SMTP_TO', 'mealeksandr68@gmail.com, info@amquantlab.ru');
+}
+
+function quantlab_smtp_recipients(): array
+{
+    $parts = preg_split('/[,;]+/', quantlab_smtp_to()) ?: [];
+    $emails = [];
+    foreach ($parts as $part) {
+        $email = trim($part);
+        if (quantlab_mail_is_email($email)) {
+            $emails[$email] = $email;
+        }
+    }
+    return array_values($emails);
 }
 
 function quantlab_mail_enabled(): bool
@@ -76,7 +89,14 @@ function quantlab_smtp_expect($fp, ?string $command, int ...$okCodes): string
     return $data;
 }
 
-function quantlab_mail_send(string $subject, string $text, string $html, ?string $replyTo = null): void
+function quantlab_mail_qp(string $text): string
+{
+    $encoded = quoted_printable_encode($text);
+    $encoded = str_replace("\r\n", "\n", $encoded);
+    return str_replace("\n", "\r\n", $encoded);
+}
+
+function quantlab_mail_send(string $subject, string $text, string $html = '', ?string $replyTo = null): void
 {
     if (!quantlab_mail_enabled()) {
         throw new RuntimeException('SMTP не настроен: укажите SMTP_USER и SMTP_PASSWORD в .env');
@@ -88,46 +108,30 @@ function quantlab_mail_send(string $subject, string $text, string $html, ?string
     $pass = quantlab_env('SMTP_PASSWORD');
     $from = quantlab_env('SMTP_FROM', $user);
     $fromName = quantlab_env('SMTP_FROM_NAME', 'AM QuantLab');
-    $to = quantlab_smtp_to();
+    $recipients = quantlab_smtp_recipients();
 
-    if (!quantlab_mail_is_email($from) || !quantlab_mail_is_email($to) || !quantlab_mail_is_email($user)) {
+    if (!quantlab_mail_is_email($from) || !quantlab_mail_is_email($user) || !$recipients) {
         throw new RuntimeException('Некорректный email в SMTP_FROM / SMTP_TO / SMTP_USER');
     }
 
     $domain = substr(strrchr($from, '@') ?: '@amquantlab.ru', 1);
-    $boundary = 'ql' . bin2hex(random_bytes(12));
-    $messageId = '<ql-' . bin2hex(random_bytes(10)) . '@' . $domain . '>';
-    $date = date('r');
-
+    $messageId = '<ql.' . date('YmdHis') . '.' . bin2hex(random_bytes(8)) . '@' . $domain . '>';
+    $toHeader = implode(', ', $recipients);
     $headers = [
-        'Date: ' . $date,
+        'Date: ' . date('r'),
         'From: ' . quantlab_mail_header_value($fromName) . ' <' . $from . '>',
-        'To: ' . $to,
+        'Sender: ' . $from,
+        'To: ' . $toHeader,
+        'Reply-To: ' . ($replyTo && quantlab_mail_is_email($replyTo) ? $replyTo : $from),
         'Subject: ' . quantlab_mail_header_value($subject),
         'Message-ID: ' . $messageId,
         'MIME-Version: 1.0',
-        'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
+        'Content-Type: text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding: quoted-printable',
         'Content-Language: ru',
-        'Auto-Submitted: auto-generated',
-        'X-Auto-Response-Suppress: All',
-        'X-Priority: 3',
-        'X-Mailer: AM-QuantLab',
     ];
-    if ($replyTo && quantlab_mail_is_email($replyTo)) {
-        $headers[] = 'Reply-To: ' . $replyTo;
-    }
 
-    $body = '--' . $boundary . "\r\n"
-        . "Content-Type: text/plain; charset=UTF-8\r\n"
-        . "Content-Transfer-Encoding: base64\r\n\r\n"
-        . chunk_split(base64_encode($text), 76, "\r\n")
-        . '--' . $boundary . "\r\n"
-        . "Content-Type: text/html; charset=UTF-8\r\n"
-        . "Content-Transfer-Encoding: base64\r\n\r\n"
-        . chunk_split(base64_encode($html), 76, "\r\n")
-        . '--' . $boundary . "--\r\n";
-
-    $payload = implode("\r\n", $headers) . "\r\n\r\n" . $body;
+    $payload = implode("\r\n", $headers) . "\r\n\r\n" . quantlab_mail_qp($text) . "\r\n";
     $ports = [$port];
     if ($port === 465) {
         $ports[] = 587;
@@ -135,7 +139,7 @@ function quantlab_mail_send(string $subject, string $text, string $html, ?string
     $lastError = 'Нет связи с SMTP';
     foreach ($ports as $tryPort) {
         try {
-            quantlab_smtp_deliver($host, $tryPort, $domain, $user, $pass, $from, $to, $payload);
+            quantlab_smtp_deliver($host, $tryPort, $domain, $user, $pass, $from, $recipients, $payload);
             quantlab_mail_status(true, '');
             return;
         } catch (Throwable $e) {
@@ -153,7 +157,7 @@ function quantlab_smtp_deliver(
     string $user,
     string $pass,
     string $from,
-    string $to,
+    array $recipients,
     string $payload
 ): void {
     $remote = ($port === 465 ? 'ssl://' : 'tcp://') . $host . ':' . $port;
@@ -184,7 +188,9 @@ function quantlab_smtp_deliver(
         quantlab_smtp_expect($fp, base64_encode($user), 334);
         quantlab_smtp_expect($fp, base64_encode($pass), 235);
         quantlab_smtp_expect($fp, 'MAIL FROM:<' . $from . '>', 250);
-        quantlab_smtp_expect($fp, 'RCPT TO:<' . $to . '>', 250, 251);
+        foreach ($recipients as $rcpt) {
+            quantlab_smtp_expect($fp, 'RCPT TO:<' . $rcpt . '>', 250, 251);
+        }
         quantlab_smtp_expect($fp, 'DATA', 354);
         fwrite($fp, $payload);
         if (!str_ends_with($payload, "\r\n")) {
@@ -208,33 +214,15 @@ function quantlab_lead_mail(array $lead): void
     $when = date('d.m.Y H:i');
     $site = function_exists('quantlab_site_url') ? quantlab_site_url() : 'https://amquantlab.ru';
 
-    $subject = 'Заявка с сайта AM QuantLab — ' . $name;
-    $text = "Новая заявка с сайта AM QuantLab\n\n"
-        . "Дата: {$when}\n"
-        . "Имя: {$name}\n"
-        . "Контакт: {$contact}\n"
-        . "Рынок: {$market}\n"
-        . "Задача:\n{$message}\n\n"
-        . "Админка: {$site}/admin/leads.php\n";
+    $subject = 'Новая заявка: ' . $name;
+    $text = "Здравствуйте.\r\n\r\n"
+        . "На amquantlab.ru оставили заявку.\r\n\r\n"
+        . "Дата: {$when}\r\n"
+        . "Имя: {$name}\r\n"
+        . "Контакт: {$contact}\r\n"
+        . "Рынок: {$market}\r\n"
+        . "Задача:\r\n{$message}\r\n\r\n"
+        . "— AM QuantLab, {$site}\r\n";
 
-    $html = '<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Заявка</title></head>'
-        . '<body style="margin:0;padding:24px;background:#f4f6f8;font-family:Arial,sans-serif;color:#111;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">'
-        . '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;">'
-        . '<tr><td style="padding:20px 24px;border-bottom:1px solid #e5e7eb;">'
-        . '<div style="font-size:13px;color:#667085;">AM QuantLab</div>'
-        . '<div style="font-size:20px;font-weight:700;margin-top:4px;">Новая заявка с сайта</div>'
-        . '</td></tr><tr><td style="padding:20px 24px;font-size:15px;line-height:1.5;">'
-        . '<p style="margin:0 0 10px;"><b>Дата:</b> ' . htmlspecialchars($when, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
-        . '<p style="margin:0 0 10px;"><b>Имя:</b> ' . htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
-        . '<p style="margin:0 0 10px;"><b>Контакт:</b> ' . htmlspecialchars($contact, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
-        . '<p style="margin:0 0 10px;"><b>Рынок:</b> ' . htmlspecialchars($market, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
-        . '<p style="margin:0 0 6px;"><b>Задача:</b></p>'
-        . '<p style="margin:0;white-space:pre-wrap;">' . nl2br(htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')) . '</p>'
-        . '</td></tr><tr><td style="padding:16px 24px;border-top:1px solid #e5e7eb;font-size:13px;color:#667085;">'
-        . 'Письмо отправлено с ' . htmlspecialchars($site, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-        . '</td></tr></table></td></tr></table></body></html>';
-
-    $replyTo = quantlab_mail_is_email($contact) ? $contact : null;
-    quantlab_mail_send($subject, $text, $html, $replyTo);
+    quantlab_mail_send($subject, $text);
 }

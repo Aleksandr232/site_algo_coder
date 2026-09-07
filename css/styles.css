@@ -817,13 +817,29 @@ button.parsed-stamp.is-loading {
 
 .ticker-track {
   display: flex;
-  gap: 42px;
-  padding: 14px 0;
   width: max-content;
-  animation: marquee 28s linear infinite;
+  padding: 14px 0;
+  will-change: transform;
+  animation: marquee 22s linear infinite;
   color: var(--muted);
   font: 500 13px IBM Plex Mono, monospace;
   letter-spacing: 0.16em;
+}
+
+.ticker-group {
+  display: flex;
+  flex-shrink: 0;
+  gap: 42px;
+  padding-right: 42px;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .ticker-track span:nth-child(odd) {
@@ -1468,7 +1484,6 @@ button.parsed-stamp.is-loading {
   .orb-a,
   .orb-b,
   .orb-c,
-  .ticker-track,
   .pulse,
   .logo-mark,
   .bar-fill,

@@ -234,10 +234,14 @@ function quantlab_render_start(array $meta): void
     </header>
     <div class="ticker ticker-inner" aria-hidden="true">
       <div class="ticker-track">
-        <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
-        <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
-        <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
-        <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
+        <div class="ticker-group">
+          <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+          <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
+        </div>
+        <div class="ticker-group">
+          <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+          <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
+        </div>
       </div>
     </div>
     <main class="page-main">
