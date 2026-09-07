@@ -66,6 +66,9 @@ function quantlab_lead_save(array $input): array
 function quantlab_lead_notify(array $lead): void
 {
     if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
+        if (function_exists('quantlab_mail_status')) {
+            quantlab_mail_status(false, 'SMTP не настроен: в .env пустой SMTP_PASSWORD для info@amquantlab.ru');
+        }
         return;
     }
     try {
