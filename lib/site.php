@@ -124,6 +124,18 @@ function quantlab_icon_href(): string
     return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2306080d'/%3E%3Cpath d='M7 22 L13 10 L19 18 L25 8' fill='none' stroke='%233dffa4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
 }
 
+function quantlab_head_verification(): void
+{
+    $yandex = quantlab_env('YANDEX_VERIFICATION');
+    $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
+    if ($yandex !== '') {
+        echo '    <meta name="yandex-verification" content="' . quantlab_h($yandex) . '" />' . "\n";
+    }
+    if ($google !== '') {
+        echo '    <meta name="google-site-verification" content="' . quantlab_h($google) . '" />' . "\n";
+    }
+}
+
 function quantlab_render_start(array $meta): void
 {
     $canonical = (string) $meta['canonical'];
@@ -142,7 +154,7 @@ function quantlab_render_start(array $meta): void
     $active = (string) ($meta['active'] ?? '');
     $extraHead = (string) ($meta['extra_head'] ?? '');
     $yandex = quantlab_env('YANDEX_VERIFICATION');
-    $google = quantlab_env('GOOGLE_SITE_VERIFICATION');
+    $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
 
     header('Content-Type: text/html; charset=utf-8');
     ?>

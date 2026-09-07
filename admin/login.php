@@ -30,6 +30,7 @@ header('X-Robots-Tag: noindex, nofollow');
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Вход в админку — AM QuantLab</title>
     <meta name="robots" content="noindex,nofollow" />
+    <?php quantlab_head_verification(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body class="page-inner page-admin">

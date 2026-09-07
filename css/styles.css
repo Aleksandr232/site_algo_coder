@@ -1737,6 +1737,14 @@ button.parsed-stamp.is-loading {
   font-size: 17px;
 }
 
+.page-404-box {
+  padding: 28px 0 48px;
+}
+
+.page-404-box h1 {
+  max-width: 16ch;
+}
+
 .prose h2,
 .prose h3 {
   margin-top: 12px;

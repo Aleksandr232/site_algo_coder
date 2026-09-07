@@ -1,5 +1,6 @@
 Options -Indexes
 DirectoryIndex index.php index.html
+ErrorDocument 404 /404.php
 
 <Files ".env">
   Require all denied
@@ -36,4 +37,8 @@ DirectoryIndex index.php index.html
   RewriteCond %{REQUEST_URI} !/$
   RewriteCond %{REQUEST_URI} !\.
   RewriteRule ^(.*)$ /$1/ [R=301,L]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ 404.php [L]
 </IfModule>

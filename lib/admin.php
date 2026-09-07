@@ -80,6 +80,7 @@ function quantlab_admin_start(string $title): void
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><?= quantlab_h($title) ?></title>
     <meta name="robots" content="noindex,nofollow" />
+    <?php quantlab_head_verification(); ?>
     <link rel="canonical" href="<?= quantlab_h(quantlab_abs_url('/admin/')) ?>" />
     <link rel="icon" href="<?= quantlab_icon_href() ?>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
