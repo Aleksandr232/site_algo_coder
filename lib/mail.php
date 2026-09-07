@@ -2,12 +2,25 @@
 
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'env.php';
 
+function quantlab_smtp_host(): string
+{
+    return quantlab_env('SMTP_HOST', 'smtp.timeweb.ru');
+}
+
+function quantlab_smtp_port(): int
+{
+    $port = (int) quantlab_env('SMTP_PORT', '465');
+    return $port > 0 ? $port : 465;
+}
+
+function quantlab_smtp_to(): string
+{
+    return quantlab_env('SMTP_TO', 'mealeksandr68@gmail.com');
+}
+
 function quantlab_mail_enabled(): bool
 {
-    return quantlab_env('SMTP_HOST') !== ''
-        && quantlab_env('SMTP_USER') !== ''
-        && quantlab_env('SMTP_PASSWORD') !== ''
-        && quantlab_env('SMTP_TO') !== '';
+    return quantlab_env('SMTP_USER') !== '' && quantlab_env('SMTP_PASSWORD') !== '';
 }
 
 function quantlab_mail_status(?bool $ok = null, string $error = ''): array
@@ -69,13 +82,13 @@ function quantlab_mail_send(string $subject, string $text, string $html, ?string
         throw new RuntimeException('SMTP не настроен: укажите SMTP_USER и SMTP_PASSWORD в .env');
     }
 
-    $host = quantlab_env('SMTP_HOST', 'smtp.timeweb.ru');
-    $port = (int) quantlab_env('SMTP_PORT', '465');
+    $host = quantlab_smtp_host();
+    $port = quantlab_smtp_port();
     $user = quantlab_env('SMTP_USER');
     $pass = quantlab_env('SMTP_PASSWORD');
     $from = quantlab_env('SMTP_FROM', $user);
     $fromName = quantlab_env('SMTP_FROM_NAME', 'AM QuantLab');
-    $to = quantlab_env('SMTP_TO');
+    $to = quantlab_smtp_to();
 
     if (!quantlab_mail_is_email($from) || !quantlab_mail_is_email($to) || !quantlab_mail_is_email($user)) {
         throw new RuntimeException('Некорректный email в SMTP_FROM / SMTP_TO / SMTP_USER');
@@ -115,6 +128,34 @@ function quantlab_mail_send(string $subject, string $text, string $html, ?string
         . '--' . $boundary . "--\r\n";
 
     $payload = implode("\r\n", $headers) . "\r\n\r\n" . $body;
+    $ports = [$port];
+    if ($port === 465) {
+        $ports[] = 587;
+    }
+    $lastError = 'Нет связи с SMTP';
+    foreach ($ports as $tryPort) {
+        try {
+            quantlab_smtp_deliver($host, $tryPort, $domain, $user, $pass, $from, $to, $payload);
+            quantlab_mail_status(true, '');
+            return;
+        } catch (Throwable $e) {
+            $lastError = $e->getMessage();
+        }
+    }
+    quantlab_mail_status(false, $lastError);
+    throw new RuntimeException($lastError);
+}
+
+function quantlab_smtp_deliver(
+    string $host,
+    int $port,
+    string $domain,
+    string $user,
+    string $pass,
+    string $from,
+    string $to,
+    string $payload
+): void {
     $remote = ($port === 465 ? 'ssl://' : 'tcp://') . $host . ':' . $port;
     $ctx = stream_context_create([
         'ssl' => [
@@ -126,13 +167,19 @@ function quantlab_mail_send(string $subject, string $text, string $html, ?string
     ]);
     $fp = @stream_socket_client($remote, $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $ctx);
     if (!$fp) {
-        throw new RuntimeException('Нет связи с SMTP: ' . $errstr);
+        throw new RuntimeException('Нет связи с SMTP ' . $host . ':' . $port . ' — ' . $errstr);
     }
     stream_set_timeout($fp, 20);
-
     try {
         quantlab_smtp_expect($fp, null, 220);
         quantlab_smtp_expect($fp, 'EHLO ' . $domain, 250);
+        if ($port !== 465) {
+            quantlab_smtp_expect($fp, 'STARTTLS', 220);
+            if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                throw new RuntimeException('STARTTLS не включился');
+            }
+            quantlab_smtp_expect($fp, 'EHLO ' . $domain, 250);
+        }
         quantlab_smtp_expect($fp, 'AUTH LOGIN', 334);
         quantlab_smtp_expect($fp, base64_encode($user), 334);
         quantlab_smtp_expect($fp, base64_encode($pass), 235);
@@ -145,7 +192,6 @@ function quantlab_mail_send(string $subject, string $text, string $html, ?string
         }
         quantlab_smtp_expect($fp, '.', 250);
         quantlab_smtp_expect($fp, 'QUIT', 221, 250);
-        quantlab_mail_status(true, '');
     } finally {
         fclose($fp);
     }
