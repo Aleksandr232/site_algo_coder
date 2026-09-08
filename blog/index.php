@@ -33,7 +33,7 @@ $extra = quantlab_json_ld([
 
 quantlab_render_start([
     'title' => 'Блог — AM QuantLab',
-    'description' => 'Статьи AM QuantLab о торговых роботах, API Финам, Bybit, OKX и Binance, алгоритмах и финтех-сервисах.',
+    'description' => 'Статьи AM QuantLab о торговых роботах, API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance, алгоритмах и финтех-сервисах.',
     'canonical' => $canonical,
     'active' => 'blog',
     'body_class' => 'page-inner page-blog',

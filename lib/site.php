@@ -261,11 +261,11 @@ function quantlab_render_start(array $meta): void
     <div class="ticker ticker-inner" aria-hidden="true">
       <div class="ticker-track">
         <div class="ticker-group">
-          <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+          <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
           <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
         </div>
         <div class="ticker-group">
-          <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+          <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
           <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
         </div>
       </div>
@@ -283,7 +283,7 @@ function quantlab_render_end(): void
         <div class="footer-top">
           <div>
             <a class="logo" href="/">AM Quant<span>Lab</span></a>
-            <p>Роботы на Node.js и Go. API Финам, Bybit, OKX, Binance.</p>
+            <p>Роботы на Node.js и Go. API Финам, Тинькофф Инвестиции, Bybit, OKX, Binance.</p>
           </div>
           <span class="sys-status"><span class="pulse"></span> systems online</span>
         </div>

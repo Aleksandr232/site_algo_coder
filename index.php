@@ -8,7 +8,7 @@ header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
 
 $title = 'AM QuantLab — торговые алгоритмы и финтех-сервисы';
-$description = 'AM QuantLab пишет торговых роботов для Финам, Bybit, OKX и Binance. Node.js, Go, API, сервисы для финтех-продуктов.';
+$description = 'AM QuantLab пишет торговых роботов для Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Node.js, Go, API, сервисы для финтех-продуктов.';
 $canonical = quantlab_abs_url('/');
 $posts = array_slice(quantlab_blog_published(), 0, 3);
 $formSent = (string) ($_GET['sent'] ?? '') === '1';
@@ -66,7 +66,7 @@ foreach ($posts as $i => $item) {
         'name' => 'AM QuantLab',
         'url' => $canonical,
         'email' => quantlab_site_email(),
-        'description' => 'Разработка торговых алгоритмов, роботов и финтех-сервисов под Финам, Bybit, OKX и Binance.',
+        'description' => 'Разработка торговых алгоритмов, роботов и финтех-сервисов под Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.',
     ]) ?>
     <?php if ($blogList): ?>
     <?= quantlab_json_ld([
@@ -133,7 +133,7 @@ foreach ($posts as $i => $item) {
             </p>
             <h1>Пишем торговых роботов <em>и сервисы для финтех-продуктов</em></h1>
             <p class="lead">
-              Пишем торговых роботов под Финам, Bybit, OKX и Binance.
+              Пишем торговых роботов под Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.
               Исполнение через официальные API. Стек — Node.js и Go.
             </p>
             <div class="hero-actions">
@@ -142,6 +142,7 @@ foreach ($posts as $i => $item) {
             </div>
             <div class="venue-chips" aria-label="Площадки">
               <span>Финам</span>
+              <span>Тинькофф</span>
               <span>Bybit</span>
               <span>OKX</span>
               <span>Binance</span>
@@ -157,7 +158,7 @@ foreach ($posts as $i => $item) {
               </div>
               <div>
                 <dt>Площадки</dt>
-                <dd>4 API</dd>
+                <dd>5 API</dd>
               </div>
             </dl>
           </div>
@@ -195,11 +196,11 @@ foreach ($posts as $i => $item) {
       <div class="ticker" aria-hidden="true">
         <div class="ticker-track">
           <div class="ticker-group">
-            <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+            <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
             <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
           </div>
           <div class="ticker-group">
-            <span>FINAM</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+            <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
             <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
           </div>
         </div>
@@ -226,7 +227,7 @@ foreach ($posts as $i => $item) {
               <ul>
                 <li>Фьючерс на юань и валютные пары</li>
                 <li>Индексные и товарные фьючерсы</li>
-                <li>Роботы через API Финам и автоследование Comon</li>
+                <li>Роботы через API Финам, Тинькофф Инвестиции и автоследование Comon</li>
               </ul>
             </article>
             <article class="glass market-card">
@@ -256,11 +257,16 @@ foreach ($posts as $i => $item) {
             <h2>Пишем торговых роботов под эти API</h2>
             <p>Один алгоритм — разные адаптеры исполнения. Подключаем счёт и гоняем ордера там, где вы торгуете.</p>
           </div>
-          <div class="cards-4">
+          <div class="cards-5">
             <article class="glass pad">
               <p class="num">MOEX</p>
               <h3>Финам</h3>
               <p>Trade API, срочный рынок, акции и валюта. Роботы и контуры автоследования Comon.</p>
+            </article>
+            <article class="glass pad">
+              <p class="num">MOEX</p>
+              <h3>Тинькофф Инвестиции</h3>
+              <p>Invest API: акции, облигации, фьючерсы и валюта. Роботы через официальный T-Invest API.</p>
             </article>
             <article class="glass pad">
               <p class="num">CEX</p>
@@ -297,7 +303,7 @@ foreach ($posts as $i => $item) {
                 алерты, кабинеты и админки для финтех-продуктов.
               </p>
               <ul class="fine-list">
-                <li>Адаптеры API: Финам, Bybit, OKX, Binance</li>
+                <li>Адаптеры API: Финам, Тинькофф Инвестиции, Bybit, OKX, Binance</li>
                 <li>Стриминг котировок и статусов заявок</li>
                 <li>Личные кабинеты, вебхуки, Telegram-боты</li>
               </ul>
@@ -320,7 +326,7 @@ foreach ($posts as $i => $item) {
             <article class="glass pad">
               <p class="num">API</p>
               <h3>Брокеры и биржи</h3>
-              <p>Официальные API Финам, Bybit, OKX и Binance. Без кликеров и серых обходов терминала.</p>
+              <p>Официальные API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Без кликеров и серых обходов терминала.</p>
             </article>
             <article class="glass pad">
               <p class="num">Fintech</p>
@@ -356,7 +362,7 @@ foreach ($posts as $i => $item) {
             <article class="glass pad">
               <p class="num">03</p>
               <h3>Исполнение и мониторинг</h3>
-              <p>Журнал сделок, алерты, исполнение через API Финам, Bybit, OKX или Binance.</p>
+              <p>Журнал сделок, алерты, исполнение через API Финам, Тинькофф Инвестиции, Bybit, OKX или Binance.</p>
             </article>
           </div>
           <div class="glass pad price-banner" id="price">
@@ -482,6 +488,7 @@ foreach ($posts as $i => $item) {
               <ol class="dash-feed">
                 <li class="buy"><span>09:41</span> BYBIT · BUY BTCUSDT</li>
                 <li class="tp"><span>09:38</span> FINAM · TP CNY +1.2%</li>
+                <li class="buy"><span>09:31</span> TINKOFF · BUY SBER</li>
                 <li class="sell"><span>09:22</span> OKX · STOP ETHUSDT</li>
                 <li class="buy"><span>09:11</span> BINANCE · GRID fill</li>
               </ol>
@@ -497,7 +504,7 @@ foreach ($posts as $i => $item) {
             <article class="glass pad dash-mini">
               <p class="num">Multi</p>
               <h3>Мультибиржа</h3>
-              <p>Один экран на Финам, Bybit, OKX и Binance: балансы, позиции, статус роботов 24/7.</p>
+              <p>Один экран на Финам, Тинькофф Инвестиции, Bybit, OKX и Binance: балансы, позиции, статус роботов 24/7.</p>
             </article>
             <article class="glass pad dash-mini">
               <p class="num">Fintech</p>
@@ -787,7 +794,7 @@ foreach ($posts as $i => $item) {
             </li>
             <li>
               <h3>Публикация</h3>
-              <p>Финам / Comon, Bybit, OKX, Binance — подключаем API и мониторинг.</p>
+              <p>Финам / Comon, Тинькофф Инвестиции, Bybit, OKX, Binance — подключаем API и мониторинг.</p>
             </li>
           </ol>
         </div>
@@ -799,7 +806,7 @@ foreach ($posts as $i => $item) {
             <p class="eyebrow">Контакт</p>
             <h2>Нужен робот или сервис под финтех-продукт</h2>
             <p class="lead">
-              Опишите площадку и задачу. Соберём робота под Финам, Bybit, OKX или Binance — и сервисы вокруг продукта.
+              Опишите площадку и задачу. Соберём робота под Финам, Тинькофф Инвестиции, Bybit, OKX или Binance — и сервисы вокруг продукта.
             </p>
             <p class="price-note">
               Разработка торгового алгоритма — <strong>от 20 000 ₽</strong>,
@@ -831,6 +838,7 @@ foreach ($posts as $i => $item) {
               Рынок
               <select name="market">
                 <option value="finam">Финам / MOEX</option>
+                <option value="tinkoff">Тинькофф Инвестиции</option>
                 <option value="bybit">Bybit</option>
                 <option value="okx">OKX</option>
                 <option value="binance">Binance</option>
@@ -858,7 +866,7 @@ foreach ($posts as $i => $item) {
         <div class="footer-top">
           <div>
             <a class="logo" href="#top">AM Quant<span>Lab</span></a>
-            <p>Роботы на Node.js и Go. API Финам, Bybit, OKX, Binance.</p>
+            <p>Роботы на Node.js и Go. API Финам, Тинькофф Инвестиции, Bybit, OKX, Binance.</p>
           </div>
           <span class="sys-status"><span class="pulse"></span> systems online</span>
         </div>

@@ -113,6 +113,7 @@ function quantlab_lead_market_label(string $market): string
 {
     $map = [
         'finam' => 'Финам / MOEX',
+        'tinkoff' => 'Тинькофф Инвестиции',
         'bybit' => 'Bybit',
         'okx' => 'OKX',
         'binance' => 'Binance',

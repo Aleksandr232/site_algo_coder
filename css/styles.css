@@ -429,6 +429,7 @@ a {
 .cards-2,
 .cards-3,
 .cards-4,
+.cards-5,
 .metrics,
 .rule-row,
 .spec,
@@ -455,6 +456,10 @@ a {
 
 .cards-4 {
   grid-template-columns: repeat(4, 1fr);
+}
+
+.cards-5 {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .venue-chips {
@@ -1458,17 +1463,24 @@ button.parsed-stamp.is-loading {
 
 .cards-2 .reveal:nth-child(2),
 .cards-3 .reveal:nth-child(2),
-.cards-4 .reveal:nth-child(2) {
+.cards-4 .reveal:nth-child(2),
+.cards-5 .reveal:nth-child(2) {
   transition-delay: 0.08s;
 }
 
 .cards-3 .reveal:nth-child(3),
-.cards-4 .reveal:nth-child(3) {
+.cards-4 .reveal:nth-child(3),
+.cards-5 .reveal:nth-child(3) {
   transition-delay: 0.14s;
 }
 
-.cards-4 .reveal:nth-child(4) {
+.cards-4 .reveal:nth-child(4),
+.cards-5 .reveal:nth-child(4) {
   transition-delay: 0.2s;
+}
+
+.cards-5 .reveal:nth-child(5) {
+  transition-delay: 0.26s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1511,6 +1523,12 @@ button.parsed-stamp.is-loading {
   }
 }
 
+@media (max-width: 1280px) {
+  .cards-5 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   .robot-log {
     display: none;
@@ -1530,6 +1548,7 @@ button.parsed-stamp.is-loading {
   .cards-2,
   .cards-3,
   .cards-4,
+  .cards-5,
   .case-grid,
   .contact-grid,
   .metrics,

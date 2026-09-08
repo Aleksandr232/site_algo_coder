@@ -504,7 +504,7 @@
   function mountLog() {
     const list = $("#robot-log-list");
     if (!list || reduced) return;
-    const venues = ["FINAM", "BYBIT", "OKX", "BINANCE"];
+    const venues = ["FINAM", "TINKOFF", "BYBIT", "OKX", "BINANCE"];
     const pairs = ["CNY", "BTC", "ETH", "Si", "SBER"];
     const lines = [];
 
@@ -532,7 +532,7 @@
 
   function mountTilt() {
     if (reduced || window.matchMedia("(pointer: coarse)").matches) return;
-    $$(".hero-panel, .market-card, .cards-4 .glass").forEach((card) => {
+    $$(".hero-panel, .market-card, .cards-4 .glass, .cards-5 .glass").forEach((card) => {
       card.addEventListener("pointermove", (event) => {
         const box = card.getBoundingClientRect();
         const x = (event.clientX - box.left) / box.width - 0.5;
