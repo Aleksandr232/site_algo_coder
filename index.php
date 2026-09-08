@@ -141,11 +141,11 @@ foreach ($posts as $i => $item) {
               <a class="btn btn-ghost" href="#dashboards">Дашборды</a>
             </div>
             <div class="venue-chips" aria-label="Площадки">
-              <span>Финам</span>
-              <span>Тинькофф</span>
-              <span>Bybit</span>
-              <span>OKX</span>
-              <span>Binance</span>
+              <?= quantlab_venue_chip('finam', 'Финам') ?>
+              <?= quantlab_venue_chip('tinkoff', 'Тинькофф') ?>
+              <?= quantlab_venue_chip('bybit', 'Bybit') ?>
+              <?= quantlab_venue_chip('okx', 'OKX') ?>
+              <?= quantlab_venue_chip('binance', 'Binance') ?>
             </div>
             <dl class="hero-stats">
               <div>
@@ -196,12 +196,10 @@ foreach ($posts as $i => $item) {
       <div class="ticker" aria-hidden="true">
         <div class="ticker-track">
           <div class="ticker-group">
-            <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
-            <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
+            <?= quantlab_ticker_group_html() ?>
           </div>
           <div class="ticker-group">
-            <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
-            <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
+            <?= quantlab_ticker_group_html() ?>
           </div>
         </div>
       </div>
@@ -229,6 +227,10 @@ foreach ($posts as $i => $item) {
                 <li>Индексные и товарные фьючерсы</li>
                 <li>Роботы через API Финам, Тинькофф Инвестиции и автоследование Comon</li>
               </ul>
+              <div class="venue-mini-row" aria-hidden="true">
+                <?= quantlab_venue_logo('finam') ?>
+                <?= quantlab_venue_logo('tinkoff') ?>
+              </div>
             </article>
             <article class="glass market-card">
               <div class="icon-row">
@@ -245,6 +247,11 @@ foreach ($posts as $i => $item) {
                 <li>Исполнение через API, алерты в Telegram</li>
                 <li>Риск в % депозита, а не «на глаз»</li>
               </ul>
+              <div class="venue-mini-row" aria-hidden="true">
+                <?= quantlab_venue_logo('bybit') ?>
+                <?= quantlab_venue_logo('okx') ?>
+                <?= quantlab_venue_logo('binance') ?>
+              </div>
             </article>
           </div>
         </div>
@@ -258,28 +265,43 @@ foreach ($posts as $i => $item) {
             <p>Один алгоритм — разные адаптеры исполнения. Подключаем счёт и гоняем ордера там, где вы торгуете.</p>
           </div>
           <div class="cards-5">
-            <article class="glass pad">
-              <p class="num">MOEX</p>
+            <article class="glass pad venue-card">
+              <div class="venue-card-top">
+                <?= quantlab_venue_logo('finam') ?>
+                <p class="num">MOEX</p>
+              </div>
               <h3>Финам</h3>
               <p>Trade API, срочный рынок, акции и валюта. Роботы и контуры автоследования Comon.</p>
             </article>
-            <article class="glass pad">
-              <p class="num">MOEX</p>
+            <article class="glass pad venue-card">
+              <div class="venue-card-top">
+                <?= quantlab_venue_logo('tinkoff') ?>
+                <p class="num">MOEX</p>
+              </div>
               <h3>Тинькофф Инвестиции</h3>
               <p>Invest API: акции, облигации, фьючерсы и валюта. Роботы через официальный T-Invest API.</p>
             </article>
-            <article class="glass pad">
-              <p class="num">CEX</p>
+            <article class="glass pad venue-card">
+              <div class="venue-card-top">
+                <?= quantlab_venue_logo('bybit') ?>
+                <p class="num">CEX</p>
+              </div>
               <h3>Bybit</h3>
               <p>Spot и perpetual, стакан, позиции и риск через официальный API.</p>
             </article>
-            <article class="glass pad">
-              <p class="num">CEX</p>
+            <article class="glass pad venue-card">
+              <div class="venue-card-top">
+                <?= quantlab_venue_logo('okx') ?>
+                <p class="num">CEX</p>
+              </div>
               <h3>OKX</h3>
               <p>Торговые боты под фьючерсы и спот, исполнение и мониторинг 24/7.</p>
             </article>
-            <article class="glass pad">
-              <p class="num">CEX</p>
+            <article class="glass pad venue-card">
+              <div class="venue-card-top">
+                <?= quantlab_venue_logo('binance') ?>
+                <p class="num">CEX</p>
+              </div>
               <h3>Binance</h3>
               <p>Роботы на ликвидных парах: тренд, сетка, алго-исполнение через API.</p>
             </article>
