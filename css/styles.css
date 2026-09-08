@@ -469,79 +469,20 @@ a {
   margin: 0 0 28px;
 }
 
-.venue-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.venue-chips span {
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 5px 12px 5px 5px;
+  padding: 7px 12px;
   color: var(--text);
   background: var(--accent-dim);
   font: 600 13px IBM Plex Mono, monospace;
   transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
 }
 
-.venue-chip:hover {
+.venue-chips span:hover {
   transform: translateY(-2px);
   border-color: rgba(61, 255, 164, 0.4);
   box-shadow: 0 8px 20px rgba(61, 255, 164, 0.12);
-}
-
-.venue-logo {
-  display: block;
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.venue-logo svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.venue-chip .venue-logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-}
-
-.venue-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.venue-card .num {
-  margin: 4px 0 0;
-}
-
-.venue-card .venue-logo {
-  transition: transform 0.35s ease;
-}
-
-.venue-card:hover .venue-logo {
-  transform: translateY(-2px) scale(1.06);
-}
-
-.venue-mini-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.venue-mini-row .venue-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
 }
 
 .eyebrow {
@@ -893,24 +834,8 @@ button.parsed-stamp.is-loading {
 .ticker-group {
   display: flex;
   flex-shrink: 0;
-  align-items: center;
   gap: 42px;
   padding-right: 42px;
-}
-
-.ticker-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  letter-spacing: 0.12em;
-  white-space: nowrap;
-}
-
-.ticker-item .venue-logo {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  box-shadow: none;
 }
 
 @keyframes marquee {

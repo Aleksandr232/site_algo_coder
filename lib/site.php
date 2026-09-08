@@ -7,43 +7,6 @@ function quantlab_h(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-function quantlab_venue_logo(string $id): string
-{
-    static $marks = [
-        'finam' => '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" focusable="false"><rect width="32" height="32" rx="8" fill="#1657C2"/><path fill="#fff" d="M14.15 6.6h3.7v4.1c2.9.3 5 2.35 5 5.3s-2.1 5-5 5.3v4.1h-3.7v-4.1c-2.9-.3-5-2.35-5-5.3s2.1-5 5-5.3V6.6zm1.85 6.55c-1.6 0-2.8.95-2.8 2.25s1.2 2.25 2.8 2.25 2.8-.95 2.8-2.25-1.2-2.25-2.8-2.25z"/></svg>',
-        'tinkoff' => '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" focusable="false"><rect width="32" height="32" rx="8" fill="#FFDD2D"/><path fill="#111" d="M7 8.1h18v4.5h-6.65V24h-4.7V12.6H7z"/></svg>',
-        'bybit' => '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" focusable="false"><rect width="32" height="32" rx="8" fill="#F7A600"/><path fill="#141414" d="M10.2 7.4h7.1c3.15 0 5.5 2.05 5.5 4.85 0 1.85-1.05 3.3-2.7 4.05 2 .7 3.25 2.35 3.25 4.45 0 3.1-2.5 5.15-6 5.15H10.2V7.4zm4.35 3.65v4.35h2.7c1.55 0 2.5-.85 2.5-2.2s-.95-2.15-2.5-2.15h-2.7zm0 7.35v4.7h3.2c1.7 0 2.75-.9 2.75-2.35s-1.05-2.35-2.75-2.35h-3.2z"/></svg>',
-        'okx' => '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" focusable="false"><rect width="32" height="32" rx="8" fill="#111"/><rect x="6" y="6" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="13.1" y="6" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="20.2" y="6" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="6" y="13.1" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="20.2" y="13.1" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="6" y="20.2" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="13.1" y="20.2" width="5.8" height="5.8" rx="1.1" fill="#fff"/><rect x="20.2" y="20.2" width="5.8" height="5.8" rx="1.1" fill="#fff"/></svg>',
-        'binance' => '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" focusable="false"><rect width="32" height="32" rx="8" fill="#1A1B1F"/><g fill="#F0B90B" transform="translate(16 16)"><path d="M0-4.2 4.2 0 0 4.2-4.2 0Z"/><path d="M0-13.2 3.3-9.9 0-6.6-3.3-9.9Z"/><path d="M0 6.6 3.3 9.9 0 13.2-3.3 9.9Z"/><path d="M-13.2 0-9.9-3.3-6.6 0-9.9 3.3Z"/><path d="M6.6 0 9.9-3.3 13.2 0 9.9 3.3Z"/></g></svg>',
-    ];
-    if (!isset($marks[$id])) {
-        return '';
-    }
-    return '<span class="venue-logo venue-logo-' . $id . '" aria-hidden="true">' . $marks[$id] . '</span>';
-}
-
-function quantlab_venue_chip(string $id, string $label): string
-{
-    return '<span class="venue-chip">' . quantlab_venue_logo($id) . '<span>' . quantlab_h($label) . '</span></span>';
-}
-
-function quantlab_ticker_group_html(): string
-{
-    $items = [
-        ['finam', 'FINAM'],
-        ['tinkoff', 'TINKOFF'],
-        ['bybit', 'BYBIT'],
-        ['okx', 'OKX'],
-        ['binance', 'BINANCE'],
-    ];
-    $html = '';
-    foreach ($items as [$id, $label]) {
-        $html .= '<span class="ticker-item">' . quantlab_venue_logo($id) . $label . '</span>';
-    }
-    $html .= '<span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>';
-    return $html;
-}
-
 function quantlab_request_origin(): string
 {
     $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -298,10 +261,12 @@ function quantlab_render_start(array $meta): void
     <div class="ticker ticker-inner" aria-hidden="true">
       <div class="ticker-track">
         <div class="ticker-group">
-          <?= quantlab_ticker_group_html() ?>
+          <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+          <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
         </div>
         <div class="ticker-group">
-          <?= quantlab_ticker_group_html() ?>
+          <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
+          <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
         </div>
       </div>
     </div>
