@@ -1305,6 +1305,7 @@ button.parsed-stamp.is-loading {
   border-radius: 12px;
   font-size: 26px;
   line-height: 1;
+  cursor: pointer;
 }
 
 .slider-dot {
@@ -1314,6 +1315,7 @@ button.parsed-stamp.is-loading {
   border-radius: 999px;
   padding: 8px 14px;
   font: 600 13px Manrope, sans-serif;
+  cursor: pointer;
 }
 
 .slider-dot.is-active {
@@ -1330,14 +1332,16 @@ button.parsed-stamp.is-loading {
 
 .case-track {
   display: flex;
+  width: 100%;
   transition: transform 0.45s ease;
+  will-change: transform;
 }
 
 .case-slide {
   flex: 0 0 100%;
   width: 100%;
+  min-width: 100%;
   max-width: 100%;
-  min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
   padding: 2px;

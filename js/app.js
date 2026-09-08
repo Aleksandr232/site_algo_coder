@@ -104,24 +104,25 @@
     const strategy = state.strategy;
     if (!strategy) return;
 
-    $("#hero-pnl").textContent = fmtPct(strategy.profitLifetime);
-    $("#hero-m30").textContent = fmtPct(strategy.profit30Days);
+    if ($("#hero-pnl")) $("#hero-pnl").textContent = fmtPct(strategy.profitLifetime);
+    if ($("#hero-m30")) $("#hero-m30").textContent = fmtPct(strategy.profit30Days);
     if ($("#hero-m90")) $("#hero-m90").textContent = fmtPct(strategy.profit90Days);
-    $("#hero-minsum").textContent = money(strategy.minSum);
+    if ($("#hero-minsum")) $("#hero-minsum").textContent = money(strategy.minSum);
     if ($("#hero-title")) $("#hero-title").textContent = strategy.title;
-    $("#case-title").textContent = strategy.title;
-    $("#case-start").textContent = fmtDate(strategy.createdAt);
-    $("#case-link").href = strategy.url;
-    $("#spec-risk").textContent = strategy.riskLevel;
-    $("#spec-cat").textContent = strategy.riskCategory;
-    $("#spec-tariff").textContent = strategy.tariffDesc;
-    $("#spec-ita").textContent = Number(strategy.tradeActivityIndex).toFixed(2);
+    if ($("#case-title")) $("#case-title").textContent = strategy.title;
+    if ($("#case-start")) $("#case-start").textContent = fmtDate(strategy.createdAt);
+    if ($("#case-link")) $("#case-link").href = strategy.url;
+    if ($("#spec-risk")) $("#spec-risk").textContent = strategy.riskLevel;
+    if ($("#spec-cat")) $("#spec-cat").textContent = strategy.riskCategory;
+    if ($("#spec-tariff")) $("#spec-tariff").textContent = strategy.tariffDesc;
+    if ($("#spec-ita")) $("#spec-ita").textContent = Number(strategy.tradeActivityIndex).toFixed(2);
     if ($("#spec-limit")) {
       $("#spec-limit").textContent = "до " + Number(strategy.moneyLimit).toLocaleString("ru-RU") + " ₽";
     }
     if ($("#spec-position")) $("#spec-position").textContent = positionText(strategy);
 
-    const when = state.fetchedAt ? fmtTime(state.fetchedAt) : fmtDate(window.COMON_SOURCE.parsedAt);
+    const parsedAt = window.COMON_SOURCE && window.COMON_SOURCE.parsedAt;
+    const when = state.fetchedAt ? fmtTime(state.fetchedAt) : fmtDate(parsedAt);
     if (state.source === "live") setStamp("live", "Live с Comon · " + when);
     else if (state.source === "cache") setStamp("cache", "Кэш Comon · " + when);
     else setStamp("cache", "Офлайн-данные · " + when);
@@ -135,24 +136,28 @@
       ["Запуск", fmtDate(strategy.createdAt), ""],
     ];
 
-    $("#case-metrics").innerHTML = metrics
-      .map(
-        ([label, value, tone]) =>
-          `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
-      )
-      .join("");
+    if ($("#case-metrics")) {
+      $("#case-metrics").innerHTML = metrics
+        .map(
+          ([label, value, tone]) =>
+            `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
+        )
+        .join("");
+    }
 
-    $("#structure-bars").innerHTML = (strategy.structure || [])
-      .map((item) => {
-        const width = Math.min(100, Math.abs(item.value));
-        const color = item.value >= 0 ? "var(--accent)" : "var(--neg)";
-        return `
+    if ($("#structure-bars")) {
+      $("#structure-bars").innerHTML = (strategy.structure || [])
+        .map((item) => {
+          const width = Math.min(100, Math.abs(item.value));
+          const color = item.value >= 0 ? "var(--accent)" : "var(--neg)";
+          return `
           <div>
             <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
             <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:${color}"></div></div>
           </div>`;
-      })
-      .join("");
+        })
+        .join("");
+    }
   }
 
   function bybitPositionText(strategy) {
@@ -556,13 +561,13 @@
     try {
     const pairs = [
       {
-        strategy: "api/comon.php?id=" + STRATEGY_ID,
-        profit: "api/comon.php?id=" + STRATEGY_ID + "&kind=profit",
+        strategy: "api/comon.php?id=" + STRATEGY_ID + "&t=" + Date.now(),
+        profit: "api/comon.php?id=" + STRATEGY_ID + "&kind=profit&t=" + Date.now(),
         prefer: "live",
       },
       {
-        strategy: "/api/comon/" + STRATEGY_ID,
-        profit: "/api/comon/" + STRATEGY_ID + "/profit",
+        strategy: "/api/comon/" + STRATEGY_ID + "?t=" + Date.now(),
+        profit: "/api/comon/" + STRATEGY_ID + "/profit?t=" + Date.now(),
         prefer: "live",
       },
       {
@@ -732,19 +737,21 @@
 
   function mountSlider() {
     const track = $("#case-track");
+    const viewport = track && track.parentElement;
     const dots = $$(".slider-dot");
-    if (!track || !dots.length) return;
+    if (!track || !viewport || !dots.length) return;
     let index = 0;
     const max = dots.length - 1;
 
     const go = (next) => {
       index = Math.max(0, Math.min(max, next));
-      track.style.transform = "translateX(-" + index * 100 + "%)";
+      const width = viewport.clientWidth;
+      track.style.transform = "translate3d(-" + index * width + "px,0,0)";
       dots.forEach((dot) => dot.classList.toggle("is-active", Number(dot.dataset.slide) === index));
       window.setTimeout(() => {
         if (window.__charts) window.__charts.refresh();
-        if (window.__bybitChart) window.__bybitChart.refresh();
         if (window.__tinkoffChart) window.__tinkoffChart.refresh();
+        if (window.__bybitChart) window.__bybitChart.refresh();
       }, 460);
     };
 
@@ -755,28 +762,33 @@
     });
 
     let startX = 0;
-    track.addEventListener("touchstart", (event) => {
+    viewport.addEventListener("touchstart", (event) => {
       startX = event.changedTouches[0].clientX;
     }, { passive: true });
-    track.addEventListener("touchend", (event) => {
+    viewport.addEventListener("touchend", (event) => {
       const dx = event.changedTouches[0].clientX - startX;
       if (Math.abs(dx) > 40) go(index + (dx < 0 ? 1 : -1));
     }, { passive: true });
+    window.addEventListener("resize", () => go(index));
   }
 
-  fillCase();
-  window.__charts = mountCharts();
-  window.__bybitChart = mountBybitChart();
-  window.__tinkoffChart = mountTinkoffChart();
+  try {
+    fillCase();
+  } catch (error) {
+    console.warn("fillCase", error);
+  }
   mountSlider();
+  window.__charts = mountCharts();
+  window.__tinkoffChart = mountTinkoffChart();
+  window.__bybitChart = mountBybitChart();
   mountNav();
   mountForm();
   loadLive();
-  loadBybit();
   loadTinkoff();
+  loadBybit();
   fetch("/api/boot.php", { cache: "no-store" }).catch(() => {});
 
-  $("#parsed-stamp").addEventListener("click", () => {
+  $("#parsed-stamp") && $("#parsed-stamp").addEventListener("click", () => {
     loadLive();
   });
   if ($("#bybit-stamp")) {
