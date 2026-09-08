@@ -404,19 +404,31 @@
       rings.push({ x: event.clientX, y: event.clientY, life: 0 });
     });
 
+    const tickPairs = ["BTC", "ETH", "SBER", "CNY", "Si"];
     const spawnTick = () => {
       if (document.hidden) return;
       const buy = Math.random() > 0.42;
+      const pair = tickPairs[Math.floor(Math.random() * tickPairs.length)];
+      const px =
+        pair === "BTC"
+          ? (66800 + Math.random() * 900).toFixed(1)
+          : pair === "ETH"
+            ? (3480 + Math.random() * 80).toFixed(1)
+            : pair === "SBER"
+              ? (278 + Math.random() * 8).toFixed(2)
+              : pair === "CNY"
+                ? (11.2 + Math.random() * 0.4).toFixed(3)
+                : (90800 + Math.random() * 600).toFixed(0);
       ticks.push({
         x: Math.random() * window.innerWidth,
         y: window.innerHeight * (0.15 + Math.random() * 0.55),
         life: 0,
-        text: buy ? "BUY" : "SELL",
+        text: (buy ? "▲ BUY " : "▼ SELL ") + pair + " " + px,
         color: buy ? "61,255,164" : "255,107,134",
       });
       if (ticks.length > 8) ticks.shift();
     };
-    window.setInterval(spawnTick, 2200);
+    window.setInterval(spawnTick, 1800);
     spawnTick();
 
     const draw = () => {
@@ -463,6 +475,10 @@
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, 2.2, 0, Math.PI * 2);
         ctx.fill();
+        const px = (67240 - (mouse.y / Math.max(1, h)) * 420).toFixed(1);
+        ctx.font = "600 11px IBM Plex Mono, monospace";
+        ctx.fillStyle = "rgba(232,237,245,0.72)";
+        ctx.fillText(px, mouse.x + 10, mouse.y - 8);
       }
 
       ticks.forEach((t) => {
@@ -499,6 +515,196 @@
         orb.style.translate = dx * k + "px " + dy * k + "px";
       });
     });
+  }
+
+  function fmtPx(px) {
+    if (px >= 1000) return px.toFixed(1);
+    if (px >= 100) return px.toFixed(2);
+    return px.toFixed(3);
+  }
+
+  function fmtSz(sz) {
+    return sz >= 10 ? sz.toFixed(0) : sz.toFixed(2);
+  }
+
+  function bookRowsHtml(rows, side) {
+    const max = Math.max.apply(null, rows.map((row) => row.sz)) || 1;
+    return rows
+      .map((row) => {
+        const hit = Math.random() > 0.72 ? " is-hit" : "";
+        return (
+          "<div class=\"book-row " +
+          side +
+          hit +
+          "\"><i style=\"--w:" +
+          Math.round((row.sz / max) * 92 + 8) +
+          "%\"></i><span>" +
+          fmtSz(row.sz) +
+          "</span><b>" +
+          fmtPx(row.px) +
+          "</b></div>"
+        );
+      })
+      .join("");
+  }
+
+  function mountBook() {
+    const asksEl = $("#book-asks");
+    const bidsEl = $("#book-bids");
+    const midEl = $("#book-mid");
+    const spreadEl = $("#book-spread");
+    const symbolEl = $("#book-symbol");
+    if (!asksEl || !bidsEl || !midEl || reduced) return;
+
+    const books = [
+      { name: "BTCUSDT", px: 67241.2, tick: 0.4 },
+      { name: "ETHUSDT", px: 3518.6, tick: 0.08 },
+      { name: "CNYRUB", px: 11.428, tick: 0.002 },
+      { name: "SBER", px: 281.45, tick: 0.05 },
+    ];
+    let idx = 0;
+    let mid = books[0].px;
+
+    const levels = (base, tick, dir) => {
+      const rows = [];
+      let px = base;
+      for (let i = 0; i < 6; i++) {
+        px += dir * tick * (1.1 + Math.random() * 1.8);
+        rows.push({ px: px, sz: 0.18 + Math.random() * 3.4 });
+      }
+      return rows;
+    };
+
+    const paint = (flash) => {
+      const book = books[idx];
+      const asks = levels(mid, book.tick, 1);
+      const bids = levels(mid, book.tick, -1);
+      asksEl.innerHTML = bookRowsHtml(asks.slice().reverse(), "ask");
+      bidsEl.innerHTML = bookRowsHtml(bids, "bid");
+      midEl.textContent = fmtPx(mid);
+      midEl.classList.toggle("up", flash > 0);
+      midEl.classList.toggle("dn", flash < 0);
+      if (flash !== 0) {
+        midEl.classList.remove("is-flash");
+        void midEl.offsetWidth;
+        midEl.classList.add("is-flash");
+      }
+      const spread = Math.abs(asks[0].px - bids[0].px);
+      if (spreadEl) spreadEl.textContent = fmtPx(spread);
+      if (symbolEl) symbolEl.textContent = book.name;
+    };
+
+    paint(0);
+    window.setInterval(() => {
+      if (document.hidden) return;
+      const book = books[idx];
+      const delta = (Math.random() - 0.48) * book.tick * 6;
+      mid += delta;
+      if (Math.random() > 0.9) {
+        idx = (idx + 1) % books.length;
+        mid = books[idx].px;
+      }
+      paint(delta);
+    }, 900);
+  }
+
+  function makePrint() {
+    const venues = ["FINAM", "TINKOFF", "BYBIT", "OKX", "BINANCE"];
+    const pairs = ["BTCUSDT", "ETHUSDT", "CNYRUB", "SBER", "Si"];
+    const roll = Math.random();
+    const kind = roll > 0.72 ? "tp" : roll > 0.36 ? "buy" : "sell";
+    const side = kind === "tp" ? "TP" : kind === "buy" ? "BUY" : "SELL";
+    const pair = pairs[Math.floor(Math.random() * pairs.length)];
+    const venue = venues[Math.floor(Math.random() * venues.length)];
+    const px =
+      pair === "BTCUSDT"
+        ? (66800 + Math.random() * 900).toFixed(1)
+        : pair === "ETHUSDT"
+          ? (3480 + Math.random() * 90).toFixed(1)
+          : pair === "SBER"
+            ? (278 + Math.random() * 8).toFixed(2)
+            : pair === "CNYRUB"
+              ? (11.2 + Math.random() * 0.35).toFixed(3)
+              : (90800 + Math.random() * 700).toFixed(0);
+    const sz = pair.indexOf("USD") >= 0 ? (0.08 + Math.random() * 1.6).toFixed(2) : (4 + Math.random() * 80).toFixed(0);
+    const extra = kind === "tp" ? "  +" + (0.2 + Math.random() * 1.6).toFixed(2) + "%" : "  × " + sz;
+    return (
+      "<span class=\"quote-print " +
+      kind +
+      "\">" +
+      venue +
+      " · " +
+      side +
+      " " +
+      pair +
+      " " +
+      px +
+      extra +
+      "</span>"
+    );
+  }
+
+  function mountQuotes() {
+    const a = $("#quotes-a");
+    const b = $("#quotes-b");
+    if (!a || !b || reduced) return;
+    const html = Array.from({ length: 10 }, makePrint).join("");
+    a.innerHTML = html;
+    b.innerHTML = html;
+    window.setInterval(() => {
+      if (document.hidden) return;
+      const next = makePrint();
+      a.insertAdjacentHTML("afterbegin", next);
+      b.insertAdjacentHTML("afterbegin", next);
+      if (a.children.length > 12) {
+        a.removeChild(a.lastElementChild);
+        b.removeChild(b.lastElementChild);
+      }
+    }, 2400);
+  }
+
+  function padTime() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function mountDashFeed() {
+    const list = $("#dash-feed");
+    if (!list || reduced) return;
+    const venues = ["FINAM", "TINKOFF", "BYBIT", "OKX", "BINANCE"];
+    const pairs = ["BTCUSDT", "ETHUSDT", "CNY", "SBER", "Si"];
+    const rows = [];
+
+    const push = () => {
+      const roll = Math.random();
+      const kind = roll > 0.68 ? "tp" : roll > 0.34 ? "buy" : "sell";
+      const venue = venues[Math.floor(Math.random() * venues.length)];
+      const pair = pairs[Math.floor(Math.random() * pairs.length)];
+      const label =
+        kind === "tp"
+          ? venue + " · TP " + pair + " +" + (0.2 + Math.random() * 1.5).toFixed(1) + "%"
+          : kind === "buy"
+            ? venue + " · BUY " + pair
+            : venue + " · STOP " + pair;
+      rows.unshift({ kind: kind, text: label, time: padTime() });
+      if (rows.length > 5) rows.pop();
+      list.innerHTML = rows
+        .map((item) => "<li class=\"" + item.kind + "\"><span>" + item.time + "</span> " + item.text + "</li>")
+        .join("");
+    };
+
+    [...list.children].forEach((li) => {
+      const span = li.querySelector("span");
+      rows.push({
+        kind: li.className,
+        text: li.textContent.replace(/^\s*\d{2}:\d{2}\s*/, "").trim(),
+        time: span ? span.textContent : padTime(),
+      });
+    });
+    window.setInterval(() => {
+      if (document.hidden) return;
+      push();
+    }, 3200);
   }
 
   function mountLog() {
@@ -561,6 +767,9 @@
   mountCandles();
   mountReveal();
   mountFx();
+  mountBook();
+  mountQuotes();
+  mountDashFeed();
   mountLog();
   mountTilt();
   mountScrollProgress();

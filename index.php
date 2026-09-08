@@ -187,6 +187,16 @@ foreach ($posts as $i => $item) {
             </div>
           </aside>
         </div>
+        <aside class="trade-book" id="trade-book" aria-hidden="true">
+          <p class="trade-book-head">
+            <span class="pulse"></span>
+            <span id="book-symbol">BTCUSDT</span>
+            <span class="trade-book-spread" id="book-spread">0.4</span>
+          </p>
+          <div class="trade-book-asks" id="book-asks"></div>
+          <p class="trade-book-mid" id="book-mid">67241.2</p>
+          <div class="trade-book-bids" id="book-bids"></div>
+        </aside>
         <aside class="robot-log" id="robot-log" aria-hidden="true">
           <p class="robot-log-head"><span class="pulse"></span> robot runtime</p>
           <ol id="robot-log-list"></ol>
@@ -203,6 +213,13 @@ foreach ($posts as $i => $item) {
             <span>FINAM</span><span>TINKOFF</span><span>BYBIT</span><span>OKX</span><span>BINANCE</span>
             <span>MOEX</span><span>BTC</span><span>ETH</span><span>CNYRUB</span>
           </div>
+        </div>
+      </div>
+
+      <div class="quotes-tape" aria-hidden="true">
+        <div class="quotes-tape-track">
+          <div class="quotes-tape-group" id="quotes-a"></div>
+          <div class="quotes-tape-group" id="quotes-b"></div>
         </div>
       </div>
 
@@ -262,26 +279,31 @@ foreach ($posts as $i => $item) {
               <p class="num">MOEX</p>
               <h3>Финам</h3>
               <p>Trade API, срочный рынок, акции и валюта. Роботы и контуры автоследования Comon.</p>
+              <div class="mini-candles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </article>
             <article class="glass pad">
               <p class="num">MOEX</p>
               <h3>Тинькофф Инвестиции</h3>
               <p>Invest API: акции, облигации, фьючерсы и валюта. Роботы через официальный T-Invest API.</p>
+              <div class="mini-candles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </article>
             <article class="glass pad">
               <p class="num">CEX</p>
               <h3>Bybit</h3>
               <p>Spot и perpetual, стакан, позиции и риск через официальный API.</p>
+              <div class="mini-candles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </article>
             <article class="glass pad">
               <p class="num">CEX</p>
               <h3>OKX</h3>
               <p>Торговые боты под фьючерсы и спот, исполнение и мониторинг 24/7.</p>
+              <div class="mini-candles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </article>
             <article class="glass pad">
               <p class="num">CEX</p>
               <h3>Binance</h3>
               <p>Роботы на ликвидных парах: тренд, сетка, алго-исполнение через API.</p>
+              <div class="mini-candles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </article>
           </div>
         </div>
@@ -485,7 +507,7 @@ foreach ($posts as $i => $item) {
                   <h3>Журнал и алерты</h3>
                 </div>
               </div>
-              <ol class="dash-feed">
+              <ol class="dash-feed" id="dash-feed">
                 <li class="buy"><span>09:41</span> BYBIT · BUY BTCUSDT</li>
                 <li class="tp"><span>09:38</span> FINAM · TP CNY +1.2%</li>
                 <li class="buy"><span>09:31</span> TINKOFF · BUY SBER</li>
