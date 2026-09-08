@@ -554,8 +554,10 @@
       headers: { Accept: "application/json" },
       cache: "no-store",
     });
-    if (!res.ok) throw new Error(url + " " + res.status);
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json.detail || json.error || url + " " + res.status);
+    }
     return { json, source: res.headers.get("X-Data-Source") || "file" };
   }
 
@@ -568,19 +570,9 @@
     try {
     const pairs = [
       {
-        strategy: "api/comon.php?id=" + STRATEGY_ID + "&t=" + Date.now(),
-        profit: "api/comon.php?id=" + STRATEGY_ID + "&kind=profit&t=" + Date.now(),
+        strategy: "/api/comon.php?id=" + STRATEGY_ID + "&t=" + Date.now(),
+        profit: "/api/comon.php?id=" + STRATEGY_ID + "&kind=profit&t=" + Date.now(),
         prefer: "live",
-      },
-      {
-        strategy: "/api/comon/" + STRATEGY_ID + "?t=" + Date.now(),
-        profit: "/api/comon/" + STRATEGY_ID + "/profit?t=" + Date.now(),
-        prefer: "live",
-      },
-      {
-        strategy: "data/strategy-" + STRATEGY_ID + ".json",
-        profit: "data/strategy-" + STRATEGY_ID + "-profit.json",
-        prefer: "cache",
       },
     ];
 
@@ -623,7 +615,7 @@
       stamp.classList.add("is-loading");
     }
     try {
-    const urls = ["api/bybit.php", "/api/bybit/case", "data/bybit-case.json"];
+    const urls = ["/api/bybit.php"];
     for (const url of urls) {
       try {
         const res = await fetchJson(url);
@@ -661,7 +653,8 @@
       stamp.classList.add("is-loading");
     }
     try {
-    const urls = ["api/tinkoff.php", "/api/tinkoff/case", "data/tinkoff-case.json"];
+    const urls = ["/api/tinkoff.php"];
+    let lastError = "";
     for (const url of urls) {
       try {
         const res = await fetchJson(url);
@@ -676,13 +669,14 @@
         if (window.__tinkoffChart) window.__tinkoffChart.refresh();
         return tinkoff.source;
       } catch (error) {
-        console.warn("Tinkoff load failed", url, error);
+        lastError = (error && error.message) || "";
+        console.warn("Tinkoff load failed", lastError);
       }
     }
     if (stamp && !silent) {
       stamp.classList.remove("is-loading");
       stamp.classList.add("is-cache");
-      stamp.textContent = "Тинькофф недоступен";
+      stamp.textContent = lastError ? "Тинькофф: " + lastError : "Тинькофф недоступен";
     }
     return "fallback";
     } finally {

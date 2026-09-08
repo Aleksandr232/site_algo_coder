@@ -365,7 +365,12 @@ function quantlab_tinkoff_case(): array
             + quantlab_tinkoff_money($portfolio['totalAmountCurrencies'] ?? []);
     }
     $positions = quantlab_tinkoff_positions($accountId);
-    $operations = quantlab_tinkoff_operations($accountId);
+    $operations = [];
+    try {
+        $operations = quantlab_tinkoff_operations($accountId);
+    } catch (Throwable $e) {
+        $operations = [];
+    }
     $built = quantlab_tinkoff_build_equity($equity, $operations);
     $snapshots = quantlab_tinkoff_snapshot_daily($equity);
     $series = quantlab_merge_snapshots($built['series'], $snapshots);
