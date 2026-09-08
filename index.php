@@ -559,8 +559,8 @@ foreach ($posts as $i => $item) {
                 >
               </p>
             </div>
-            <button class="parsed-stamp is-loading" id="parsed-stamp" type="button" title="Обновить с Comon">
-              Тяну данные с Comon…
+            <button class="parsed-stamp" id="parsed-stamp" type="button" title="Обновить с Comon">
+              Обновить с Comon
             </button>
           </div>
 
@@ -656,8 +656,8 @@ foreach ($posts as $i => $item) {
                 <a href="https://www.tbank.ru/invest/" target="_blank" rel="noopener">tbank.ru/invest</a>
               </p>
             </div>
-            <button class="parsed-stamp is-loading" id="tinkoff-stamp" type="button" title="Обновить с Тинькофф">
-              Тяну счёт с Тинькофф…
+            <button class="parsed-stamp" id="tinkoff-stamp" type="button" title="Обновить с Тинькофф">
+              Обновить с Тинькофф
             </button>
           </div>
 
@@ -753,8 +753,8 @@ foreach ($posts as $i => $item) {
                 <a href="https://www.bybit.com/" target="_blank" rel="noopener">bybit.com</a>
               </p>
             </div>
-            <button class="parsed-stamp is-loading" id="bybit-stamp" type="button" title="Обновить с Bybit">
-              Тяну баланс с Bybit…
+            <button class="parsed-stamp" id="bybit-stamp" type="button" title="Обновить с Bybit">
+              Обновить с Bybit
             </button>
           </div>
 

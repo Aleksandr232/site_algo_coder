@@ -19,6 +19,13 @@
     fetchedAt: null,
   };
 
+  const bybit = {
+    strategy: null,
+    equity: [],
+    source: "fallback",
+    fetchedAt: null,
+  };
+
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -556,7 +563,7 @@
     if (loadingLive) return;
     loadingLive = true;
     if (!silent || !state.equity.length) {
-      setStamp("loading", "Тяну данные с Comon…");
+      setStamp("loading", "Обновить с Comon");
     }
     try {
     const pairs = [
@@ -614,7 +621,6 @@
     if (stamp && (!silent || !bybit.equity.length)) {
       stamp.classList.remove("is-live", "is-cache");
       stamp.classList.add("is-loading");
-      stamp.textContent = "Тяну баланс с Bybit…";
     }
     try {
     const urls = ["api/bybit.php", "/api/bybit/case", "data/bybit-case.json"];
@@ -653,7 +659,6 @@
     if (stamp && (!silent || !tinkoff.equity.length)) {
       stamp.classList.remove("is-live", "is-cache");
       stamp.classList.add("is-loading");
-      stamp.textContent = "Тяну счёт с Тинькофф…";
     }
     try {
     const urls = ["api/tinkoff.php", "/api/tinkoff/case", "data/tinkoff-case.json"];
@@ -778,14 +783,18 @@
     console.warn("fillCase", error);
   }
   mountSlider();
-  window.__charts = mountCharts();
-  window.__tinkoffChart = mountTinkoffChart();
-  window.__bybitChart = mountBybitChart();
   mountNav();
   mountForm();
   loadLive();
   loadTinkoff();
   loadBybit();
+  try {
+    window.__charts = mountCharts();
+    window.__tinkoffChart = mountTinkoffChart();
+    window.__bybitChart = mountBybitChart();
+  } catch (error) {
+    console.warn("charts", error);
+  }
   fetch("/api/boot.php", { cache: "no-store" }).catch(() => {});
 
   $("#parsed-stamp") && $("#parsed-stamp").addEventListener("click", () => {
