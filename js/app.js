@@ -644,8 +644,13 @@
     }
   }
 
+  function tinkoffVisible() {
+    const slide = $("#slide-tinkoff");
+    return !!(slide && !slide.hidden);
+  }
+
   async function loadTinkoff(silent) {
-    if (loadingTinkoff) return;
+    if (!tinkoffVisible() || loadingTinkoff) return;
     loadingTinkoff = true;
     const stamp = $("#tinkoff-stamp");
     if (stamp && (!silent || !tinkoff.equity.length)) {
@@ -737,7 +742,7 @@
   function mountSlider() {
     const track = $("#case-track");
     const viewport = track && track.parentElement;
-    const dots = $$(".slider-dot");
+    const dots = $$(".slider-dot").filter((dot) => !dot.hidden);
     if (!track || !viewport || !dots.length) return;
     let index = 0;
     const max = dots.length - 1;
@@ -780,11 +785,11 @@
   mountNav();
   mountForm();
   loadLive();
-  loadTinkoff();
+  if (tinkoffVisible()) loadTinkoff();
   loadBybit();
   try {
     window.__charts = mountCharts();
-    window.__tinkoffChart = mountTinkoffChart();
+    if (tinkoffVisible()) window.__tinkoffChart = mountTinkoffChart();
     window.__bybitChart = mountBybitChart();
   } catch (error) {
     console.warn("charts", error);
@@ -799,7 +804,7 @@
       loadBybit();
     });
   }
-  if ($("#tinkoff-stamp")) {
+  if (tinkoffVisible() && $("#tinkoff-stamp")) {
     $("#tinkoff-stamp").addEventListener("click", () => {
       loadTinkoff();
     });
@@ -808,13 +813,13 @@
   window.setInterval(() => {
     loadLive(true);
     loadBybit(true);
-    loadTinkoff(true);
+    if (tinkoffVisible()) loadTinkoff(true);
   }, REFRESH_MS);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       loadLive(true);
       loadBybit(true);
-      loadTinkoff(true);
+      if (tinkoffVisible()) loadTinkoff(true);
     }
   });
 

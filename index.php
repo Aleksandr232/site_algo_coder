@@ -538,8 +538,8 @@ foreach ($posts as $i => $item) {
               <button type="button" class="slider-btn" id="slide-prev" aria-label="Предыдущая стратегия">‹</button>
               <div class="slider-dots" role="tablist" aria-label="Стратегии">
                 <button type="button" class="slider-dot is-active" data-slide="0">Юань · Comon</button>
-                <button type="button" class="slider-dot" data-slide="1">Юань · Тинькофф</button>
-                <button type="button" class="slider-dot" data-slide="2">BTC · тест</button>
+                <button type="button" class="slider-dot" data-slide="1" hidden>Юань · Тинькофф</button>
+                <button type="button" class="slider-dot" data-slide="1">BTC · тест</button>
               </div>
               <button type="button" class="slider-btn" id="slide-next" aria-label="Следующая стратегия">›</button>
             </div>
@@ -646,7 +646,7 @@ foreach ($posts as $i => $item) {
             </article>
           </div>
               </article>
-              <article class="case-slide" id="slide-tinkoff">
+              <article class="case-slide" id="slide-tinkoff" hidden>
           <div class="section-head case-head">
             <div>
               <p class="eyebrow">Тестовый кейс · Тинькофф Инвестиции API</p>

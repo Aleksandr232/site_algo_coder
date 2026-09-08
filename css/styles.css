@@ -1347,6 +1347,11 @@ button.parsed-stamp.is-loading {
   padding: 2px;
 }
 
+.case-slide[hidden],
+.slider-dot[hidden] {
+  display: none !important;
+}
+
 .pills {
   display: flex;
   gap: 8px;
