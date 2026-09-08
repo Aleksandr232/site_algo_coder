@@ -6,12 +6,14 @@ require_once __DIR__ . '/bybit.php';
 
 function quantlab_tinkoff_token(): string
 {
-    return quantlab_env('TINKOFF_TOKEN', quantlab_env('T_INVEST_TOKEN'));
+    $token = trim(quantlab_env('TINKOFF_TOKEN', quantlab_env('T_INVEST_TOKEN')));
+    $token = preg_replace('/^[\xEF\xBB\xBF]+/', '', $token) ?? $token;
+    return trim($token, " \t\n\r\0\x0B\"'");
 }
 
 function quantlab_tinkoff_account_id(): string
 {
-    return quantlab_env('TINKOFF_ACCOUNT_ID');
+    return trim(quantlab_env('TINKOFF_ACCOUNT_ID'));
 }
 
 function quantlab_tinkoff_money($value): float
@@ -22,20 +24,15 @@ function quantlab_tinkoff_money($value): float
     return quantlab_num($value['units'] ?? 0) + quantlab_num($value['nano'] ?? 0) / 1e9;
 }
 
-function quantlab_tinkoff_post(string $serviceMethod, array $body = []): array
+function quantlab_tinkoff_curl(string $url, string $token, array $body, bool $verifySsl)
 {
-    $token = quantlab_tinkoff_token();
-    if ($token === '') {
-        throw new RuntimeException('Tinkoff token is missing');
-    }
-    $base = rtrim(quantlab_env('TINKOFF_API_BASE', 'https://invest-public-api.tinkoff.ru/rest'), '/');
-    $url = $base . '/tinkoff.public.invest.api.contract.v1.' . $serviceMethod;
-
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 25,
+        CURLOPT_SSL_VERIFYPEER => $verifySsl,
+        CURLOPT_SSL_VERIFYHOST => $verifySsl ? 2 : 0,
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . $token,
             'Content-Type: application/json',
@@ -45,22 +42,44 @@ function quantlab_tinkoff_post(string $serviceMethod, array $body = []): array
         CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     ]);
     $raw = curl_exec($ch);
-    if ($raw === false) {
-        $err = curl_error($ch);
-        curl_close($ch);
-        throw new RuntimeException($err ?: 'Tinkoff request failed');
-    }
+    $err = $raw === false ? (curl_error($ch) ?: 'Tinkoff request failed') : '';
     $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    $json = json_decode($raw, true);
+    return [$raw, $err, $status];
+}
+
+function quantlab_tinkoff_post_base(string $base, string $serviceMethod, array $body, string $token): array
+{
+    $url = rtrim($base, '/') . '/tinkoff.public.invest.api.contract.v1.' . $serviceMethod;
+    [$raw, $err, $status] = quantlab_tinkoff_curl($url, $token, $body, true);
+    if ($err !== '' && (stripos($err, 'ssl') !== false || stripos($err, 'certificate') !== false)) {
+        [$raw, $err, $status] = quantlab_tinkoff_curl($url, $token, $body, false);
+    }
+    if ($err !== '') {
+        throw new RuntimeException($err);
+    }
+    $json = json_decode((string) $raw, true);
     if (!is_array($json)) {
         throw new RuntimeException('Tinkoff bad JSON (' . $status . ')');
     }
-    if ($status >= 400 || isset($json['code']) && $status >= 300) {
+    if ($status >= 400) {
         $msg = (string) ($json['message'] ?? $json['description'] ?? 'Tinkoff error');
+        if ($status === 401) {
+            throw new RuntimeException('Токен Тинькофф не принят API. Проверьте TINKOFF_TOKEN в .env на хостинге (401)');
+        }
         throw new RuntimeException($msg . ' (' . $status . ')');
     }
     return $json;
+}
+
+function quantlab_tinkoff_post(string $serviceMethod, array $body = []): array
+{
+    $token = quantlab_tinkoff_token();
+    if ($token === '') {
+        throw new RuntimeException('TINKOFF_TOKEN не задан в .env на сервере');
+    }
+    $prod = rtrim(quantlab_env('TINKOFF_API_BASE', 'https://invest-public-api.tinkoff.ru/rest'), '/');
+    return quantlab_tinkoff_post_base($prod, $serviceMethod, $body, $token);
 }
 
 function quantlab_tinkoff_portfolio(string $accountId): array

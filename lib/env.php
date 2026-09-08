@@ -22,6 +22,12 @@ function quantlab_load_env(): void
         }
         $key = trim(substr($line, 0, $eq));
         $value = trim(substr($line, $eq + 1));
+        if ($value !== '' && (
+            ($value[0] === '"' && substr($value, -1) === '"')
+            || ($value[0] === "'" && substr($value, -1) === "'")
+        )) {
+            $value = substr($value, 1, -1);
+        }
         if ($key !== '') {
             putenv($key . '=' . $value);
             $_ENV[$key] = $value;
@@ -32,6 +38,14 @@ function quantlab_load_env(): void
 function quantlab_env(string $key, string $default = ''): string
 {
     quantlab_load_env();
-    $value = getenv($key);
-    return $value === false || $value === '' ? $default : $value;
+    $candidates = [
+        $_ENV[$key] ?? null,
+        getenv($key),
+    ];
+    foreach ($candidates as $value) {
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+    }
+    return $default;
 }
