@@ -3,6 +3,7 @@
   const REFRESH_MS = 20 * 1000;
   let loadingLive = false;
   let loadingBybit = false;
+  let loadingTinkoff = false;
 
   const state = {
     strategy: window.COMON_STRATEGY,
@@ -11,7 +12,7 @@
     fetchedAt: null,
   };
 
-  const bybit = {
+  const tinkoff = {
     strategy: null,
     equity: [],
     source: "fallback",
@@ -159,6 +160,73 @@
     if (!pos.size) return "позиции нет";
     const side = pos.side === "Sell" ? "шорт" : "лонг";
     return side + " " + pos.size + " BTC";
+  }
+
+  function tinkoffPositionText(strategy) {
+    const pos = strategy.position || {};
+    const ticker = pos.ticker || strategy.instrument || "CNY";
+    if (!pos.size) return "позиции нет";
+    const side = pos.side === "Sell" ? "шорт" : "лонг";
+    return side + " " + pos.size + " " + ticker;
+  }
+
+  function fillTinkoff() {
+    const strategy = tinkoff.strategy;
+    if (!strategy || !$("#tinkoff-title")) return;
+    $("#tinkoff-title").textContent = strategy.title;
+    if ($("#tinkoff-equity")) $("#tinkoff-equity").textContent = money(strategy.equity);
+    if ($("#tinkoff-position")) $("#tinkoff-position").textContent = tinkoffPositionText(strategy);
+    if ($("#tinkoff-instrument")) $("#tinkoff-instrument").textContent = strategy.instrument || "CNY";
+    $("#tinkoff-avg").textContent = strategy.position && strategy.position.avgPrice
+      ? Number(strategy.position.avgPrice).toLocaleString("ru-RU") + " ₽"
+      : "—";
+    $("#tinkoff-upl").textContent = (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toLocaleString("ru-RU") + " ₽";
+    $("#tinkoff-upl").className = strategy.unrealized >= 0 ? "pos" : "neg";
+
+    const stamp = $("#tinkoff-stamp");
+    const when = tinkoff.fetchedAt ? fmtTime(tinkoff.fetchedAt) : "";
+    if (stamp) {
+      stamp.classList.remove("is-live", "is-cache", "is-loading");
+      if (tinkoff.source === "live") {
+        stamp.classList.add("is-live");
+        stamp.textContent = "Live с Тинькофф · " + when;
+      } else {
+        stamp.classList.add("is-cache");
+        stamp.textContent = "Кэш Тинькофф · " + when;
+      }
+    }
+
+    const metrics = [
+      ["За всё время", fmtPct(strategy.profitLifetime), strategy.profitLifetime >= 0 ? "pos" : "neg"],
+      ["30 дней", fmtPct(strategy.profit30Days), strategy.profit30Days >= 0 ? "pos" : "neg"],
+      ["7 дней", fmtPct(strategy.profit7Days), strategy.profit7Days >= 0 ? "pos" : "neg"],
+      ["Счёт", money(strategy.equity), ""],
+      ["Нереализ. PnL", (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(0) + " ₽", strategy.unrealized >= 0 ? "pos" : "neg"],
+      ["Позиция", tinkoffPositionText(strategy), ""],
+    ];
+    $("#tinkoff-metrics").innerHTML = metrics
+      .map(
+        ([label, value, tone]) =>
+          `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
+      )
+      .join("");
+
+    const notional = Math.abs((strategy.position && strategy.position.size * strategy.position.avgPrice) || 0);
+    const cash = Math.max(0, strategy.equity - notional);
+    const rows = [
+      { name: "Деньги на счёте", value: strategy.equity ? (cash / strategy.equity) * 100 : 0 },
+      { name: "Позиция " + (strategy.instrument || "CNY"), value: strategy.equity ? (notional / strategy.equity) * 100 : 0 },
+    ];
+    $("#tinkoff-bars").innerHTML = rows
+      .map((item) => {
+        const width = Math.min(100, Math.abs(item.value));
+        return `
+          <div>
+            <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:var(--accent)"></div></div>
+          </div>`;
+      })
+      .join("");
   }
 
   function fillBybit() {
@@ -421,6 +489,54 @@
     return { refresh: paint };
   }
 
+  function mountTinkoffChart() {
+    const chart = $("#tinkoff-chart");
+    const tip = $("#tinkoff-tip");
+    if (!chart) return { refresh: () => {} };
+    let range = "all";
+    let geometry = null;
+    let view = tinkoff.equity;
+
+    const paint = () => {
+      const points = range === "all" ? tinkoff.equity : tinkoff.equity.slice(-Number(range));
+      view = points;
+      geometry = drawLine(chart, view, {
+        pad: { t: 16, r: 14, b: 26, l: 48 },
+        grid: true,
+        zero: true,
+        lineWidth: 2.4,
+      });
+    };
+
+    paint();
+    window.addEventListener("resize", paint);
+    $$("#tinkoff-pills .pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        $$("#tinkoff-pills .pill").forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        range = btn.dataset.range;
+        paint();
+      });
+    });
+    chart.addEventListener("mousemove", (event) => {
+      if (!geometry || !view.length) return;
+      const rect = chart.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const ratio = (x - geometry.pad.l) / (rect.width - geometry.pad.l - geometry.pad.r);
+      const index = Math.min(view.length - 1, Math.max(0, Math.round(ratio * (view.length - 1))));
+      const point = view[index];
+      tip.hidden = false;
+      tip.style.left = event.clientX - rect.left + "px";
+      tip.style.top = event.clientY - rect.top + "px";
+      const extra = point.balance != null ? "<br>" + money(point.balance) : "";
+      tip.innerHTML = `<strong>${fmtDate(point.date)}</strong><br>${fmtPct(point.value, 2)}${extra}`;
+    });
+    chart.addEventListener("mouseleave", () => {
+      tip.hidden = true;
+    });
+    return { refresh: paint };
+  }
+
   async function fetchJson(url) {
     const res = await fetch(url, {
       headers: { Accept: "application/json" },
@@ -525,6 +641,45 @@
     }
   }
 
+  async function loadTinkoff(silent) {
+    if (loadingTinkoff) return;
+    loadingTinkoff = true;
+    const stamp = $("#tinkoff-stamp");
+    if (stamp && (!silent || !tinkoff.equity.length)) {
+      stamp.classList.remove("is-live", "is-cache");
+      stamp.classList.add("is-loading");
+      stamp.textContent = "Тяну счёт с Тинькофф…";
+    }
+    try {
+    const urls = ["api/tinkoff.php", "/api/tinkoff/case", "data/tinkoff-case.json"];
+    for (const url of urls) {
+      try {
+        const res = await fetchJson(url);
+        const payload = res.json;
+        if (!payload || !payload.strategy || !payload.series) throw new Error("bad tinkoff payload");
+        tinkoff.strategy = payload.strategy;
+        tinkoff.equity = payload.series;
+        tinkoff.source = res.source === "tinkoff-live" || url.indexOf("/api/") === 0 ? "live" : "cache";
+        if (res.source === "cache") tinkoff.source = "cache";
+        tinkoff.fetchedAt = new Date();
+        fillTinkoff();
+        if (window.__tinkoffChart) window.__tinkoffChart.refresh();
+        return tinkoff.source;
+      } catch (error) {
+        console.warn("Tinkoff load failed", url, error);
+      }
+    }
+    if (stamp && !silent) {
+      stamp.classList.remove("is-loading");
+      stamp.classList.add("is-cache");
+      stamp.textContent = "Тинькофф недоступен";
+    }
+    return "fallback";
+    } finally {
+      loadingTinkoff = false;
+    }
+  }
+
   function mountNav() {
     const burger = $("#burger");
     const nav = $("#nav");
@@ -589,6 +744,7 @@
       window.setTimeout(() => {
         if (window.__charts) window.__charts.refresh();
         if (window.__bybitChart) window.__bybitChart.refresh();
+        if (window.__tinkoffChart) window.__tinkoffChart.refresh();
       }, 460);
     };
 
@@ -611,11 +767,13 @@
   fillCase();
   window.__charts = mountCharts();
   window.__bybitChart = mountBybitChart();
+  window.__tinkoffChart = mountTinkoffChart();
   mountSlider();
   mountNav();
   mountForm();
   loadLive();
   loadBybit();
+  loadTinkoff();
   fetch("/api/boot.php", { cache: "no-store" }).catch(() => {});
 
   $("#parsed-stamp").addEventListener("click", () => {
@@ -626,15 +784,22 @@
       loadBybit();
     });
   }
+  if ($("#tinkoff-stamp")) {
+    $("#tinkoff-stamp").addEventListener("click", () => {
+      loadTinkoff();
+    });
+  }
 
   window.setInterval(() => {
     loadLive(true);
     loadBybit(true);
+    loadTinkoff(true);
   }, REFRESH_MS);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       loadLive(true);
       loadBybit(true);
+      loadTinkoff(true);
     }
   });
 
@@ -642,6 +807,7 @@
     if (!document.hidden) {
       if (window.__charts) window.__charts.refresh();
       if (window.__bybitChart) window.__bybitChart.refresh();
+      if (window.__tinkoffChart) window.__tinkoffChart.refresh();
     }
     window.setTimeout(() => requestAnimationFrame(pulseCharts), 90);
   };

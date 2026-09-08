@@ -538,7 +538,8 @@ foreach ($posts as $i => $item) {
               <button type="button" class="slider-btn" id="slide-prev" aria-label="Предыдущая стратегия">‹</button>
               <div class="slider-dots" role="tablist" aria-label="Стратегии">
                 <button type="button" class="slider-dot is-active" data-slide="0">Юань · Comon</button>
-                <button type="button" class="slider-dot" data-slide="1">BTC · тест</button>
+                <button type="button" class="slider-dot" data-slide="1">Юань · Тинькофф</button>
+                <button type="button" class="slider-dot" data-slide="2">BTC · тест</button>
               </div>
               <button type="button" class="slider-btn" id="slide-next" aria-label="Следующая стратегия">›</button>
             </div>
@@ -640,6 +641,103 @@ foreach ($posts as $i => $item) {
                 <div>
                   <dt>Позиция сейчас</dt>
                   <dd id="spec-position">шорт фьючерса, кэш ~100%</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+              </article>
+              <article class="case-slide" id="slide-tinkoff">
+          <div class="section-head case-head">
+            <div>
+              <p class="eyebrow">Тестовый кейс · Тинькофф Инвестиции API</p>
+              <h2 id="tinkoff-title">Юань Тренд 2-5-15 · Тинькофф · тест</h2>
+              <p class="case-meta">
+                Тот же тренд 2 / −5 / +15 по юаню, пока на тестовом контуре T-Invest API ·
+                <a href="https://www.tbank.ru/invest/" target="_blank" rel="noopener">tbank.ru/invest</a>
+              </p>
+            </div>
+            <button class="parsed-stamp is-loading" id="tinkoff-stamp" type="button" title="Обновить с Тинькофф">
+              Тяну счёт с Тинькофф…
+            </button>
+          </div>
+
+          <div class="metrics" id="tinkoff-metrics"></div>
+
+          <div class="chart-wrap glass">
+            <div class="chart-toolbar">
+              <div>
+                <h3>Кривая баланса</h3>
+                <p>Дневная доходность брокерского счёта, %</p>
+              </div>
+              <div class="pills" id="tinkoff-pills" role="tablist" aria-label="Период графика Тинькофф">
+                <button type="button" class="pill is-active" data-range="all">Всё время</button>
+                <button type="button" class="pill" data-range="90">90 дней</button>
+                <button type="button" class="pill" data-range="30">30 дней</button>
+              </div>
+            </div>
+            <div class="chart-stage">
+              <canvas id="tinkoff-chart" width="1100" height="420"></canvas>
+              <div class="chart-tip" id="tinkoff-tip" hidden></div>
+            </div>
+          </div>
+
+          <div class="case-grid">
+            <article class="glass pad">
+              <h3>Логика робота</h3>
+              <p>
+                Автоматическая стратегия по юаню через официальный API Тинькофф Инвестиций.
+                Вход 2% депозита, стоп −5%, цель +15% — как в публичном кейсе Comon.
+              </p>
+              <div class="rule-row">
+                <div>
+                  <span>Вход</span>
+                  <strong>2%</strong>
+                  <em>от депозита</em>
+                </div>
+                <div>
+                  <span>Стоп</span>
+                  <strong class="neg">−5%</strong>
+                  <em>от депозита</em>
+                </div>
+                <div>
+                  <span>Цель</span>
+                  <strong class="pos">+15%</strong>
+                  <em>от депозита</em>
+                </div>
+              </div>
+              <ul class="fine-list">
+                <li>Тестовый контур: цифры рабочие, стратегия ещё на прогоне.</li>
+                <li>Исполнение через T-Invest API, без кликера терминала.</li>
+                <li>В кривую входят операции счёта и ежедневный снимок эквити.</li>
+              </ul>
+            </article>
+            <article class="glass pad">
+              <h3>Счёт и позиция</h3>
+              <div class="bars" id="tinkoff-bars"></div>
+              <dl class="spec">
+                <div>
+                  <dt>Площадка</dt>
+                  <dd>Тинькофф Инвестиции</dd>
+                </div>
+                <div>
+                  <dt>Инструмент</dt>
+                  <dd id="tinkoff-instrument">CNY</dd>
+                </div>
+                <div>
+                  <dt>Позиция</dt>
+                  <dd id="tinkoff-position">—</dd>
+                </div>
+                <div>
+                  <dt>Средняя</dt>
+                  <dd id="tinkoff-avg">—</dd>
+                </div>
+                <div>
+                  <dt>Нереализ. PnL</dt>
+                  <dd id="tinkoff-upl">—</dd>
+                </div>
+                <div>
+                  <dt>Оценка счёта</dt>
+                  <dd id="tinkoff-equity">—</dd>
                 </div>
               </dl>
             </article>
