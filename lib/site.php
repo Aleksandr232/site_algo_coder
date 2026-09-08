@@ -195,6 +195,7 @@ function quantlab_render_start(array $meta): void
     <?php endif; ?>
     <link rel="canonical" href="<?= quantlab_h($canonical) ?>" />
     <link rel="alternate" type="application/rss+xml" title="Блог AM QuantLab" href="<?= quantlab_h(quantlab_abs_url('rss.xml')) ?>" />
+    <link rel="alternate" type="text/plain" title="llms.txt" href="<?= quantlab_h(quantlab_abs_url('llms.txt')) ?>" />
     <link rel="sitemap" type="application/xml" title="Sitemap" href="<?= quantlab_h(quantlab_abs_url('sitemap.xml')) ?>" />
     <meta property="og:type" content="<?= quantlab_h($type) ?>" />
     <meta property="og:locale" content="ru_RU" />
@@ -291,6 +292,7 @@ function quantlab_render_end(): void
           <a href="/">Главная</a>
           <a href="/blog/">Блог</a>
           <a href="/#case">Кейсы</a>
+          <a href="/#faq">FAQ</a>
           <a href="/#contact">Контакт</a>
           <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
           <a href="#privacy" data-privacy>Политика конфиденциальности</a>

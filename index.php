@@ -45,6 +45,8 @@ foreach ($posts as $i => $item) {
     <link rel="canonical" href="<?= quantlab_h($canonical) ?>" />
     <link rel="sitemap" type="application/xml" href="<?= quantlab_h(quantlab_abs_url('sitemap.xml')) ?>" />
     <link rel="alternate" type="application/rss+xml" title="Блог AM QuantLab" href="<?= quantlab_h(quantlab_abs_url('rss.xml')) ?>" />
+    <link rel="alternate" type="text/plain" title="llms.txt" href="<?= quantlab_h(quantlab_abs_url('llms.txt')) ?>" />
+    <meta name="keywords" content="торговые роботы, разработка торговых роботов, алготрейдинг, робот или трейдер, T-Invest API, Bybit, Финам, AM QuantLab" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="ru_RU" />
     <meta property="og:site_name" content="AM QuantLab" />
@@ -54,20 +56,20 @@ foreach ($posts as $i => $item) {
     <meta name="twitter:card" content="summary" />
     <?= quantlab_json_ld([
         '@context' => 'https://schema.org',
-        '@type' => 'WebSite',
-        'name' => 'AM QuantLab',
-        'url' => $canonical,
-        'inLanguage' => 'ru-RU',
-        'potentialAction' => ['@type' => 'ReadAction', 'target' => quantlab_abs_url('blog')],
+        '@graph' => [
+            [
+                '@type' => 'WebSite',
+                '@id' => rtrim($canonical, '/') . '/#website',
+                'name' => 'AM QuantLab',
+                'url' => $canonical,
+                'inLanguage' => 'ru-RU',
+                'publisher' => ['@id' => quantlab_org_id()],
+                'potentialAction' => ['@type' => 'ReadAction', 'target' => quantlab_abs_url('blog')],
+            ],
+            quantlab_organization_schema(),
+        ],
     ]) ?>
-    <?= quantlab_json_ld([
-        '@context' => 'https://schema.org',
-        '@type' => 'Organization',
-        'name' => 'AM QuantLab',
-        'url' => $canonical,
-        'email' => quantlab_site_email(),
-        'description' => 'Разработка торговых алгоритмов, роботов и финтех-сервисов под Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.',
-    ]) ?>
+    <?= quantlab_json_ld(quantlab_faq_schema()) ?>
     <?php if ($blogList): ?>
     <?= quantlab_json_ld([
         '@context' => 'https://schema.org',
@@ -108,6 +110,7 @@ foreach ($posts as $i => $item) {
           <a href="#case">Кейсы</a>
           <a href="<?= $posts ? '#blog' : '/blog/' ?>">Блог</a>
           <a href="#process">Процесс</a>
+          <a href="#faq">FAQ</a>
           <a href="#contact">Контакт</a>
         </nav>
         <a class="btn btn-sm" href="#contact">Заказать робота</a>
@@ -907,6 +910,23 @@ foreach ($posts as $i => $item) {
               <p>Финам / Comon, Тинькофф Инвестиции, Bybit, OKX, Binance — подключаем API и мониторинг.</p>
             </li>
           </ol>
+        </div>
+      </section>
+
+      <section class="section" id="faq">
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">FAQ</p>
+            <h2>Вопросы про торговых роботов</h2>
+          </div>
+          <div class="faq-list">
+            <?php foreach (quantlab_faq_items() as $item): ?>
+              <details class="glass pad faq-item">
+                <summary><?= quantlab_h($item['q']) ?></summary>
+                <p><?= quantlab_h($item['a']) ?></p>
+              </details>
+            <?php endforeach; ?>
+          </div>
         </div>
       </section>
 

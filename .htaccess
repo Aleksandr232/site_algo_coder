@@ -25,6 +25,7 @@ ErrorDocument 404 /404.php
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
   RewriteRule ^robots\.txt$ robots.php [L]
   RewriteRule ^rss\.xml$ rss.php [L]
+  RewriteRule ^llms\.txt$ llms.php [L]
 
   RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
   RewriteRule ^index\.html$ / [R=301,L]

@@ -24,6 +24,10 @@ if ($uri === '/rss.xml') {
     require $root . DIRECTORY_SEPARATOR . 'rss.php';
     return true;
 }
+if ($uri === '/llms.txt') {
+    require $root . DIRECTORY_SEPARATOR . 'llms.php';
+    return true;
+}
 
 $file = $root . str_replace('/', DIRECTORY_SEPARATOR, $uri);
 if ($uri !== '/' && is_file($file)) {

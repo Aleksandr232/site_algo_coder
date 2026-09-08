@@ -1469,6 +1469,37 @@ button.parsed-stamp.is-loading {
   font: 600 12px IBM Plex Mono, monospace;
 }
 
+.faq-list {
+  display: grid;
+  gap: 12px;
+}
+
+.faq-item summary {
+  cursor: pointer;
+  font: 700 18px Syne, sans-serif;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: "+";
+  float: right;
+  color: var(--accent);
+  font: 600 20px IBM Plex Mono, monospace;
+}
+
+.faq-item[open] summary::after {
+  content: "–";
+}
+
+.faq-item p {
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
 .form {
   position: relative;
   display: grid;

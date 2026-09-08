@@ -584,6 +584,7 @@ function quantlab_sitemap_xml(): string
         ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0'],
         ['loc' => quantlab_abs_url('/blog/'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.9'],
         ['loc' => quantlab_abs_url('rss.xml'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.4'],
+        ['loc' => quantlab_abs_url('llms.txt'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.3'],
     ];
     foreach (quantlab_blog_published() as $item) {
         $post = quantlab_blog_load($item['slug']);
@@ -657,30 +658,32 @@ function quantlab_rss_xml(): string
 function quantlab_robots_txt(): string
 {
     $host = parse_url(quantlab_site_url(), PHP_URL_HOST) ?: '';
-    $txt = "User-agent: *\n"
-        . "Allow: /\n"
+    $deny = "Allow: /\n"
         . "Allow: /blog/\n"
         . "Allow: /uploads/\n"
+        . "Allow: /llms.txt\n"
         . "Disallow: /admin/\n"
         . "Disallow: /lib/\n"
         . "Disallow: /api/\n"
         . "Disallow: /install.php\n"
         . "Disallow: /data/blog/\n"
-        . "Disallow: /router.php\n"
-        . "\n"
-        . "User-agent: Yandex\n"
-        . "Allow: /\n"
-        . "Allow: /blog/\n"
-        . "Disallow: /admin/\n"
-        . "Disallow: /lib/\n"
-        . "Disallow: /api/\n"
+        . "Disallow: /router.php\n";
+    $googleAgents = [
+        'Googlebot',
+        'Googlebot-Image',
+        'Google-Extended',
+        'GoogleOther',
+        'Google-CloudVertexBot',
+        'Storebot-Google',
+    ];
+    $txt = "User-agent: *\n" . $deny . "\n";
+    foreach ($googleAgents as $agent) {
+        $txt .= 'User-agent: ' . $agent . "\n" . $deny . "\n";
+    }
+    $txt .= "User-agent: Yandex\n"
+        . $deny
         . "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&fbclid\n"
         . ($host !== '' ? 'Host: ' . $host . "\n" : '')
-        . "\n"
-        . "User-agent: Googlebot\n"
-        . "Allow: /\n"
-        . "Allow: /blog/\n"
-        . "Disallow: /admin/\n"
         . "\n"
         . 'Sitemap: ' . quantlab_abs_url('sitemap.xml') . "\n";
     return $txt;
@@ -692,6 +695,9 @@ function quantlab_write_seo_files(): void
     file_put_contents($root . DIRECTORY_SEPARATOR . 'sitemap.xml', quantlab_sitemap_xml(), LOCK_EX);
     file_put_contents($root . DIRECTORY_SEPARATOR . 'robots.txt', quantlab_robots_txt(), LOCK_EX);
     file_put_contents($root . DIRECTORY_SEPARATOR . 'rss.xml', quantlab_rss_xml(), LOCK_EX);
+    if (function_exists('quantlab_llms_txt')) {
+        file_put_contents($root . DIRECTORY_SEPARATOR . 'llms.txt', quantlab_llms_txt(), LOCK_EX);
+    }
 }
 
 function quantlab_ping_search_engines(): void
@@ -757,15 +763,12 @@ function quantlab_render_public_article(string $slug): void
             '@type' => 'WebPage',
             '@id' => $canonical,
         ],
-        'author' => [
-            '@type' => 'Organization',
-            'name' => 'AM QuantLab',
-            'url' => quantlab_abs_url('/'),
-        ],
-        'publisher' => [
-            '@type' => 'Organization',
-            'name' => 'AM QuantLab',
-            'url' => quantlab_abs_url('/'),
+        'author' => ['@id' => quantlab_org_id()],
+        'publisher' => ['@id' => quantlab_org_id()],
+        'isAccessibleForFree' => true,
+        'speakable' => [
+            '@type' => 'SpeakableSpecification',
+            'cssSelector' => ['.article-page h1', '.article-page .lead', '.article-page .prose p'],
         ],
     ];
     if ($image !== '') {
@@ -774,7 +777,11 @@ function quantlab_render_public_article(string $slug): void
     if ($keywords !== '') {
         $schema['keywords'] = $keywords;
     }
-    $extra = quantlab_json_ld($schema);
+    unset($schema['@context']);
+    $extra = quantlab_json_ld([
+        '@context' => 'https://schema.org',
+        '@graph' => [quantlab_organization_schema(), $schema],
+    ]);
 
     quantlab_render_start([
         'title' => $title,
