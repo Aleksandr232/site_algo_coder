@@ -517,97 +517,6 @@
     });
   }
 
-  function fmtPx(px) {
-    if (px >= 1000) return px.toFixed(1);
-    if (px >= 100) return px.toFixed(2);
-    return px.toFixed(3);
-  }
-
-  function fmtSz(sz) {
-    return sz >= 10 ? sz.toFixed(0) : sz.toFixed(2);
-  }
-
-  function bookRowsHtml(rows, side) {
-    const max = Math.max.apply(null, rows.map((row) => row.sz)) || 1;
-    return rows
-      .map((row) => {
-        const hit = Math.random() > 0.72 ? " is-hit" : "";
-        return (
-          "<div class=\"book-row " +
-          side +
-          hit +
-          "\"><i style=\"--w:" +
-          Math.round((row.sz / max) * 92 + 8) +
-          "%\"></i><span>" +
-          fmtSz(row.sz) +
-          "</span><b>" +
-          fmtPx(row.px) +
-          "</b></div>"
-        );
-      })
-      .join("");
-  }
-
-  function mountBook() {
-    const asksEl = $("#book-asks");
-    const bidsEl = $("#book-bids");
-    const midEl = $("#book-mid");
-    const spreadEl = $("#book-spread");
-    const symbolEl = $("#book-symbol");
-    if (!asksEl || !bidsEl || !midEl || reduced) return;
-
-    const books = [
-      { name: "BTCUSDT", px: 67241.2, tick: 0.4 },
-      { name: "ETHUSDT", px: 3518.6, tick: 0.08 },
-      { name: "CNYRUB", px: 11.428, tick: 0.002 },
-      { name: "SBER", px: 281.45, tick: 0.05 },
-    ];
-    let idx = 0;
-    let mid = books[0].px;
-
-    const levels = (base, tick, dir) => {
-      const rows = [];
-      let px = base;
-      for (let i = 0; i < 6; i++) {
-        px += dir * tick * (1.1 + Math.random() * 1.8);
-        rows.push({ px: px, sz: 0.18 + Math.random() * 3.4 });
-      }
-      return rows;
-    };
-
-    const paint = (flash) => {
-      const book = books[idx];
-      const asks = levels(mid, book.tick, 1);
-      const bids = levels(mid, book.tick, -1);
-      asksEl.innerHTML = bookRowsHtml(asks.slice().reverse(), "ask");
-      bidsEl.innerHTML = bookRowsHtml(bids, "bid");
-      midEl.textContent = fmtPx(mid);
-      midEl.classList.toggle("up", flash > 0);
-      midEl.classList.toggle("dn", flash < 0);
-      if (flash !== 0) {
-        midEl.classList.remove("is-flash");
-        void midEl.offsetWidth;
-        midEl.classList.add("is-flash");
-      }
-      const spread = Math.abs(asks[0].px - bids[0].px);
-      if (spreadEl) spreadEl.textContent = fmtPx(spread);
-      if (symbolEl) symbolEl.textContent = book.name;
-    };
-
-    paint(0);
-    window.setInterval(() => {
-      if (document.hidden) return;
-      const book = books[idx];
-      const delta = (Math.random() - 0.48) * book.tick * 6;
-      mid += delta;
-      if (Math.random() > 0.9) {
-        idx = (idx + 1) % books.length;
-        mid = books[idx].px;
-      }
-      paint(delta);
-    }, 900);
-  }
-
   function makePrint() {
     const venues = ["FINAM", "TINKOFF", "BYBIT", "OKX", "BINANCE"];
     const pairs = ["BTCUSDT", "ETHUSDT", "CNYRUB", "SBER", "Si"];
@@ -767,7 +676,6 @@
   mountCandles();
   mountReveal();
   mountFx();
-  mountBook();
   mountQuotes();
   mountDashFeed();
   mountLog();

@@ -187,16 +187,6 @@ foreach ($posts as $i => $item) {
             </div>
           </aside>
         </div>
-        <aside class="trade-book" id="trade-book" aria-hidden="true">
-          <p class="trade-book-head">
-            <span class="pulse"></span>
-            <span id="book-symbol">BTCUSDT</span>
-            <span class="trade-book-spread" id="book-spread">0.4</span>
-          </p>
-          <div class="trade-book-asks" id="book-asks"></div>
-          <p class="trade-book-mid" id="book-mid">67241.2</p>
-          <div class="trade-book-bids" id="book-bids"></div>
-        </aside>
         <aside class="robot-log" id="robot-log" aria-hidden="true">
           <p class="robot-log-head"><span class="pulse"></span> robot runtime</p>
           <ol id="robot-log-list"></ol>
