@@ -31,6 +31,7 @@ quantlab_admin_start('Статьи — админка AM QuantLab');
             <?= quantlab_admin_storage_note() ?>
           </div>
           <a class="btn" href="/admin/edit.php">Новая статья</a>
+          <a class="btn btn-ghost" href="/admin/strategies.php">Стратегии</a>
         </div>
 
         <?php if (isset($_GET['deleted'])): ?>

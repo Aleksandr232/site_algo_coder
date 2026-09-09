@@ -11,6 +11,7 @@ $title = 'AM QuantLab — торговые алгоритмы и финтех-с
 $description = 'AM QuantLab пишет торговых роботов для Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Node.js, Go, API, сервисы для финтех-продуктов.';
 $canonical = quantlab_abs_url('/');
 $posts = array_slice(quantlab_blog_published(), 0, 3);
+$cases = quantlab_strategies_visible();
 $formSent = (string) ($_GET['sent'] ?? '') === '1';
 $yandex = quantlab_env('YANDEX_VERIFICATION', 'd94405cb4c18d9e3');
 $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
@@ -530,6 +531,7 @@ foreach ($posts as $i => $item) {
         </div>
       </section>
 
+      <?php if ($cases): ?>
       <section class="section" id="case">
         <div class="container">
           <div class="slider-bar">
@@ -540,314 +542,32 @@ foreach ($posts as $i => $item) {
             <div class="slider-nav">
               <button type="button" class="slider-btn" id="slide-prev" aria-label="Предыдущая стратегия">‹</button>
               <div class="slider-dots" role="tablist" aria-label="Стратегии">
-                <button type="button" class="slider-dot is-active" data-slide="0">Юань · Comon</button>
-                <button type="button" class="slider-dot" data-slide="1" hidden>Юань · Тинькофф</button>
-                <button type="button" class="slider-dot" data-slide="1">BTC · тест</button>
+                <?php foreach ($cases as $i => $case): ?>
+                  <button type="button" class="slider-dot<?= $i === 0 ? ' is-active' : '' ?>" data-slide="<?= (int) $i ?>">
+                    <?= quantlab_h($case['dot'] !== '' ? $case['dot'] : $case['title']) ?>
+                  </button>
+                <?php endforeach; ?>
               </div>
               <button type="button" class="slider-btn" id="slide-next" aria-label="Следующая стратегия">›</button>
             </div>
           </div>
           <div class="case-slider">
             <div class="case-track" id="case-track">
-              <article class="case-slide" id="slide-comon">
-          <div class="section-head case-head">
-            <div>
-              <p class="eyebrow">Кейс · автообновление с Comon</p>
-              <h2 id="case-title">Юань Тренд 2-5-15</h2>
-              <p class="case-meta">
-                Запуск
-                <span id="case-start">08.04.2026</span> · источник
-                <a id="case-link" href="https://www.comon.ru/strategies/131208/" target="_blank" rel="noopener"
-                  >comon.ru/strategies/131208</a
-                >
-              </p>
-            </div>
-            <button class="parsed-stamp" id="parsed-stamp" type="button" title="Обновить с Comon">
-              Обновить с Comon
-            </button>
-          </div>
-
-          <div class="metrics" id="case-metrics"></div>
-
-          <div class="chart-wrap glass">
-            <div class="chart-toolbar">
-              <div>
-                <h3>Кривая доходности</h3>
-                <p id="chart-caption">Накопленный результат публичной стратегии, %</p>
-              </div>
-              <div class="pills" id="comon-pills" role="tablist" aria-label="Период графика">
-                <button type="button" class="pill is-active" data-range="all">Всё время</button>
-                <button type="button" class="pill" data-range="90">90 дней</button>
-                <button type="button" class="pill" data-range="30">30 дней</button>
-              </div>
-            </div>
-            <div class="chart-stage">
-              <canvas id="equity-chart" width="1100" height="420"></canvas>
-              <div class="chart-tip" id="chart-tip" hidden></div>
-            </div>
-          </div>
-
-          <div class="case-grid">
-            <article class="glass pad">
-              <h3>Логика робота</h3>
-              <p>
-                Автоматическая стратегия по фьючерсу на юань. Работает в сторону
-                устойчивого движения, характер умеренно-агрессивный.
-              </p>
-              <div class="rule-row">
-                <div>
-                  <span>Вход</span>
-                  <strong>2%</strong>
-                  <em>от депозита</em>
-                </div>
-                <div>
-                  <span>Стоп</span>
-                  <strong class="neg">−5%</strong>
-                  <em>от депозита</em>
-                </div>
-                <div>
-                  <span>Цель</span>
-                  <strong class="pos">+15%</strong>
-                  <em>от депозита</em>
-                </div>
-              </div>
-              <ul class="fine-list">
-                <li>Если сделка старше 5 дней и прибыль 7–10%, фиксация может быть досрочной.</li>
-                <li>При прибыли выше ~10% позиция обычно держится до цели 15%.</li>
-                <li>С 01.06.2026 усилена логика тренда: меньше ложных входов в боковике.</li>
-              </ul>
-            </article>
-            <article class="glass pad">
-              <h3>Состав и доступ</h3>
-              <div class="bars" id="structure-bars"></div>
-              <dl class="spec">
-                <div>
-                  <dt>Профиль риска</dt>
-                  <dd id="spec-risk">Агрессивный</dd>
-                </div>
-                <div>
-                  <dt>Категория</dt>
-                  <dd id="spec-cat">КСУР, КПУР</dd>
-                </div>
-                <div>
-                  <dt>Тариф</dt>
-                  <dd id="spec-tariff">6% годовых от СЧА</dd>
-                </div>
-                <div>
-                  <dt>Лимит стратегии</dt>
-                  <dd id="spec-limit">до 50 млн ₽</dd>
-                </div>
-                <div>
-                  <dt>ИТА</dt>
-                  <dd id="spec-ita">0.77</dd>
-                </div>
-                <div>
-                  <dt>Позиция сейчас</dt>
-                  <dd id="spec-position">шорт фьючерса, кэш ~100%</dd>
-                </div>
-              </dl>
-            </article>
-          </div>
-              </article>
-              <article class="case-slide" id="slide-tinkoff" hidden>
-          <div class="section-head case-head">
-            <div>
-              <p class="eyebrow">Тестовый кейс · Тинькофф Инвестиции API</p>
-              <h2 id="tinkoff-title">Юань Тренд 2-5-15 · Тинькофф · тест</h2>
-              <p class="case-meta">
-                Тот же тренд 2 / −5 / +15 по юаню, пока на тестовом контуре T-Invest API ·
-                <a href="https://www.tbank.ru/invest/" target="_blank" rel="noopener">tbank.ru/invest</a>
-              </p>
-            </div>
-            <button class="parsed-stamp" id="tinkoff-stamp" type="button" title="Обновить с Тинькофф">
-              Обновить с Тинькофф
-            </button>
-          </div>
-
-          <div class="metrics" id="tinkoff-metrics"></div>
-
-          <div class="chart-wrap glass">
-            <div class="chart-toolbar">
-              <div>
-                <h3>Кривая баланса</h3>
-                <p>Дневная доходность брокерского счёта, %</p>
-              </div>
-              <div class="pills" id="tinkoff-pills" role="tablist" aria-label="Период графика Тинькофф">
-                <button type="button" class="pill is-active" data-range="all">Всё время</button>
-                <button type="button" class="pill" data-range="90">90 дней</button>
-                <button type="button" class="pill" data-range="30">30 дней</button>
-              </div>
-            </div>
-            <div class="chart-stage">
-              <canvas id="tinkoff-chart" width="1100" height="420"></canvas>
-              <div class="chart-tip" id="tinkoff-tip" hidden></div>
-            </div>
-          </div>
-
-          <div class="case-grid">
-            <article class="glass pad">
-              <h3>Логика робота</h3>
-              <p>
-                Автоматическая стратегия по юаню через официальный API Тинькофф Инвестиций.
-                Вход 2% депозита, стоп −5%, цель +15% — как в публичном кейсе Comon.
-              </p>
-              <div class="rule-row">
-                <div>
-                  <span>Вход</span>
-                  <strong>2%</strong>
-                  <em>от депозита</em>
-                </div>
-                <div>
-                  <span>Стоп</span>
-                  <strong class="neg">−5%</strong>
-                  <em>от депозита</em>
-                </div>
-                <div>
-                  <span>Цель</span>
-                  <strong class="pos">+15%</strong>
-                  <em>от депозита</em>
-                </div>
-              </div>
-              <ul class="fine-list">
-                <li>Тестовый контур: цифры рабочие, стратегия ещё на прогоне.</li>
-                <li>Исполнение через T-Invest API, без кликера терминала.</li>
-                <li>В кривую входят операции счёта и ежедневный снимок эквити.</li>
-              </ul>
-            </article>
-            <article class="glass pad">
-              <h3>Счёт и позиция</h3>
-              <div class="bars" id="tinkoff-bars"></div>
-              <dl class="spec">
-                <div>
-                  <dt>Площадка</dt>
-                  <dd>Тинькофф Инвестиции</dd>
-                </div>
-                <div>
-                  <dt>Инструмент</dt>
-                  <dd id="tinkoff-instrument">CNY</dd>
-                </div>
-                <div>
-                  <dt>Позиция</dt>
-                  <dd id="tinkoff-position">—</dd>
-                </div>
-                <div>
-                  <dt>Средняя</dt>
-                  <dd id="tinkoff-avg">—</dd>
-                </div>
-                <div>
-                  <dt>Нереализ. PnL</dt>
-                  <dd id="tinkoff-upl">—</dd>
-                </div>
-                <div>
-                  <dt>Оценка счёта</dt>
-                  <dd id="tinkoff-equity">—</dd>
-                </div>
-              </dl>
-            </article>
-          </div>
-              </article>
-              <article class="case-slide" id="slide-bybit">
-          <div class="section-head case-head">
-            <div>
-              <p class="eyebrow">Тестовый кейс · пока считаем доходность</p>
-              <h2 id="bybit-title">BTC Trend · Bybit · тест</h2>
-              <p class="case-meta">
-                Тестовый контур BTCUSDT Perp. Цифры рабочие, но стратегия ещё на тесте ·
-                <a href="https://www.bybit.com/" target="_blank" rel="noopener">bybit.com</a>
-              </p>
-            </div>
-            <button class="parsed-stamp" id="bybit-stamp" type="button" title="Обновить с Bybit">
-              Обновить с Bybit
-            </button>
-          </div>
-
-          <div class="metrics" id="bybit-metrics"></div>
-
-          <div class="chart-wrap glass">
-            <div class="chart-toolbar">
-              <div>
-                <h3>Кривая баланса</h3>
-                <p>Дневная доходность счёта Unified, %</p>
-              </div>
-              <div class="pills" id="bybit-pills" role="tablist" aria-label="Период графика Bybit">
-                <button type="button" class="pill is-active" data-range="all">Всё время</button>
-                <button type="button" class="pill" data-range="90">90 дней</button>
-                <button type="button" class="pill" data-range="30">30 дней</button>
-              </div>
-            </div>
-            <div class="chart-stage">
-              <canvas id="bybit-chart" width="1100" height="420"></canvas>
-              <div class="chart-tip" id="bybit-tip" hidden></div>
-            </div>
-          </div>
-
-          <div class="case-grid">
-            <article class="glass pad">
-              <h3>Логика робота</h3>
-              <p>
-                Трендовый робот по бессрочному фьючерсу BTCUSDT на Bybit.
-                Входит по направлению движения, режет риск и забирает профит по правилам системы.
-              </p>
-              <div class="rule-row">
-                <div>
-                  <span>Площадка</span>
-                  <strong>Bybit</strong>
-                  <em>Unified API</em>
-                </div>
-                <div>
-                  <span>Инструмент</span>
-                  <strong>BTC</strong>
-                  <em>USDT Perp</em>
-                </div>
-                <div>
-                  <span>Счёт</span>
-                  <strong id="bybit-equity">—</strong>
-                  <em>текущий баланс</em>
-                </div>
-              </div>
-              <ul class="fine-list">
-                <li>Доходность считается по изменению баланса за каждый день, не по витрине.</li>
-                <li>В кривую входят закрытый результат и актуальная оценка счёта.</li>
-                <li>Сервер каждый день пишет снимок эквити и подтягивает историю сделок BTC.</li>
-              </ul>
-            </article>
-            <article class="glass pad">
-              <h3>Счёт и позиция</h3>
-              <div class="bars" id="bybit-bars"></div>
-              <dl class="spec">
-                <div>
-                  <dt>Площадка</dt>
-                  <dd>Bybit Unified</dd>
-                </div>
-                <div>
-                  <dt>Инструмент</dt>
-                  <dd>BTCUSDT</dd>
-                </div>
-                <div>
-                  <dt>Позиция</dt>
-                  <dd id="bybit-position">—</dd>
-                </div>
-                <div>
-                  <dt>Средняя</dt>
-                  <dd id="bybit-avg">—</dd>
-                </div>
-                <div>
-                  <dt>Нереализ. PnL</dt>
-                  <dd id="bybit-upl">—</dd>
-                </div>
-                <div>
-                  <dt>Доступно</dt>
-                  <dd id="bybit-free">—</dd>
-                </div>
-              </dl>
-            </article>
-          </div>
-              </article>
+              <?php
+                $heroDone = false;
+                foreach ($cases as $case) {
+                    $isHero = !$heroDone && $case['venue'] === 'comon';
+                    if ($isHero) {
+                        $heroDone = true;
+                    }
+                    quantlab_render_case_slide($case, $isHero);
+                }
+              ?>
             </div>
           </div>
         </div>
       </section>
-
+      <?php endif; ?>
       <?php if ($posts): ?>
       <section class="section home-blog" id="blog">
         <div class="container">

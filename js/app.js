@@ -1,13 +1,14 @@
 (function () {
-  const STRATEGY_ID = (window.COMON_SOURCE && window.COMON_SOURCE.id) || 131208;
   const REFRESH_MS = 20 * 1000;
-  let loadingLive = false;
+  const stores = {};
+  const charts = [];
   let loadingBybit = false;
   let loadingTinkoff = false;
+  const loadingComon = {};
 
-  const state = {
-    strategy: window.COMON_STRATEGY,
-    equity: window.COMON_EQUITY || [],
+  const bybit = {
+    strategy: null,
+    equity: [],
     source: "fallback",
     fetchedAt: null,
   };
@@ -19,15 +20,16 @@
     fetchedAt: null,
   };
 
-  const bybit = {
-    strategy: null,
-    equity: [],
-    source: "fallback",
-    fetchedAt: null,
-  };
+  const $ = (sel, root = document) => (root || document).querySelector(sel);
+  const $$ = (sel, root = document) => [...(root || document).querySelectorAll(sel)];
 
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+  function storeFor(slide) {
+    const slug = slide.dataset.slug;
+    if (!stores[slug]) {
+      stores[slug] = { strategy: null, equity: [], source: "fallback", fetchedAt: null };
+    }
+    return stores[slug];
+  }
 
   const fmtPct = (value, digits = 1) => {
     const sign = value > 0 ? "+" : "";
@@ -99,79 +101,161 @@
     return parts.join(", ") || "—";
   }
 
-  function setStamp(mode, text) {
-    const stamp = $("#parsed-stamp");
-    if (!stamp) return;
-    stamp.classList.remove("is-live", "is-cache", "is-loading");
-    stamp.classList.add("is-" + mode);
-    stamp.textContent = text;
+  function setStamp(el, mode, text) {
+    if (!el) return;
+    el.classList.remove("is-live", "is-cache", "is-loading");
+    el.classList.add("is-" + mode);
+    el.textContent = text;
   }
 
-  function fillCase() {
-    const strategy = state.strategy;
+  function fillHero(strategy, equity) {
     if (!strategy) return;
-
     if ($("#hero-pnl")) $("#hero-pnl").textContent = fmtPct(strategy.profitLifetime);
     if ($("#hero-m30")) $("#hero-m30").textContent = fmtPct(strategy.profit30Days);
     if ($("#hero-m90")) $("#hero-m90").textContent = fmtPct(strategy.profit90Days);
-    if ($("#hero-minsum")) $("#hero-minsum").textContent = money(strategy.minSum);
+    if ($("#hero-minsum") && strategy.minSum != null) $("#hero-minsum").textContent = money(strategy.minSum);
     if ($("#hero-title")) $("#hero-title").textContent = strategy.title;
-    if ($("#case-title")) $("#case-title").textContent = strategy.title;
-    if ($("#case-start")) $("#case-start").textContent = fmtDate(strategy.createdAt);
-    if ($("#case-link")) $("#case-link").href = strategy.url;
-    if ($("#spec-risk")) $("#spec-risk").textContent = strategy.riskLevel;
-    if ($("#spec-cat")) $("#spec-cat").textContent = strategy.riskCategory;
-    if ($("#spec-tariff")) $("#spec-tariff").textContent = strategy.tariffDesc;
-    if ($("#spec-ita")) $("#spec-ita").textContent = Number(strategy.tradeActivityIndex).toFixed(2);
-    if ($("#spec-limit")) {
-      $("#spec-limit").textContent = "до " + Number(strategy.moneyLimit).toLocaleString("ru-RU") + " ₽";
+    const hero = $("#hero-spark");
+    if (hero && equity && equity.length) {
+      drawLine(hero, equity, { pad: { t: 12, r: 8, b: 10, l: 8 }, lineWidth: 2 });
     }
-    if ($("#spec-position")) $("#spec-position").textContent = positionText(strategy);
+  }
 
-    const parsedAt = window.COMON_SOURCE && window.COMON_SOURCE.parsedAt;
-    const when = state.fetchedAt ? fmtTime(state.fetchedAt) : fmtDate(parsedAt);
-    if (state.source === "live") setStamp("live", "Live с Comon · " + when);
-    else if (state.source === "cache") setStamp("cache", "Кэш Comon · " + when);
-    else setStamp("cache", "Офлайн-данные · " + when);
+  function fillComonSlide(slide, data) {
+    const strategy = data.strategy;
+    if (!strategy) return;
+    const q = (sel) => slide.querySelector(sel);
+    const title = q(".js-title");
+    if (title) title.textContent = strategy.title;
+    const start = q(".js-start");
+    if (start) start.textContent = fmtDate(strategy.createdAt);
+    const link = q(".js-link");
+    if (link && strategy.url) {
+      link.href = strategy.url;
+    }
+    const risk = q(".js-risk");
+    if (risk) risk.textContent = strategy.riskLevel || "—";
+    const cat = q(".js-cat");
+    if (cat) cat.textContent = strategy.riskCategory || "—";
+    const tariff = q(".js-tariff");
+    if (tariff) tariff.textContent = strategy.tariffDesc || "—";
+    const ita = q(".js-ita");
+    if (ita) ita.textContent = Number(strategy.tradeActivityIndex || 0).toFixed(2);
+    const limit = q(".js-limit");
+    if (limit && strategy.moneyLimit) {
+      limit.textContent = "до " + Number(strategy.moneyLimit).toLocaleString("ru-RU") + " ₽";
+    }
+    const pos = q(".js-position");
+    if (pos) pos.textContent = positionText(strategy);
+
+    const when = data.fetchedAt ? fmtTime(data.fetchedAt) : "";
+    if (data.source === "live") setStamp(q(".js-stamp"), "live", "Live с Comon · " + when);
+    else if (data.source === "cache") setStamp(q(".js-stamp"), "cache", "Кэш Comon · " + when);
+    else setStamp(q(".js-stamp"), "cache", "Офлайн-данные");
 
     const metrics = [
       ["За всё время", fmtPct(strategy.profitLifetime), "pos"],
       ["30 дней", fmtPct(strategy.profit30Days), strategy.profit30Days >= 0 ? "pos" : "neg"],
       ["7 дней", fmtPct(strategy.profit7Days), strategy.profit7Days >= 0 ? "pos" : "neg"],
       ["90 дней", fmtPct(strategy.profit90Days), strategy.profit90Days >= 0 ? "pos" : "neg"],
-      ["Мин. сумма", money(strategy.minSum), ""],
+      ["Мин. сумма", money(strategy.minSum || 0), ""],
       ["Запуск", fmtDate(strategy.createdAt), ""],
     ];
-
-    if ($("#case-metrics")) {
-      $("#case-metrics").innerHTML = metrics
+    const box = q(".js-metrics");
+    if (box) {
+      box.innerHTML = metrics
         .map(
           ([label, value, tone]) =>
             `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
         )
         .join("");
     }
-
-    if ($("#structure-bars")) {
-      $("#structure-bars").innerHTML = (strategy.structure || [])
+    const bars = q(".js-bars");
+    if (bars) {
+      bars.innerHTML = (strategy.structure || [])
         .map((item) => {
           const width = Math.min(100, Math.abs(item.value));
           const color = item.value >= 0 ? "var(--accent)" : "var(--neg)";
-          return `
-          <div>
+          return `<div>
             <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
             <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:${color}"></div></div>
           </div>`;
         })
         .join("");
     }
+    if (slide.dataset.hero === "1") fillHero(strategy, data.equity);
   }
 
-  function bybitPositionText(strategy) {
+  function bybitPositionText(strategy, instrument) {
     const pos = strategy.position || {};
     if (!pos.size) return "позиции нет";
     const side = pos.side === "Sell" ? "шорт" : "лонг";
-    return side + " " + pos.size + " BTC";
+    const unit = instrument && instrument.indexOf("BTC") === 0 ? "BTC" : instrument || "";
+    return side + " " + pos.size + (unit ? " " + unit : "");
+  }
+
+  function fillBybitSlide(slide) {
+    const strategy = bybit.strategy;
+    if (!strategy) return;
+    const q = (sel) => slide.querySelector(sel);
+    const instrument = slide.dataset.instrument || "BTCUSDT";
+    const equity = q(".js-equity");
+    if (equity) equity.textContent = moneyUsd(strategy.equity);
+    const pos = q(".js-position");
+    if (pos) pos.textContent = bybitPositionText(strategy, instrument);
+    const avg = q(".js-avg");
+    if (avg) {
+      avg.textContent = strategy.position && strategy.position.avgPrice
+        ? strategy.position.avgPrice.toLocaleString("en-US") + " USDT"
+        : "—";
+    }
+    const upl = q(".js-upl");
+    if (upl) {
+      upl.textContent = (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(2) + " USDT";
+      upl.className = "js-upl " + (strategy.unrealized >= 0 ? "pos" : "neg");
+    }
+    const free = q(".js-free");
+    if (free) free.textContent = moneyUsd(strategy.available);
+
+    const when = bybit.fetchedAt ? fmtTime(bybit.fetchedAt) : "";
+    if (bybit.source === "live") setStamp(q(".js-stamp"), "live", "Live с Bybit · " + when);
+    else setStamp(q(".js-stamp"), "cache", "Кэш Bybit · " + when);
+
+    const metrics = [
+      ["За всё время", fmtPct(strategy.profitLifetime), strategy.profitLifetime >= 0 ? "pos" : "neg"],
+      ["30 дней", fmtPct(strategy.profit30Days), strategy.profit30Days >= 0 ? "pos" : "neg"],
+      ["7 дней", fmtPct(strategy.profit7Days), strategy.profit7Days >= 0 ? "pos" : "neg"],
+      ["Баланс", moneyUsd(strategy.equity), ""],
+      ["Нереализ. PnL", (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(2), strategy.unrealized >= 0 ? "pos" : "neg"],
+      ["Позиция", bybitPositionText(strategy, instrument), ""],
+    ];
+    const box = q(".js-metrics");
+    if (box) {
+      box.innerHTML = metrics
+        .map(
+          ([label, value, tone]) =>
+            `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
+        )
+        .join("");
+    }
+    const notional = (strategy.position && strategy.position.size * strategy.position.avgPrice) || 0;
+    const cash = Math.max(0, strategy.equity - notional);
+    const rows = [
+      { name: "USDT на счёте", value: strategy.equity ? (cash / strategy.equity) * 100 : 0 },
+      { name: "Позиция " + instrument, value: strategy.equity ? (notional / strategy.equity) * 100 : 0 },
+    ];
+    const bars = q(".js-bars");
+    if (bars) {
+      bars.innerHTML = rows
+        .map((item) => {
+          const width = Math.min(100, Math.abs(item.value));
+          return `<div>
+            <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:var(--accent)"></div></div>
+          </div>`;
+        })
+        .join("");
+    }
   }
 
   function tinkoffPositionText(strategy) {
@@ -186,124 +270,10 @@
     const strategy = tinkoff.strategy;
     if (!strategy || !$("#tinkoff-title")) return;
     $("#tinkoff-title").textContent = strategy.title;
-    if ($("#tinkoff-equity")) $("#tinkoff-equity").textContent = money(strategy.equity);
-    if ($("#tinkoff-position")) $("#tinkoff-position").textContent = tinkoffPositionText(strategy);
-    if ($("#tinkoff-instrument")) $("#tinkoff-instrument").textContent = strategy.instrument || "CNY";
-    $("#tinkoff-avg").textContent = strategy.position && strategy.position.avgPrice
-      ? Number(strategy.position.avgPrice).toLocaleString("ru-RU") + " ₽"
-      : "—";
-    $("#tinkoff-upl").textContent = (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toLocaleString("ru-RU") + " ₽";
-    $("#tinkoff-upl").className = strategy.unrealized >= 0 ? "pos" : "neg";
-
-    const stamp = $("#tinkoff-stamp");
-    const when = tinkoff.fetchedAt ? fmtTime(tinkoff.fetchedAt) : "";
-    if (stamp) {
-      stamp.classList.remove("is-live", "is-cache", "is-loading");
-      if (tinkoff.source === "live") {
-        stamp.classList.add("is-live");
-        stamp.textContent = "Live с Тинькофф · " + when;
-      } else {
-        stamp.classList.add("is-cache");
-        stamp.textContent = "Кэш Тинькофф · " + when;
-      }
-    }
-
-    const metrics = [
-      ["За всё время", fmtPct(strategy.profitLifetime), strategy.profitLifetime >= 0 ? "pos" : "neg"],
-      ["30 дней", fmtPct(strategy.profit30Days), strategy.profit30Days >= 0 ? "pos" : "neg"],
-      ["7 дней", fmtPct(strategy.profit7Days), strategy.profit7Days >= 0 ? "pos" : "neg"],
-      ["Счёт", money(strategy.equity), ""],
-      ["Нереализ. PnL", (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(0) + " ₽", strategy.unrealized >= 0 ? "pos" : "neg"],
-      ["Позиция", tinkoffPositionText(strategy), ""],
-    ];
-    $("#tinkoff-metrics").innerHTML = metrics
-      .map(
-        ([label, value, tone]) =>
-          `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
-      )
-      .join("");
-
-    const notional = Math.abs((strategy.position && strategy.position.size * strategy.position.avgPrice) || 0);
-    const cash = Math.max(0, strategy.equity - notional);
-    const rows = [
-      { name: "Деньги на счёте", value: strategy.equity ? (cash / strategy.equity) * 100 : 0 },
-      { name: "Позиция " + (strategy.instrument || "CNY"), value: strategy.equity ? (notional / strategy.equity) * 100 : 0 },
-    ];
-    $("#tinkoff-bars").innerHTML = rows
-      .map((item) => {
-        const width = Math.min(100, Math.abs(item.value));
-        return `
-          <div>
-            <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
-            <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:var(--accent)"></div></div>
-          </div>`;
-      })
-      .join("");
-  }
-
-  function fillBybit() {
-    const strategy = bybit.strategy;
-    if (!strategy || !$("#bybit-title")) return;
-    $("#bybit-title").textContent = strategy.title;
-    $("#bybit-equity").textContent = moneyUsd(strategy.equity);
-    $("#bybit-position").textContent = bybitPositionText(strategy);
-    $("#bybit-avg").textContent = strategy.position && strategy.position.avgPrice
-      ? strategy.position.avgPrice.toLocaleString("en-US") + " USDT"
-      : "—";
-    $("#bybit-upl").textContent = (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(2) + " USDT";
-    $("#bybit-upl").className = strategy.unrealized >= 0 ? "pos" : "neg";
-    $("#bybit-free").textContent = moneyUsd(strategy.available);
-
-    const stamp = $("#bybit-stamp");
-    const when = bybit.fetchedAt ? fmtTime(bybit.fetchedAt) : "";
-    stamp.classList.remove("is-live", "is-cache", "is-loading");
-    if (bybit.source === "live") {
-      stamp.classList.add("is-live");
-      stamp.textContent = "Live с Bybit · " + when;
-    } else {
-      stamp.classList.add("is-cache");
-      stamp.textContent = "Кэш Bybit · " + when;
-    }
-
-    const metrics = [
-      ["За всё время", fmtPct(strategy.profitLifetime), strategy.profitLifetime >= 0 ? "pos" : "neg"],
-      ["30 дней", fmtPct(strategy.profit30Days), strategy.profit30Days >= 0 ? "pos" : "neg"],
-      ["7 дней", fmtPct(strategy.profit7Days), strategy.profit7Days >= 0 ? "pos" : "neg"],
-      ["Баланс", moneyUsd(strategy.equity), ""],
-      ["Нереализ. PnL", (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(2), strategy.unrealized >= 0 ? "pos" : "neg"],
-      ["Позиция", bybitPositionText(strategy), ""],
-    ];
-    $("#bybit-metrics").innerHTML = metrics
-      .map(
-        ([label, value, tone]) =>
-          `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
-      )
-      .join("");
-
-    const notional = (strategy.position && strategy.position.size * strategy.position.avgPrice) || 0;
-    const cash = Math.max(0, strategy.equity - notional);
-    const rows = [
-      { name: "USDT на счёте", value: strategy.equity ? (cash / strategy.equity) * 100 : 0 },
-      { name: "Позиция BTC", value: strategy.equity ? (notional / strategy.equity) * 100 : 0 },
-    ];
-    $("#bybit-bars").innerHTML = rows
-      .map((item) => {
-        const width = Math.min(100, Math.abs(item.value));
-        return `
-          <div>
-            <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
-            <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:var(--accent)"></div></div>
-          </div>`;
-      })
-      .join("");
-  }
-
-  function sliceRange(range) {
-    if (range === "all") return state.equity;
-    return state.equity.slice(-Number(range));
   }
 
   function drawLine(canvas, points, options) {
+    if (!canvas) return { pad: options.pad || { t: 18, r: 16, b: 28, l: 44 } };
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
@@ -315,12 +285,10 @@
     canvas.width = Math.floor(cssW * dpr);
     canvas.height = Math.floor(cssH * dpr);
     ctx.scale(dpr, dpr);
-
     if (!points.length) {
       ctx.clearRect(0, 0, cssW, cssH);
       return { pad: options.pad || { t: 18, r: 16, b: 28, l: 44 } };
     }
-
     const pad = options.pad || { t: 18, r: 16, b: 28, l: 44 };
     const w = cssW - pad.l - pad.r;
     const h = cssH - pad.t - pad.b;
@@ -330,9 +298,7 @@
     const span = max - min || 1;
     const xAt = (i) => pad.l + (i / Math.max(points.length - 1, 1)) * w;
     const yAt = (v) => pad.t + ((max - v) / span) * h;
-
     ctx.clearRect(0, 0, cssW, cssH);
-
     if (options.grid) {
       ctx.strokeStyle = "rgba(232,237,245,0.08)";
       ctx.lineWidth = 1;
@@ -348,7 +314,6 @@
         ctx.fillText(fmtPct(v, 0), 8, y + 4);
       }
     }
-
     const path = new Path2D();
     points.forEach((p, i) => {
       const x = xAt(i);
@@ -356,12 +321,10 @@
       if (i === 0) path.moveTo(x, y);
       else path.lineTo(x, y);
     });
-
     const fill = new Path2D(path);
     fill.lineTo(xAt(points.length - 1), pad.t + h);
     fill.lineTo(xAt(0), pad.t + h);
     fill.closePath();
-
     const last = points[points.length - 1].value;
     const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
     const top = last >= 0 ? "rgba(61,255,164,0.28)" : "rgba(255,107,134,0.22)";
@@ -369,13 +332,11 @@
     grad.addColorStop(1, "rgba(61,255,164,0)");
     ctx.fillStyle = grad;
     ctx.fill(fill);
-
     ctx.strokeStyle = last >= 0 ? "#3dffa4" : "#ff6b86";
     ctx.lineWidth = options.lineWidth || 2.2;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.stroke(path);
-
     const lx = xAt(points.length - 1);
     const ly = yAt(last);
     const pulse = (Math.sin((performance.now() || 0) / 260) + 1) / 2;
@@ -388,7 +349,6 @@
     ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
     ctx.fillStyle = last >= 0 ? "#3dffa4" : "#ff6b86";
     ctx.fill();
-
     if (options.zero) {
       ctx.strokeStyle = "rgba(232,237,245,0.2)";
       ctx.setLineDash([4, 4]);
@@ -398,72 +358,19 @@
       ctx.stroke();
       ctx.setLineDash([]);
     }
-
     return { xAt, yAt, pad, cssW, cssH };
   }
 
-  function mountCharts() {
-    const hero = $("#hero-spark");
-    const chart = $("#equity-chart");
-    const tip = $("#chart-tip");
-    let range = "all";
-    let geometry = null;
-    let view = state.equity;
-
-    const paint = () => {
-      drawLine(hero, state.equity, { pad: { t: 12, r: 8, b: 10, l: 8 }, lineWidth: 2 });
-      view = sliceRange(range);
-      geometry = drawLine(chart, view, {
-        pad: { t: 16, r: 14, b: 26, l: 48 },
-        grid: true,
-        zero: true,
-        lineWidth: 2.4,
-      });
-    };
-
-    paint();
-    window.addEventListener("resize", paint);
-
-    $$("#comon-pills .pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        $$("#comon-pills .pill").forEach((b) => b.classList.remove("is-active"));
-        btn.classList.add("is-active");
-        range = btn.dataset.range;
-        paint();
-      });
-    });
-
-    chart.addEventListener("mousemove", (event) => {
-      if (!geometry || !view.length) return;
-      const rect = chart.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const ratio = (x - geometry.pad.l) / (rect.width - geometry.pad.l - geometry.pad.r);
-      const index = Math.min(view.length - 1, Math.max(0, Math.round(ratio * (view.length - 1))));
-      const point = view[index];
-      tip.hidden = false;
-      tip.style.left = event.clientX - rect.left + "px";
-      tip.style.top = event.clientY - rect.top + "px";
-      tip.innerHTML = `<strong>${fmtDate(point.date)}</strong><br>${fmtPct(point.value, 2)}`;
-    });
-
-    chart.addEventListener("mouseleave", () => {
-      tip.hidden = true;
-    });
-
-    return { refresh: paint };
-  }
-
-  function mountBybitChart() {
-    const chart = $("#bybit-chart");
-    const tip = $("#bybit-tip");
+  function mountSlideChart(slide, getPoints, tipMoney) {
+    const chart = slide.querySelector(".js-chart");
+    const tip = slide.querySelector(".js-tip");
     if (!chart) return { refresh: () => {} };
     let range = "all";
     let geometry = null;
-    let view = bybit.equity;
-
+    let view = [];
     const paint = () => {
-      const points = range === "all" ? bybit.equity : bybit.equity.slice(-Number(range));
-      view = points;
+      const all = getPoints() || [];
+      view = range === "all" ? all : all.slice(-Number(range));
       geometry = drawLine(chart, view, {
         pad: { t: 16, r: 14, b: 26, l: 48 },
         grid: true,
@@ -471,81 +378,35 @@
         lineWidth: 2.4,
       });
     };
-
     paint();
     window.addEventListener("resize", paint);
-    $$("#bybit-pills .pill").forEach((btn) => {
+    $$( ".pill", slide.querySelector(".js-pills") || slide).forEach((btn) => {
       btn.addEventListener("click", () => {
-        $$("#bybit-pills .pill").forEach((b) => b.classList.remove("is-active"));
+        $$(".pill", slide.querySelector(".js-pills") || slide).forEach((b) => b.classList.remove("is-active"));
         btn.classList.add("is-active");
         range = btn.dataset.range;
         paint();
       });
     });
-    chart.addEventListener("mousemove", (event) => {
-      if (!geometry || !view.length) return;
-      const rect = chart.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const ratio = (x - geometry.pad.l) / (rect.width - geometry.pad.l - geometry.pad.r);
-      const index = Math.min(view.length - 1, Math.max(0, Math.round(ratio * (view.length - 1))));
-      const point = view[index];
-      tip.hidden = false;
-      tip.style.left = event.clientX - rect.left + "px";
-      tip.style.top = event.clientY - rect.top + "px";
-      const extra = point.balance != null ? "<br>" + moneyUsd(point.balance) : "";
-      tip.innerHTML = `<strong>${fmtDate(point.date)}</strong><br>${fmtPct(point.value, 2)}${extra}`;
-    });
-    chart.addEventListener("mouseleave", () => {
-      tip.hidden = true;
-    });
-    return { refresh: paint };
-  }
-
-  function mountTinkoffChart() {
-    const chart = $("#tinkoff-chart");
-    const tip = $("#tinkoff-tip");
-    if (!chart) return { refresh: () => {} };
-    let range = "all";
-    let geometry = null;
-    let view = tinkoff.equity;
-
-    const paint = () => {
-      const points = range === "all" ? tinkoff.equity : tinkoff.equity.slice(-Number(range));
-      view = points;
-      geometry = drawLine(chart, view, {
-        pad: { t: 16, r: 14, b: 26, l: 48 },
-        grid: true,
-        zero: true,
-        lineWidth: 2.4,
+    if (tip) {
+      chart.addEventListener("mousemove", (event) => {
+        if (!geometry || !view.length) return;
+        const rect = chart.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const ratio = (x - geometry.pad.l) / (rect.width - geometry.pad.l - geometry.pad.r);
+        const index = Math.min(view.length - 1, Math.max(0, Math.round(ratio * (view.length - 1))));
+        const point = view[index];
+        tip.hidden = false;
+        tip.style.left = event.clientX - rect.left + "px";
+        tip.style.top = event.clientY - rect.top + "px";
+        let extra = "";
+        if (point.balance != null) extra = "<br>" + (tipMoney === "usd" ? moneyUsd(point.balance) : money(point.balance));
+        tip.innerHTML = `<strong>${fmtDate(point.date)}</strong><br>${fmtPct(point.value, 2)}${extra}`;
       });
-    };
-
-    paint();
-    window.addEventListener("resize", paint);
-    $$("#tinkoff-pills .pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        $$("#tinkoff-pills .pill").forEach((b) => b.classList.remove("is-active"));
-        btn.classList.add("is-active");
-        range = btn.dataset.range;
-        paint();
+      chart.addEventListener("mouseleave", () => {
+        tip.hidden = true;
       });
-    });
-    chart.addEventListener("mousemove", (event) => {
-      if (!geometry || !view.length) return;
-      const rect = chart.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const ratio = (x - geometry.pad.l) / (rect.width - geometry.pad.l - geometry.pad.r);
-      const index = Math.min(view.length - 1, Math.max(0, Math.round(ratio * (view.length - 1))));
-      const point = view[index];
-      tip.hidden = false;
-      tip.style.left = event.clientX - rect.left + "px";
-      tip.style.top = event.clientY - rect.top + "px";
-      const extra = point.balance != null ? "<br>" + money(point.balance) : "";
-      tip.innerHTML = `<strong>${fmtDate(point.date)}</strong><br>${fmtPct(point.value, 2)}${extra}`;
-    });
-    chart.addEventListener("mouseleave", () => {
-      tip.hidden = true;
-    });
+    }
     return { refresh: paint };
   }
 
@@ -561,84 +422,59 @@
     return { json, source: res.headers.get("X-Data-Source") || "file" };
   }
 
-  async function loadLive(silent) {
-    if (loadingLive) return;
-    loadingLive = true;
-    if (!silent || !state.equity.length) {
-      setStamp("loading", "Обновить с Comon");
-    }
+  async function loadComon(slide, silent) {
+    const id = slide.dataset.comonId;
+    const slug = slide.dataset.slug;
+    if (!id || loadingComon[slug]) return;
+    loadingComon[slug] = true;
+    const data = storeFor(slide);
+    const stamp = slide.querySelector(".js-stamp");
+    if (!silent || !data.equity.length) setStamp(stamp, "loading", "Обновить с Comon");
     try {
-    const pairs = [
-      {
-        strategy: "/api/comon.php?id=" + STRATEGY_ID + "&t=" + Date.now(),
-        profit: "/api/comon.php?id=" + STRATEGY_ID + "&kind=profit&t=" + Date.now(),
-        prefer: "live",
-      },
-    ];
-
-    for (const pair of pairs) {
-      try {
-        const [strategyRes, profitRes] = await Promise.all([
-          fetchJson(pair.strategy),
-          fetchJson(pair.profit),
-        ]);
-        const equity = normalizeEquity(profitRes.json);
-        if (!equity.length) throw new Error("empty equity");
-        const sourceHeader = strategyRes.source;
-        state.strategy = normalizeStrategy(strategyRes.json, state.strategy);
-        state.equity = equity;
-        state.source = sourceHeader === "comon-live" ? "live" : sourceHeader === "cache" ? "cache" : pair.prefer;
-        state.fetchedAt = new Date();
-        fillCase();
-        if (window.__charts) window.__charts.refresh();
-        return state.source;
-      } catch (error) {
-        console.warn("Comon load failed", pair.strategy, error);
-      }
-    }
-
-    state.source = "fallback";
-    fillCase();
-    if (window.__charts) window.__charts.refresh();
-    return "fallback";
+      const [strategyRes, profitRes] = await Promise.all([
+        fetchJson("/api/comon.php?id=" + id + "&t=" + Date.now()),
+        fetchJson("/api/comon.php?id=" + id + "&kind=profit&t=" + Date.now()),
+      ]);
+      const equity = normalizeEquity(profitRes.json);
+      if (!equity.length) throw new Error("empty equity");
+      data.strategy = normalizeStrategy(strategyRes.json, data.strategy);
+      data.equity = equity;
+      data.source = strategyRes.source === "comon-live" ? "live" : strategyRes.source === "cache" ? "cache" : "live";
+      data.fetchedAt = new Date();
+      fillComonSlide(slide, data);
+      charts.forEach((c) => c.refresh && c.refresh());
+    } catch (error) {
+      console.warn("Comon load failed", id, error);
+      if (!silent) setStamp(stamp, "cache", "Comon недоступен");
+      fillComonSlide(slide, data);
     } finally {
-      loadingLive = false;
+      loadingComon[slug] = false;
     }
   }
 
   async function loadBybit(silent) {
-    if (loadingBybit) return;
+    const slides = $$('.case-slide[data-venue="bybit"]');
+    if (!slides.length || loadingBybit) return;
     loadingBybit = true;
-    const stamp = $("#bybit-stamp");
-    if (stamp && (!silent || !bybit.equity.length)) {
-      stamp.classList.remove("is-live", "is-cache");
-      stamp.classList.add("is-loading");
-    }
+    slides.forEach((slide) => {
+      const stamp = slide.querySelector(".js-stamp");
+      if (stamp && (!silent || !bybit.equity.length)) setStamp(stamp, "loading", "Обновить с Bybit");
+    });
     try {
-    const urls = ["/api/bybit.php"];
-    for (const url of urls) {
-      try {
-        const res = await fetchJson(url);
-        const payload = res.json;
-        if (!payload || !payload.strategy || !payload.series) throw new Error("bad bybit payload");
-        bybit.strategy = payload.strategy;
-        bybit.equity = payload.series;
-        bybit.source = res.source === "bybit-live" || url.indexOf("/api/") === 0 ? "live" : "cache";
-        if (res.source === "cache") bybit.source = "cache";
-        bybit.fetchedAt = new Date();
-        fillBybit();
-        if (window.__bybitChart) window.__bybitChart.refresh();
-        return bybit.source;
-      } catch (error) {
-        console.warn("Bybit load failed", url, error);
+      const res = await fetchJson("/api/bybit.php");
+      const payload = res.json;
+      if (!payload || !payload.strategy || !payload.series) throw new Error("bad bybit payload");
+      bybit.strategy = payload.strategy;
+      bybit.equity = payload.series;
+      bybit.source = res.source === "cache" ? "cache" : "live";
+      bybit.fetchedAt = new Date();
+      slides.forEach((slide) => fillBybitSlide(slide));
+      charts.forEach((c) => c.refresh && c.refresh());
+    } catch (error) {
+      console.warn("Bybit load failed", error);
+      if (!silent) {
+        slides.forEach((slide) => setStamp(slide.querySelector(".js-stamp"), "cache", "Bybit недоступен"));
       }
-    }
-    if (stamp && !silent) {
-      stamp.classList.remove("is-loading");
-      stamp.classList.add("is-cache");
-      stamp.textContent = "Bybit недоступен";
-    }
-    return "fallback";
     } finally {
       loadingBybit = false;
     }
@@ -652,38 +488,17 @@
   async function loadTinkoff(silent) {
     if (!tinkoffVisible() || loadingTinkoff) return;
     loadingTinkoff = true;
-    const stamp = $("#tinkoff-stamp");
-    if (stamp && (!silent || !tinkoff.equity.length)) {
-      stamp.classList.remove("is-live", "is-cache");
-      stamp.classList.add("is-loading");
-    }
     try {
-    const urls = ["/api/tinkoff.php"];
-    let lastError = "";
-    for (const url of urls) {
-      try {
-        const res = await fetchJson(url);
-        const payload = res.json;
-        if (!payload || !payload.strategy || !payload.series) throw new Error("bad tinkoff payload");
-        tinkoff.strategy = payload.strategy;
-        tinkoff.equity = payload.series;
-        tinkoff.source = res.source === "tinkoff-live" || url.indexOf("/api/") === 0 ? "live" : "cache";
-        if (res.source === "cache") tinkoff.source = "cache";
-        tinkoff.fetchedAt = new Date();
-        fillTinkoff();
-        if (window.__tinkoffChart) window.__tinkoffChart.refresh();
-        return tinkoff.source;
-      } catch (error) {
-        lastError = (error && error.message) || "";
-        console.warn("Tinkoff load failed", lastError);
-      }
-    }
-    if (stamp && !silent) {
-      stamp.classList.remove("is-loading");
-      stamp.classList.add("is-cache");
-      stamp.textContent = lastError ? "Тинькофф: " + lastError : "Тинькофф недоступен";
-    }
-    return "fallback";
+      const res = await fetchJson("/api/tinkoff.php");
+      const payload = res.json;
+      if (!payload || !payload.strategy || !payload.series) throw new Error("bad tinkoff payload");
+      tinkoff.strategy = payload.strategy;
+      tinkoff.equity = payload.series;
+      tinkoff.source = res.source === "cache" ? "cache" : "live";
+      tinkoff.fetchedAt = new Date();
+      fillTinkoff();
+    } catch (error) {
+      console.warn("Tinkoff load failed", error);
     } finally {
       loadingTinkoff = false;
     }
@@ -692,6 +507,7 @@
   function mountNav() {
     const burger = $("#burger");
     const nav = $("#nav");
+    if (!burger || !nav) return;
     burger.addEventListener("click", () => nav.classList.toggle("is-open"));
     $$("#nav a").forEach((link) =>
       link.addEventListener("click", () => nav.classList.remove("is-open"))
@@ -746,25 +562,22 @@
     if (!track || !viewport || !dots.length) return;
     let index = 0;
     const max = dots.length - 1;
-
     const go = (next) => {
       index = Math.max(0, Math.min(max, next));
       const width = viewport.clientWidth;
       track.style.transform = "translate3d(-" + index * width + "px,0,0)";
       dots.forEach((dot) => dot.classList.toggle("is-active", Number(dot.dataset.slide) === index));
       window.setTimeout(() => {
-        if (window.__charts) window.__charts.refresh();
-        if (window.__tinkoffChart) window.__tinkoffChart.refresh();
-        if (window.__bybitChart) window.__bybitChart.refresh();
+        charts.forEach((c) => c.refresh && c.refresh());
       }, 460);
     };
-
-    $("#slide-prev").addEventListener("click", () => go(index - 1));
-    $("#slide-next").addEventListener("click", () => go(index + 1));
+    const prev = $("#slide-prev");
+    const next = $("#slide-next");
+    if (prev) prev.addEventListener("click", () => go(index - 1));
+    if (next) next.addEventListener("click", () => go(index + 1));
     dots.forEach((dot) => {
       dot.addEventListener("click", () => go(Number(dot.dataset.slide)));
     });
-
     let startX = 0;
     viewport.addEventListener("touchstart", (event) => {
       startX = event.changedTouches[0].clientX;
@@ -776,48 +589,47 @@
     window.addEventListener("resize", () => go(index));
   }
 
-  try {
-    fillCase();
-  } catch (error) {
-    console.warn("fillCase", error);
+  function bootCases() {
+    $$('.case-slide[data-venue="comon"]').forEach((slide) => {
+      const data = storeFor(slide);
+      if (slide.dataset.comonId === "131208" && window.COMON_STRATEGY) {
+        data.strategy = window.COMON_STRATEGY;
+        data.equity = window.COMON_EQUITY || [];
+        fillComonSlide(slide, data);
+      }
+      charts.push(mountSlideChart(slide, () => storeFor(slide).equity, false));
+      const stamp = slide.querySelector(".js-stamp");
+      if (stamp) stamp.addEventListener("click", () => loadComon(slide));
+      loadComon(slide);
+    });
+    const bybitSlides = $$('.case-slide[data-venue="bybit"]');
+    bybitSlides.forEach((slide) => {
+      charts.push(mountSlideChart(slide, () => bybit.equity, "usd"));
+      const stamp = slide.querySelector(".js-stamp");
+      if (stamp) stamp.addEventListener("click", () => loadBybit());
+    });
+    if (bybitSlides.length) loadBybit();
   }
+
   mountSlider();
   mountNav();
   mountForm();
-  loadLive();
-  if (tinkoffVisible()) loadTinkoff();
-  loadBybit();
   try {
-    window.__charts = mountCharts();
-    if (tinkoffVisible()) window.__tinkoffChart = mountTinkoffChart();
-    window.__bybitChart = mountBybitChart();
+    bootCases();
   } catch (error) {
-    console.warn("charts", error);
+    console.warn("cases", error);
   }
+  if (tinkoffVisible()) loadTinkoff();
   fetch("/api/boot.php", { cache: "no-store" }).catch(() => {});
 
-  $("#parsed-stamp") && $("#parsed-stamp").addEventListener("click", () => {
-    loadLive();
-  });
-  if ($("#bybit-stamp")) {
-    $("#bybit-stamp").addEventListener("click", () => {
-      loadBybit();
-    });
-  }
-  if (tinkoffVisible() && $("#tinkoff-stamp")) {
-    $("#tinkoff-stamp").addEventListener("click", () => {
-      loadTinkoff();
-    });
-  }
-
   window.setInterval(() => {
-    loadLive(true);
+    $$('.case-slide[data-venue="comon"]').forEach((slide) => loadComon(slide, true));
     loadBybit(true);
     if (tinkoffVisible()) loadTinkoff(true);
   }, REFRESH_MS);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      loadLive(true);
+      $$('.case-slide[data-venue="comon"]').forEach((slide) => loadComon(slide, true));
       loadBybit(true);
       if (tinkoffVisible()) loadTinkoff(true);
     }
@@ -825,9 +637,12 @@
 
   const pulseCharts = () => {
     if (!document.hidden) {
-      if (window.__charts) window.__charts.refresh();
-      if (window.__bybitChart) window.__bybitChart.refresh();
-      if (window.__tinkoffChart) window.__tinkoffChart.refresh();
+      charts.forEach((c) => c.refresh && c.refresh());
+      const heroSlide = $('.case-slide[data-hero="1"]');
+      if (heroSlide) {
+        const st = storeFor(heroSlide);
+        if (st.strategy) fillHero(st.strategy, st.equity);
+      }
     }
     window.setTimeout(() => requestAnimationFrame(pulseCharts), 90);
   };
