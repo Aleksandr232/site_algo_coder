@@ -69,7 +69,7 @@ quantlab_render_start([
                 <?php endif; ?>
                 <p class="eyebrow"><?= quantlab_h($venues[$robot['venue']] ?? $robot['venue']) ?></p>
                 <h2><a href="<?= quantlab_h($url) ?>"><?= quantlab_h($robot['title']) ?></a></h2>
-                <p><?= quantlab_h($robot['description']) ?></p>
+                <p><?= quantlab_h(quantlab_ready_seo_description($robot)) ?></p>
                 <div class="ready-card-foot">
                   <strong class="ready-price"><?= quantlab_h(quantlab_ready_price_label((string) $robot['price'])) ?></strong>
                   <a class="btn" href="<?= quantlab_h($url) ?>#order">Оставить заявку</a>
