@@ -413,7 +413,7 @@ foreach ($posts as $i => $item) {
           <div class="section-head">
             <p class="eyebrow">Готовые роботы</p>
             <h2>Можно взять уже собранного</h2>
-            <p>Описание, цена и своя страница под SEO. Заявку можно оставить прямо на карточке робота.</p>
+            <p> Заявку можно оставить прямо на карточке робота.</p>
           </div>
           <div class="ready-grid">
             <?php foreach ($readyRobots as $robot): ?>
