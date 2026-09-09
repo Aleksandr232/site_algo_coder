@@ -185,7 +185,7 @@ a {
 .header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
   backdrop-filter: blur(18px);
   background: rgba(6, 8, 13, 0.72);
   border-bottom: 1px solid var(--line);
@@ -225,6 +225,7 @@ a {
   align-items: center;
   gap: 28px;
   min-height: 72px;
+  position: relative;
 }
 
 .logo {
@@ -358,19 +359,46 @@ a {
 
 .burger {
   display: none;
-  width: 42px;
-  height: 42px;
+  position: relative;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--line);
   background: transparent;
   border-radius: 12px;
-  padding: 11px 10px;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .burger span {
-  display: block;
+  position: absolute;
+  left: 12px;
+  right: 12px;
   height: 1.5px;
   background: var(--text);
-  margin: 6px 0;
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease, top 0.2s ease;
+}
+
+.burger span:nth-child(1) { top: 15px; }
+.burger span:nth-child(2) { top: 21px; }
+.burger span:nth-child(3) { top: 27px; }
+
+.burger.is-open span:nth-child(1) {
+  top: 21px;
+  transform: rotate(45deg);
+}
+
+.burger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+
+.burger.is-open span:nth-child(3) {
+  top: 21px;
+  transform: rotate(-45deg);
+}
+
+.nav-backdrop {
+  display: none;
 }
 
 .btn,
@@ -1734,6 +1762,12 @@ button.parsed-stamp.is-loading {
     stroke-dashoffset: 0;
   }
 
+  .nav,
+  .nav-backdrop,
+  .burger span {
+    transition: none !important;
+  }
+
   .meter > i {
     transform: none;
   }
@@ -1762,6 +1796,11 @@ button.parsed-stamp.is-loading {
 }
 
 @media (max-width: 960px) {
+  .header {
+    backdrop-filter: none;
+    background: #0b1018;
+  }
+
   .slider-bar,
   .slider-nav {
     width: 100%;
@@ -1792,24 +1831,72 @@ button.parsed-stamp.is-loading {
   }
 
   .nav {
-    display: none;
-    position: absolute;
+    position: fixed;
     top: 72px;
-    left: 20px;
-    right: 20px;
-    padding: 16px;
+    left: 0;
+    right: 0;
+    z-index: 45;
+    display: flex;
     flex-direction: column;
-    background: #0d131d;
-    border: 1px solid var(--line);
-    border-radius: 16px;
+    gap: 0;
+    margin: 0;
+    padding: 6px 0 18px;
+    max-height: calc(100dvh - 72px);
+    overflow-y: auto;
+    background: #0b1018;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0 0 18px 18px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
   }
 
   .nav.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .nav > a,
+  .nav-more-list a {
     display: flex;
-    gap: 16px;
-    max-height: calc(100vh - 88px);
-    overflow-y: auto;
-    z-index: 30;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 20px;
+    font-size: 16px;
+    color: var(--text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .nav > a::after,
+  .nav-more-list a::after {
+    content: none;
+  }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(4, 6, 10, 0.62);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s;
+  }
+
+  .nav-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  body.nav-open {
+    overflow: hidden;
   }
 
   .header-inner .sys-status {
@@ -1828,8 +1915,9 @@ button.parsed-stamp.is-loading {
   .nav-more {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
     position: static;
+    width: 100%;
   }
 
   .nav-more-btn {
@@ -1846,20 +1934,16 @@ button.parsed-stamp.is-loading {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    gap: 16px;
+    gap: 0;
   }
 
   .nav-more-list a {
-    padding: 0;
+    padding: 0 20px;
     border-radius: 0;
   }
 
-  .nav-more-list a::after {
-    content: "";
-  }
-
   .nav-more-list a:hover {
-    background: transparent;
+    background: rgba(61, 255, 164, 0.08);
   }
 
   h1 {

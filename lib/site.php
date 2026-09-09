@@ -183,6 +183,9 @@ function quantlab_render_header_nav(array $opts = []): void
           </div>
         </nav>
         <a class="btn btn-sm header-cta" href="<?= quantlab_h($cta) ?>">Заказать робота</a>
+        <button class="burger" id="burger" type="button" aria-label="Открыть меню" aria-controls="nav" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
     <?php
 }
 
@@ -278,10 +281,8 @@ function quantlab_render_start(array $meta): void
           <span class="sys-status" aria-hidden="true"><span class="pulse"></span> live</span>
         </div>
         <?php quantlab_render_header_nav(['active' => $active]); ?>
-        <button class="burger" id="burger" type="button" aria-label="Открыть меню">
-          <span></span><span></span>
-        </button>
       </div>
+      <div class="nav-backdrop" id="nav-backdrop"></div>
     </header>
     <div class="ticker ticker-inner" aria-hidden="true">
       <div class="ticker-track">
@@ -328,46 +329,9 @@ function quantlab_render_end(): void
         </p>
       </div>
     </footer>
+    <script src="/js/nav.js"></script>
     <script src="/js/motion.js"></script>
     <script src="/js/privacy.js"></script>
-    <script>
-      (function () {
-        var burger = document.getElementById("burger");
-        var nav = document.getElementById("nav");
-        var more = nav && nav.querySelector(".nav-more");
-        var moreBtn = more && more.querySelector(".nav-more-btn");
-        var closeMore = function () {
-          if (!more || !moreBtn) return;
-          more.classList.remove("is-open");
-          moreBtn.setAttribute("aria-expanded", "false");
-        };
-        if (burger && nav) {
-          burger.addEventListener("click", function () {
-            nav.classList.toggle("is-open");
-            closeMore();
-          });
-          nav.querySelectorAll("a").forEach(function (link) {
-            link.addEventListener("click", function () {
-              nav.classList.remove("is-open");
-              closeMore();
-            });
-          });
-        }
-        if (!more || !moreBtn) return;
-        moreBtn.addEventListener("click", function (event) {
-          event.stopPropagation();
-          var open = !more.classList.contains("is-open");
-          more.classList.toggle("is-open", open);
-          moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
-        });
-        document.addEventListener("click", function (event) {
-          if (!more.contains(event.target)) closeMore();
-        });
-        document.addEventListener("keydown", function (event) {
-          if (event.key === "Escape") closeMore();
-        });
-      })();
-    </script>
   </body>
 </html>
     <?php

@@ -530,43 +530,6 @@
     }
   }
 
-  function mountNav() {
-    const burger = $("#burger");
-    const nav = $("#nav");
-    const more = nav && nav.querySelector(".nav-more");
-    const moreBtn = more && more.querySelector(".nav-more-btn");
-    const closeMore = () => {
-      if (!more || !moreBtn) return;
-      more.classList.remove("is-open");
-      moreBtn.setAttribute("aria-expanded", "false");
-    };
-    if (burger && nav) {
-      burger.addEventListener("click", () => {
-        nav.classList.toggle("is-open");
-        closeMore();
-      });
-      $$("a", nav).forEach((link) =>
-        link.addEventListener("click", () => {
-          nav.classList.remove("is-open");
-          closeMore();
-        })
-      );
-    }
-    if (!more || !moreBtn) return;
-    moreBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const open = !more.classList.contains("is-open");
-      more.classList.toggle("is-open", open);
-      moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-    document.addEventListener("click", (event) => {
-      if (!more.contains(event.target)) closeMore();
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeMore();
-    });
-  }
-
   function mountForm() {
     const form = $("#lead-form");
     const note = $("#form-note");
@@ -734,7 +697,6 @@
   }
 
   mountSlider();
-  mountNav();
   mountForm();
   mountReadyOrder();
   try {

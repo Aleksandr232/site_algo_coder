@@ -105,10 +105,8 @@ foreach ($posts as $i => $item) {
           <span class="sys-status" aria-hidden="true"><span class="pulse"></span> live</span>
         </div>
         <?php quantlab_render_header_nav(['home' => true, 'has_posts' => $posts !== []]); ?>
-        <button class="burger" id="burger" type="button" aria-label="Открыть меню">
-          <span></span><span></span>
-        </button>
       </div>
+      <div class="nav-backdrop" id="nav-backdrop"></div>
     </header>
 
     <main>
@@ -762,6 +760,7 @@ foreach ($posts as $i => $item) {
     </footer>
 
     <script src="/js/data.js"></script>
+    <script src="/js/nav.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/motion.js"></script>
     <script src="/js/privacy.js"></script>
