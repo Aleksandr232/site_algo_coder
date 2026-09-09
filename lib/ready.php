@@ -239,7 +239,7 @@ function quantlab_ready_save(array $input, ?string $currentSlug = null): array
     if ($description === '') {
         throw new InvalidArgumentException('Добавьте описание');
     }
-    $price = trim((string) ($input['price'] ?? ''));
+    $price = quantlab_ready_price_label(trim((string) ($input['price'] ?? '')));
     if ($price === '') {
         throw new InvalidArgumentException('Укажите цену');
     }
@@ -482,7 +482,7 @@ function quantlab_ready_seo_description(array $row): string
         return $custom;
     }
     $desc = trim((string) ($row['description'] ?? ''));
-    $price = trim((string) ($row['price'] ?? ''));
+    $price = quantlab_ready_price_label((string) ($row['price'] ?? ''));
     $venues = quantlab_ready_venues();
     $venue = $venues[$row['venue'] ?? ''] ?? '';
     $base = $desc !== '' ? $desc : 'Готовый торговый робот AM QuantLab.';
@@ -498,6 +498,20 @@ function quantlab_ready_price_number(string $price): ?string
     }
     $num = preg_replace('/\s+/u', '', $match[1]);
     return $num !== '' ? $num : null;
+}
+
+function quantlab_ready_price_label(string $price): string
+{
+    $price = trim(preg_replace('/\s+/u', ' ', $price) ?? $price);
+    if ($price === '') {
+        return '';
+    }
+    $num = quantlab_ready_price_number($price);
+    if ($num === null) {
+        return $price;
+    }
+    $prefix = preg_match('/^\s*от\b/iu', $price) ? 'от ' : '';
+    return $prefix . number_format((int) $num, 0, '', ' ') . ' ₽';
 }
 
 function quantlab_ready_description_html(string $text): string
@@ -637,7 +651,7 @@ function quantlab_render_ready_page(string $slug): void
             <?php if (($row['status'] ?? '') !== 'visible'): ?>
               <p class="article-meta"><span class="badge badge-warn">Скрыт</span></p>
             <?php endif; ?>
-            <p class="ready-price ready-page-price"><?= quantlab_h($row['price']) ?></p>
+            <p class="ready-price ready-page-price"><?= quantlab_h(quantlab_ready_price_label((string) $row['price'])) ?></p>
             <?php if ($image !== ''): ?>
               <figure class="ready-page-cover">
                 <img src="<?= quantlab_h($image) ?>" alt="<?= quantlab_h($row['title']) ?>" loading="eager" />

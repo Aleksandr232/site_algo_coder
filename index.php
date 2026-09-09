@@ -428,9 +428,9 @@ foreach ($posts as $i => $item) {
                 <?php endif; ?>
                 <p class="eyebrow"><?= quantlab_h($readyVenues[$robot['venue']] ?? $robot['venue']) ?></p>
                 <h3><a href="<?= quantlab_h($url) ?>"><?= quantlab_h($robot['title']) ?></a></h3>
-                <p><?= quantlab_h($robot['description']) ?></p>
+                <p><?= quantlab_h(quantlab_ready_seo_description($robot)) ?></p>
                 <div class="ready-card-foot">
-                  <strong class="ready-price"><?= quantlab_h($robot['price']) ?></strong>
+                  <strong class="ready-price"><?= quantlab_h(quantlab_ready_price_label((string) $robot['price'])) ?></strong>
                   <a class="btn" href="<?= quantlab_h($url) ?>#order">Оставить заявку</a>
                 </div>
               </article>

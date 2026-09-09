@@ -71,7 +71,7 @@ quantlab_render_start([
                 <h2><a href="<?= quantlab_h($url) ?>"><?= quantlab_h($robot['title']) ?></a></h2>
                 <p><?= quantlab_h($robot['description']) ?></p>
                 <div class="ready-card-foot">
-                  <strong class="ready-price"><?= quantlab_h($robot['price']) ?></strong>
+                  <strong class="ready-price"><?= quantlab_h(quantlab_ready_price_label((string) $robot['price'])) ?></strong>
                   <a class="btn" href="<?= quantlab_h($url) ?>#order">Оставить заявку</a>
                 </div>
               </article>

@@ -26,7 +26,7 @@ function quantlab_lead_save(array $input): array
             throw new InvalidArgumentException('Этот робот сейчас недоступен');
         }
         $robotTitle = (string) $robot['title'];
-        $robotPrice = (string) $robot['price'];
+        $robotPrice = quantlab_ready_price_label((string) $robot['price']);
         $market = 'ready';
         if ($message === '') {
             $message = 'Оформление готового робота «' . $robotTitle . '»';

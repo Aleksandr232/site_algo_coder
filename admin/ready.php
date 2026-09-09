@@ -75,7 +75,7 @@ quantlab_admin_start('Готовые роботы — админка AM QuantLab
                       <strong><?= quantlab_h($item['title']) ?></strong><br />
                       <span class="field-hint"><?= quantlab_h($venues[$item['venue']] ?? $item['venue']) ?></span>
                     </td>
-                    <td><?= quantlab_h($item['price']) ?></td>
+                    <td><?= quantlab_h(quantlab_ready_price_label((string) $item['price'])) ?></td>
                     <td>
                       <span class="badge <?= $item['status'] === 'visible' ? 'badge-ok' : 'badge-warn' ?>">
                         <?= $item['status'] === 'visible' ? 'на сайте' : 'скрыт' ?>
