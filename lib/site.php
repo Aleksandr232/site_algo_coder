@@ -248,6 +248,7 @@ function quantlab_render_start(array $meta): void
           <a href="/#venues">Площадки</a>
           <a href="/#stack">Стек</a>
           <a href="/#algos">Продукты</a>
+          <a href="/robots/"<?= $active === 'robots' ? ' aria-current="page"' : '' ?>>Роботы</a>
           <a href="/#dashboards">Дашборды</a>
           <a href="/#case">Кейсы</a>
           <a href="/blog/"<?= $active === 'blog' ? ' aria-current="page"' : '' ?>>Блог</a>
@@ -291,6 +292,7 @@ function quantlab_render_end(): void
         <p class="footer-links">
           <a href="/">Главная</a>
           <a href="/blog/">Блог</a>
+          <a href="/robots/">Роботы</a>
           <a href="/#case">Кейсы</a>
           <a href="/#faq">FAQ</a>
           <a href="/#contact">Контакт</a>

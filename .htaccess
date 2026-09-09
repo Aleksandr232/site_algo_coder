@@ -27,6 +27,10 @@ ErrorDocument 404 /404.php
   RewriteRule ^rss\.xml$ rss.php [L]
   RewriteRule ^llms\.txt$ llms.php [L]
 
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^robots/([a-z0-9-]+)/?$ robots/view.php?slug=$1 [L,QSA]
+
   RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
   RewriteRule ^index\.html$ / [R=301,L]
 

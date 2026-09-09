@@ -169,6 +169,9 @@ function quantlab_db_migrate(PDO $pdo): void
             message TEXT NOT NULL,
             ip VARCHAR(64) NULL,
             created_at DATETIME NOT NULL,
+            robot_slug VARCHAR(191) NULL,
+            robot_title VARCHAR(500) NULL,
+            robot_price VARCHAR(120) NULL,
             KEY created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
@@ -196,6 +199,48 @@ function quantlab_db_migrate(PDO $pdo): void
             KEY status_sort (status, sort_order)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
     );
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS ready_robots (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            slug VARCHAR(191) NOT NULL UNIQUE,
+            status VARCHAR(16) NOT NULL DEFAULT "visible",
+            sort_order INT NOT NULL DEFAULT 0,
+            title VARCHAR(500) NOT NULL,
+            description TEXT NULL,
+            price VARCHAR(120) NOT NULL,
+            venue VARCHAR(64) NULL,
+            image VARCHAR(500) NULL,
+            keywords VARCHAR(1000) NULL,
+            seo_title VARCHAR(500) NULL,
+            seo_description VARCHAR(1000) NULL,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            KEY status_sort (status, sort_order)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    try {
+        quantlab_db_ensure_column($pdo, 'leads', 'robot_slug', 'robot_slug VARCHAR(191) NULL');
+        quantlab_db_ensure_column($pdo, 'leads', 'robot_title', 'robot_title VARCHAR(500) NULL');
+        quantlab_db_ensure_column($pdo, 'leads', 'robot_price', 'robot_price VARCHAR(120) NULL');
+        quantlab_db_ensure_column($pdo, 'ready_robots', 'keywords', 'keywords VARCHAR(1000) NULL');
+        quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_title', 'seo_title VARCHAR(500) NULL');
+        quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_description', 'seo_description VARCHAR(1000) NULL');
+    } catch (Throwable $e) {
+        // старая таблица leads без прав на ALTER — заявки на роботов уйдут в JSON-поля сообщения
+    }
+}
+
+function quantlab_db_ensure_column(PDO $pdo, string $table, string $column, string $ddl): void
+{
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || !preg_match('/^[A-Za-z0-9_]+$/', $column)) {
+        return;
+    }
+    $st = $pdo->prepare('SHOW COLUMNS FROM `' . $table . '` LIKE ?');
+    $st->execute([$column]);
+    if ($st->fetch()) {
+        return;
+    }
+    $pdo->exec('ALTER TABLE `' . $table . '` ADD COLUMN ' . $ddl);
 }
 
 function quantlab_dt_iso(?string $value): ?string

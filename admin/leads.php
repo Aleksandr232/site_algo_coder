@@ -37,7 +37,7 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                   <th>Дата</th>
                   <th>Имя</th>
                   <th>Контакт</th>
-                  <th>Рынок</th>
+                  <th>Рынок / робот</th>
                   <th>Задача</th>
                 </tr>
               </thead>
@@ -51,7 +51,15 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                     <td><?= quantlab_h($when) ?></td>
                     <td><?= quantlab_h((string) ($lead['name'] ?? '')) ?></td>
                     <td><?= quantlab_h((string) ($lead['contact'] ?? '')) ?></td>
-                    <td><?= quantlab_h(quantlab_lead_market_label((string) ($lead['market'] ?? ''))) ?></td>
+                    <td>
+                      <?= quantlab_h(quantlab_lead_market_label((string) ($lead['market'] ?? ''))) ?>
+                      <?php if (!empty($lead['robot_title'])): ?>
+                        <br /><strong><?= quantlab_h((string) $lead['robot_title']) ?></strong>
+                        <?php if (!empty($lead['robot_price'])): ?>
+                          <br /><span class="field-hint"><?= quantlab_h((string) $lead['robot_price']) ?></span>
+                        <?php endif; ?>
+                      <?php endif; ?>
+                    </td>
                     <td class="lead-msg"><?= quantlab_h((string) ($lead['message'] ?? '')) ?></td>
                   </tr>
                 <?php endforeach; ?>

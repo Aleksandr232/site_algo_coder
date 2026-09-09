@@ -8,6 +8,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'site.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'blog.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'seo.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'strategies.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'ready.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'admin.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'mail.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'leads.php';

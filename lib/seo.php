@@ -64,7 +64,7 @@ function quantlab_faq_items(): array
         ],
         [
             'q' => 'Как заказать торгового робота?',
-            'a' => 'Оставьте заявку на amquantlab.ru, напишите на ' . $email . ' или в Telegram. Опишите площадку, инструмент и риск.',
+            'a' => 'Откройте каталог amquantlab.ru/robots/, оставьте заявку на странице робота, напишите на ' . $email . ' или в Telegram. Для кастомной разработки опишите площадку, инструмент и риск.',
         ],
     ];
 }
@@ -118,6 +118,7 @@ function quantlab_llms_txt(): string
         '',
         '- [Главная](' . $site . '/): площадки, стек, кейсы, заявка',
         '- [Блог](' . $site . '/blog/): статьи про роботов и алготрейдинг',
+        '- [Готовые роботы](' . $site . '/robots/): каталог с ценой и заявкой',
         '- [Контакт](' . $site . '/#contact): заявка, почта, Telegram',
         '- [FAQ](' . $site . '/#faq): кто мы, площадки, цена, робот или трейдер',
     ];
@@ -128,6 +129,16 @@ function quantlab_llms_txt(): string
             continue;
         }
         $lines[] = '- [' . $title . '](' . $site . '/blog/' . $slug . '/)';
+    }
+    if (function_exists('quantlab_ready_visible')) {
+        foreach (quantlab_ready_visible() as $item) {
+            $title = trim((string) ($item['title'] ?? ''));
+            $slug = trim((string) ($item['slug'] ?? ''));
+            if ($title === '' || $slug === '') {
+                continue;
+            }
+            $lines[] = '- [' . $title . '](' . $site . '/robots/' . $slug . '/)';
+        }
     }
     $lines[] = '';
     $lines[] = '## Ограничения';

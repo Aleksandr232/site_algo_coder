@@ -94,6 +94,7 @@ function quantlab_admin_start(string $title): void
         <nav class="nav" id="nav">
           <a href="/admin/">Статьи</a>
           <a href="/admin/strategies.php">Стратегии</a>
+          <a href="/admin/ready.php">Роботы</a>
           <a href="/admin/leads.php">Заявки</a>
           <a href="/admin/edit.php">Новая</a>
           <a href="/blog/">Блог</a>

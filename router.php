@@ -28,6 +28,11 @@ if ($uri === '/llms.txt') {
     require $root . DIRECTORY_SEPARATOR . 'llms.php';
     return true;
 }
+if (preg_match('#^/robots/([a-z0-9-]+)/?$#', $uri, $readyMatch)) {
+    $quantlab_slug = $readyMatch[1];
+    require $root . DIRECTORY_SEPARATOR . 'robots' . DIRECTORY_SEPARATOR . 'view.php';
+    return true;
+}
 
 $file = $root . str_replace('/', DIRECTORY_SEPARATOR, $uri);
 if ($uri !== '/' && is_file($file)) {

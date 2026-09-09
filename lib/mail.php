@@ -211,17 +211,27 @@ function quantlab_lead_mail(array $lead): void
         ? quantlab_lead_market_label((string) ($lead['market'] ?? ''))
         : (string) ($lead['market'] ?? '');
     $message = (string) ($lead['message'] ?? '');
+    $robotTitle = (string) ($lead['robot_title'] ?? '');
+    $robotPrice = (string) ($lead['robot_price'] ?? '');
+    $robotSlug = (string) ($lead['robot_slug'] ?? '');
     $when = date('d.m.Y H:i');
     $site = function_exists('quantlab_site_url') ? quantlab_site_url() : 'https://amquantlab.ru';
 
-    $subject = 'Новая заявка: ' . $name;
+    $subject = $robotTitle !== '' ? ('Заказ робота: ' . $robotTitle) : ('Новая заявка: ' . $name);
     $text = "Здравствуйте.\r\n\r\n"
-        . "На amquantlab.ru оставили заявку.\r\n\r\n"
+        . ($robotTitle !== ''
+            ? "На amquantlab.ru оформили готового робота.\r\n\r\n"
+            : "На amquantlab.ru оставили заявку.\r\n\r\n")
         . "Дата: {$when}\r\n"
         . "Имя: {$name}\r\n"
         . "Контакт: {$contact}\r\n"
-        . "Рынок: {$market}\r\n"
-        . "Задача:\r\n{$message}\r\n\r\n"
+        . "Рынок: {$market}\r\n";
+    if ($robotTitle !== '') {
+        $text .= "Робот: {$robotTitle}\r\n"
+            . "Цена: {$robotPrice}\r\n"
+            . ($robotSlug !== '' ? "Слаг: {$robotSlug}\r\n" : '');
+    }
+    $text .= "Задача:\r\n{$message}\r\n\r\n"
         . "— AM QuantLab, {$site}\r\n";
 
     quantlab_mail_send($subject, $text);

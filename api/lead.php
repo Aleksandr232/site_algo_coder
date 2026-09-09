@@ -18,6 +18,11 @@ function quantlab_lead_reply(bool $ok, string $message, int $status, bool $json)
         exit;
     }
     if ($ok) {
+        $slug = trim((string) ($_POST['robot_slug'] ?? ''));
+        if ($slug !== '' && function_exists('quantlab_is_slug') && quantlab_is_slug($slug)) {
+            header('Location: ' . quantlab_public_path('robots/' . $slug) . '?sent=1', true, 302);
+            exit;
+        }
         header('Location: /?sent=1#contact', true, 302);
         exit;
     }

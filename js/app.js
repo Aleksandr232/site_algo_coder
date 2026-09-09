@@ -581,6 +581,76 @@
     });
   }
 
+  function mountReadyOrder() {
+    const modal = $("#ready-order-modal");
+    const form = $("#ready-order-form");
+    if (!modal || !form) return;
+    const titleEl = $("#ready-order-title");
+    const priceEl = $("#ready-order-price");
+    const slugInput = $("#ready-order-slug");
+    const note = $("#ready-order-note");
+    const open = (btn) => {
+      if (slugInput) slugInput.value = btn.dataset.slug || "";
+      if (titleEl) titleEl.textContent = btn.dataset.title || "";
+      if (priceEl) priceEl.textContent = btn.dataset.price || "";
+      if (note) {
+        note.hidden = true;
+        note.textContent = "";
+      }
+      form.reset();
+      if (slugInput) slugInput.value = btn.dataset.slug || "";
+      modal.hidden = false;
+      document.body.classList.add("modal-open");
+    };
+    const close = () => {
+      modal.hidden = true;
+      document.body.classList.remove("modal-open");
+    };
+    $$("[data-ready-order]").forEach((btn) => {
+      btn.addEventListener("click", () => open(btn));
+    });
+    $$("[data-ready-close]", modal).forEach((el) => {
+      el.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !modal.hidden) close();
+    });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      if ((data.get("website") || "").toString().trim()) {
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]');
+      if (note) {
+        note.hidden = false;
+        note.textContent = "Отправляем заявку…";
+      }
+      if (button) button.disabled = true;
+      try {
+        const res = await fetch("/api/lead.php", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "fetch",
+          },
+          body: data,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.ok === false) {
+          throw new Error(json.error || json.message || "Не удалось оформить");
+        }
+        if (note) note.textContent = "Заявка ушла на почту. Скоро свяжемся.";
+        form.reset();
+        if (slugInput) slugInput.value = "";
+      } catch (err) {
+        if (note) note.textContent = (err && err.message) || "Не удалось оформить. Попробуйте ещё раз.";
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+  }
+
   function mountSlider() {
     const track = $("#case-track");
     const viewport = track && track.parentElement;
@@ -639,6 +709,7 @@
   mountSlider();
   mountNav();
   mountForm();
+  mountReadyOrder();
   try {
     bootCases();
   } catch (error) {

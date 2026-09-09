@@ -6,3 +6,6 @@ node_modules/
 uploads/blog/*
 !uploads/blog/.gitkeep
 !uploads/blog/.htaccess
+uploads/ready/*
+!uploads/ready/.gitkeep
+!uploads/ready/.htaccess

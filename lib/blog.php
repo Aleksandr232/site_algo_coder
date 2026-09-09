@@ -583,6 +583,7 @@ function quantlab_sitemap_xml(): string
     $urls = [
         ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0'],
         ['loc' => quantlab_abs_url('/blog/'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.9'],
+        ['loc' => quantlab_abs_url('/robots/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.9'],
         ['loc' => quantlab_abs_url('rss.xml'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.4'],
         ['loc' => quantlab_abs_url('llms.txt'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.3'],
     ];
@@ -597,6 +598,19 @@ function quantlab_sitemap_xml(): string
             'image' => !empty($post['image']) ? quantlab_abs_url($post['image']) : null,
             'image_title' => $post['title'] ?? '',
         ];
+    }
+    if (function_exists('quantlab_ready_visible')) {
+        foreach (quantlab_ready_visible() as $item) {
+            $last = $item['updated_at'] ?? $item['created_at'] ?? null;
+            $urls[] = [
+                'loc' => quantlab_abs_url('robots/' . $item['slug']),
+                'lastmod' => $last ? substr((string) $last, 0, 10) : $today,
+                'changefreq' => 'weekly',
+                'priority' => '0.85',
+                'image' => !empty($item['image']) ? quantlab_abs_url($item['image']) : null,
+                'image_title' => $item['title'] ?? '',
+            ];
+        }
     }
 
     $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
@@ -660,6 +674,7 @@ function quantlab_robots_txt(): string
     $host = parse_url(quantlab_site_url(), PHP_URL_HOST) ?: '';
     $deny = "Allow: /\n"
         . "Allow: /blog/\n"
+        . "Allow: /robots/\n"
         . "Allow: /uploads/\n"
         . "Allow: /llms.txt\n"
         . "Disallow: /admin/\n"

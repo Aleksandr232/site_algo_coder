@@ -14,7 +14,28 @@ function quantlab_lead_save(array $input): array
     $contact = trim((string) ($input['contact'] ?? ''));
     $market = trim((string) ($input['market'] ?? ''));
     $message = trim((string) ($input['message'] ?? ''));
-    if ($name === '' || $contact === '' || $message === '') {
+    $robotSlug = trim((string) ($input['robot_slug'] ?? ''));
+    $robotTitle = '';
+    $robotPrice = '';
+    if ($robotSlug !== '') {
+        if (!function_exists('quantlab_ready_load')) {
+            throw new InvalidArgumentException('Каталог роботов недоступен');
+        }
+        $robot = quantlab_ready_load($robotSlug);
+        if (!$robot || ($robot['status'] ?? '') !== 'visible') {
+            throw new InvalidArgumentException('Этот робот сейчас недоступен');
+        }
+        $robotTitle = (string) $robot['title'];
+        $robotPrice = (string) $robot['price'];
+        $market = 'ready';
+        if ($message === '') {
+            $message = 'Оформление готового робота «' . $robotTitle . '»';
+        }
+    }
+    if ($name === '' || $contact === '') {
+        throw new InvalidArgumentException('Заполните имя и контакт');
+    }
+    if ($robotSlug === '' && $message === '') {
         throw new InvalidArgumentException('Заполните имя, контакт и задачу');
     }
     $lead = [
@@ -22,6 +43,9 @@ function quantlab_lead_save(array $input): array
         'contact' => $contact,
         'market' => $market !== '' ? $market : 'finam',
         'message' => $message,
+        'robot_slug' => $robotSlug,
+        'robot_title' => $robotTitle,
+        'robot_price' => $robotPrice,
         'ip' => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         'created_at' => date('c'),
     ];
@@ -31,17 +55,40 @@ function quantlab_lead_save(array $input): array
         if (quantlab_lead_rate_limited_db($pdo, $lead['ip'])) {
             throw new RuntimeException('Слишком много заявок. Попробуйте позже.');
         }
-        $st = $pdo->prepare(
-            'INSERT INTO leads (name, contact, market, message, ip, created_at) VALUES (?,?,?,?,?,?)'
-        );
-        $st->execute([
-            $lead['name'],
-            $lead['contact'],
-            $lead['market'],
-            $lead['message'],
-            $lead['ip'],
-            date('Y-m-d H:i:s'),
-        ]);
+        try {
+            $st = $pdo->prepare(
+                'INSERT INTO leads (name, contact, market, message, ip, created_at, robot_slug, robot_title, robot_price)
+                 VALUES (?,?,?,?,?,?,?,?,?)'
+            );
+            $st->execute([
+                $lead['name'],
+                $lead['contact'],
+                $lead['market'],
+                $lead['message'],
+                $lead['ip'],
+                date('Y-m-d H:i:s'),
+                $lead['robot_slug'] !== '' ? $lead['robot_slug'] : null,
+                $lead['robot_title'] !== '' ? $lead['robot_title'] : null,
+                $lead['robot_price'] !== '' ? $lead['robot_price'] : null,
+            ]);
+        } catch (Throwable $e) {
+            $body = $lead['message'];
+            if ($lead['robot_title'] !== '') {
+                $body = 'Робот: ' . $lead['robot_title'] . "\nЦена: " . $lead['robot_price'] . "\n\n" . $body;
+            }
+            $st = $pdo->prepare(
+                'INSERT INTO leads (name, contact, market, message, ip, created_at) VALUES (?,?,?,?,?,?)'
+            );
+            $st->execute([
+                $lead['name'],
+                $lead['contact'],
+                $lead['market'],
+                $body,
+                $lead['ip'],
+                date('Y-m-d H:i:s'),
+            ]);
+            $lead['message'] = $body;
+        }
         $lead['id'] = (int) $pdo->lastInsertId();
         quantlab_lead_notify($lead);
         return $lead;
@@ -119,6 +166,7 @@ function quantlab_lead_market_label(string $market): string
         'binance' => 'Binance',
         'multi' => 'Несколько площадок',
         'fintech' => 'Сервис для финтех-продукта',
+        'ready' => 'Готовый робот',
     ];
     return $map[$market] ?? $market;
 }

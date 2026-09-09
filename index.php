@@ -12,6 +12,8 @@ $description = 'AM QuantLab пишет торговых роботов для Ф
 $canonical = quantlab_abs_url('/');
 $posts = array_slice(quantlab_blog_published(), 0, 3);
 $cases = quantlab_strategies_visible();
+$readyRobots = quantlab_ready_visible();
+$readyVenues = quantlab_ready_venues();
 $formSent = (string) ($_GET['sent'] ?? '') === '1';
 $yandex = quantlab_env('YANDEX_VERIFICATION', 'd94405cb4c18d9e3');
 $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
@@ -107,6 +109,7 @@ foreach ($posts as $i => $item) {
           <a href="#venues">Площадки</a>
           <a href="#stack">Стек</a>
           <a href="#algos">Продукты</a>
+          <a href="/robots/">Роботы</a>
           <a href="#dashboards">Дашборды</a>
           <a href="#case">Кейсы</a>
           <a href="<?= $posts ? '#blog' : '/blog/' ?>">Блог</a>
@@ -403,6 +406,40 @@ foreach ($posts as $i => $item) {
           </div>
         </div>
       </section>
+
+      <?php if ($readyRobots): ?>
+      <section class="section" id="ready">
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">Готовые роботы</p>
+            <h2>Можно взять уже собранного</h2>
+            <p>Описание, цена и своя страница под SEO. Заявку можно оставить прямо на карточке робота.</p>
+          </div>
+          <div class="ready-grid">
+            <?php foreach ($readyRobots as $robot): ?>
+              <?php $url = quantlab_ready_url($robot['slug']); ?>
+              <article class="glass pad ready-card">
+                <?php if ($robot['image'] !== ''): ?>
+                  <a class="ready-card-cover" href="<?= quantlab_h($url) ?>">
+                    <img src="<?= quantlab_h($robot['image']) ?>" alt="<?= quantlab_h($robot['title']) ?>" />
+                  </a>
+                <?php else: ?>
+                  <a class="ready-card-cover ready-card-cover-empty" href="<?= quantlab_h($url) ?>" aria-hidden="true"></a>
+                <?php endif; ?>
+                <p class="eyebrow"><?= quantlab_h($readyVenues[$robot['venue']] ?? $robot['venue']) ?></p>
+                <h3><a href="<?= quantlab_h($url) ?>"><?= quantlab_h($robot['title']) ?></a></h3>
+                <p><?= quantlab_h($robot['description']) ?></p>
+                <div class="ready-card-foot">
+                  <strong class="ready-price"><?= quantlab_h($robot['price']) ?></strong>
+                  <a class="btn" href="<?= quantlab_h($url) ?>#order">Оставить заявку</a>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+          <p class="home-blog-more"><a class="btn btn-ghost" href="/robots/">Все роботы</a></p>
+        </div>
+      </section>
+      <?php endif; ?>
 
       <section class="section" id="dashboards">
         <div class="container">
@@ -723,6 +760,7 @@ foreach ($posts as $i => $item) {
         <p class="footer-links">
           <a href="/">Главная</a>
           <a href="/blog/">Блог</a>
+          <a href="/robots/">Роботы</a>
           <a href="#case">Кейсы</a>
           <a href="#contact">Контакт</a>
           <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
