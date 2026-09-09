@@ -104,20 +104,7 @@ foreach ($posts as $i => $item) {
           </a>
           <span class="sys-status" aria-hidden="true"><span class="pulse"></span> live</span>
         </div>
-        <nav class="nav" id="nav">
-          <a href="#markets">Рынки</a>
-          <a href="#venues">Площадки</a>
-          <a href="#stack">Стек</a>
-          <a href="#algos">Продукты</a>
-          <a href="/robots/">Роботы</a>
-          <a href="#dashboards">Дашборды</a>
-          <a href="#case">Кейсы</a>
-          <a href="<?= $posts ? '#blog' : '/blog/' ?>">Блог</a>
-          <a href="#process">Процесс</a>
-          <a href="#faq">FAQ</a>
-          <a href="#contact">Контакт</a>
-        </nav>
-        <a class="btn btn-sm" href="#contact">Заказать робота</a>
+        <?php quantlab_render_header_nav(['home' => true, 'has_posts' => $posts !== []]); ?>
         <button class="burger" id="burger" type="button" aria-label="Открыть меню">
           <span></span><span></span>
         </button>

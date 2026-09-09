@@ -152,6 +152,40 @@ function quantlab_head_verification(): void
     }
 }
 
+function quantlab_render_header_nav(array $opts = []): void
+{
+    $home = !empty($opts['home']);
+    $active = (string) ($opts['active'] ?? '');
+    $p = $home ? '' : '/';
+    $blog = $home && !empty($opts['has_posts']) ? '#blog' : '/blog/';
+    $cta = $home ? '#contact' : '/#contact';
+    $item = static function (string $href, string $label, bool $current = false): void {
+        $attr = $current ? ' aria-current="page"' : '';
+        echo '<a href="' . quantlab_h($href) . '"' . $attr . '>' . quantlab_h($label) . '</a>';
+    };
+    ?>
+        <nav class="nav" id="nav">
+          <?php $item('/robots/', 'Роботы', $active === 'robots'); ?>
+          <?php $item($p . '#case', 'Кейсы'); ?>
+          <?php $item($blog, 'Блог', $active === 'blog'); ?>
+          <div class="nav-more">
+            <button class="nav-more-btn" type="button" aria-expanded="false" aria-haspopup="true">Ещё</button>
+            <div class="nav-more-list">
+              <?php $item($p . '#markets', 'Рынки'); ?>
+              <?php $item($p . '#venues', 'Площадки'); ?>
+              <?php $item($p . '#stack', 'Стек'); ?>
+              <?php $item($p . '#algos', 'Продукты'); ?>
+              <?php $item($p . '#dashboards', 'Дашборды'); ?>
+              <?php $item($p . '#process', 'Процесс'); ?>
+              <?php $item($p . '#faq', 'FAQ'); ?>
+              <?php $item($p . '#contact', 'Контакт'); ?>
+            </div>
+          </div>
+        </nav>
+        <a class="btn btn-sm header-cta" href="<?= quantlab_h($cta) ?>">Заказать робота</a>
+    <?php
+}
+
 function quantlab_render_start(array $meta): void
 {
     $canonical = (string) $meta['canonical'];
@@ -243,18 +277,7 @@ function quantlab_render_start(array $meta): void
           </a>
           <span class="sys-status" aria-hidden="true"><span class="pulse"></span> live</span>
         </div>
-        <nav class="nav" id="nav">
-          <a href="/#markets">Рынки</a>
-          <a href="/#venues">Площадки</a>
-          <a href="/#stack">Стек</a>
-          <a href="/#algos">Продукты</a>
-          <a href="/robots/"<?= $active === 'robots' ? ' aria-current="page"' : '' ?>>Роботы</a>
-          <a href="/#dashboards">Дашборды</a>
-          <a href="/#case">Кейсы</a>
-          <a href="/blog/"<?= $active === 'blog' ? ' aria-current="page"' : '' ?>>Блог</a>
-          <a href="/#contact">Контакт</a>
-        </nav>
-        <a class="btn btn-sm" href="/#contact">Заказать робота</a>
+        <?php quantlab_render_header_nav(['active' => $active]); ?>
         <button class="burger" id="burger" type="button" aria-label="Открыть меню">
           <span></span><span></span>
         </button>
@@ -311,10 +334,37 @@ function quantlab_render_end(): void
       (function () {
         var burger = document.getElementById("burger");
         var nav = document.getElementById("nav");
-        if (!burger || !nav) return;
-        burger.addEventListener("click", function () { nav.classList.toggle("is-open"); });
-        nav.querySelectorAll("a").forEach(function (link) {
-          link.addEventListener("click", function () { nav.classList.remove("is-open"); });
+        var more = nav && nav.querySelector(".nav-more");
+        var moreBtn = more && more.querySelector(".nav-more-btn");
+        var closeMore = function () {
+          if (!more || !moreBtn) return;
+          more.classList.remove("is-open");
+          moreBtn.setAttribute("aria-expanded", "false");
+        };
+        if (burger && nav) {
+          burger.addEventListener("click", function () {
+            nav.classList.toggle("is-open");
+            closeMore();
+          });
+          nav.querySelectorAll("a").forEach(function (link) {
+            link.addEventListener("click", function () {
+              nav.classList.remove("is-open");
+              closeMore();
+            });
+          });
+        }
+        if (!more || !moreBtn) return;
+        moreBtn.addEventListener("click", function (event) {
+          event.stopPropagation();
+          var open = !more.classList.contains("is-open");
+          more.classList.toggle("is-open", open);
+          moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        document.addEventListener("click", function (event) {
+          if (!more.contains(event.target)) closeMore();
+        });
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape") closeMore();
         });
       })();
     </script>
