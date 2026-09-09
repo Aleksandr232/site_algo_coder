@@ -96,7 +96,7 @@ function quantlab_strategy_normalize(array $row): array
 
 function quantlab_strategy_note_lines(array $row): array
 {
-    $lines = preg_split('/\R/', (string) ($row['notes'] ?? '')) ?: [];
+    $lines = preg_split("/\r\n|\n|\r/", (string) ($row['notes'] ?? '')) ?: [];
     return array_values(array_filter(array_map('trim', $lines), static function ($line) {
         return $line !== '';
     }));
