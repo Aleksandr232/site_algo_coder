@@ -644,19 +644,19 @@ function quantlab_render_ready_page(string $slug): void
             ['name' => 'Роботы', 'path' => '/robots/'],
             ['name' => $row['title'], 'path' => $url],
         ]) ?>
+        <p class="eyebrow">Готовый робот · <?= quantlab_h($venueLabel) ?></p>
+        <h1><?= quantlab_h($row['title']) ?></h1>
+        <?php if (($row['status'] ?? '') !== 'visible'): ?>
+          <p class="article-meta"><span class="badge badge-warn">Скрыт</span></p>
+        <?php endif; ?>
+        <p class="ready-price ready-page-price"><?= quantlab_h(quantlab_ready_price_label((string) $row['price'])) ?></p>
+        <?php if ($image !== ''): ?>
+          <figure class="article-cover ready-page-cover">
+            <img src="<?= quantlab_h($image) ?>" alt="<?= quantlab_h($row['title']) ?>" loading="eager" />
+          </figure>
+        <?php endif; ?>
         <div class="ready-page-grid">
           <div>
-            <p class="eyebrow">Готовый робот · <?= quantlab_h($venueLabel) ?></p>
-            <h1><?= quantlab_h($row['title']) ?></h1>
-            <?php if (($row['status'] ?? '') !== 'visible'): ?>
-              <p class="article-meta"><span class="badge badge-warn">Скрыт</span></p>
-            <?php endif; ?>
-            <p class="ready-price ready-page-price"><?= quantlab_h(quantlab_ready_price_label((string) $row['price'])) ?></p>
-            <?php if ($image !== ''): ?>
-              <figure class="ready-page-cover">
-                <img src="<?= quantlab_h($image) ?>" alt="<?= quantlab_h($row['title']) ?>" loading="eager" />
-              </figure>
-            <?php endif; ?>
             <div class="prose ready-page-body">
               <?= quantlab_ready_description_html((string) $row['description']) ?>
             </div>
