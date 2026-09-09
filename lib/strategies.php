@@ -446,7 +446,7 @@ function quantlab_render_comon_slide(array $row, array $notes, string $url, stri
               </div>
             </div>
             <div class="chart-stage">
-              <canvas class="js-chart" width="1100" height="420"></canvas>
+              <canvas class="js-chart"></canvas>
               <div class="chart-tip js-tip" hidden></div>
             </div>
           </div>
@@ -518,7 +518,7 @@ function quantlab_render_bybit_slide(array $row, array $notes, string $url, stri
               </div>
             </div>
             <div class="chart-stage">
-              <canvas class="js-chart" width="1100" height="420"></canvas>
+              <canvas class="js-chart"></canvas>
               <div class="chart-tip js-tip" hidden></div>
             </div>
           </div>

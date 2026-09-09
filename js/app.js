@@ -272,19 +272,42 @@
     $("#tinkoff-title").textContent = strategy.title;
   }
 
+  function canvasCssSize(canvas) {
+    const stage = canvas.closest(".chart-stage");
+    if (stage) {
+      return {
+        cssW: Math.floor(stage.clientWidth || 0),
+        cssH: Math.floor(stage.clientHeight || 280),
+      };
+    }
+    const parent = canvas.parentElement;
+    return {
+      cssW: Math.floor(canvas.clientWidth || (parent && parent.clientWidth) || 0),
+      cssH: Math.floor(parseFloat(getComputedStyle(canvas).height) || canvas.clientHeight || 180),
+    };
+  }
+
   function drawLine(canvas, points, options) {
     if (!canvas) return { pad: options.pad || { t: 18, r: 16, b: 28, l: 44 } };
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-    const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
-    const cssW = Math.max(0, parentW || canvas.clientWidth || 0);
-    const cssH = canvas.clientHeight || 260;
-    if (cssW < 40) {
+    const size = canvasCssSize(canvas);
+    const cssW = Math.max(0, size.cssW);
+    const cssH = Math.max(0, size.cssH);
+    if (cssW < 40 || cssH < 40) {
       return { pad: options.pad || { t: 18, r: 16, b: 28, l: 44 } };
     }
-    canvas.width = Math.floor(cssW * dpr);
-    canvas.height = Math.floor(cssH * dpr);
-    ctx.scale(dpr, dpr);
+    if (!canvas.closest(".chart-stage")) {
+      canvas.style.width = "100%";
+      canvas.style.height = cssH + "px";
+    }
+    const bw = Math.floor(cssW * dpr);
+    const bh = Math.floor(cssH * dpr);
+    if (canvas.width !== bw || canvas.height !== bh) {
+      canvas.width = bw;
+      canvas.height = bh;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!points.length) {
       ctx.clearRect(0, 0, cssW, cssH);
       return { pad: options.pad || { t: 18, r: 16, b: 28, l: 44 } };
@@ -380,6 +403,9 @@
     };
     paint();
     window.addEventListener("resize", paint);
+    if (window.ResizeObserver && chart.parentElement) {
+      new ResizeObserver(paint).observe(chart.parentElement);
+    }
     $$( ".pill", slide.querySelector(".js-pills") || slide).forEach((btn) => {
       btn.addEventListener("click", () => {
         $$(".pill", slide.querySelector(".js-pills") || slide).forEach((b) => b.classList.remove("is-active"));
@@ -564,8 +590,7 @@
     const max = dots.length - 1;
     const go = (next) => {
       index = Math.max(0, Math.min(max, next));
-      const width = viewport.clientWidth;
-      track.style.transform = "translate3d(-" + index * width + "px,0,0)";
+      track.style.transform = "translate3d(-" + index * 100 + "%,0,0)";
       dots.forEach((dot) => dot.classList.toggle("is-active", Number(dot.dataset.slide) === index));
       window.setTimeout(() => {
         charts.forEach((c) => c.refresh && c.refresh());
