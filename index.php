@@ -596,7 +596,7 @@ foreach ($posts as $i => $item) {
           <div class="section-head">
             <p class="eyebrow">Блог</p>
             <h2>Свежие статьи</h2>
-            <p>Разборы площадок, API и того, как собираем роботов. Обновляется из админки.</p>
+            <p>Разборы площадок, API и того, как собираем роботов.</p>
           </div>
           <div class="blog-list home-blog-list">
             <?php foreach ($posts as $item): ?>
