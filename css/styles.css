@@ -1805,6 +1805,10 @@ button.parsed-stamp.is-loading {
     background: #0b1018;
   }
 
+  .header-inner {
+    z-index: 46;
+  }
+
   .slider-bar,
   .slider-nav {
     width: 100%;
@@ -1891,7 +1895,10 @@ button.parsed-stamp.is-loading {
   .nav-backdrop {
     display: block;
     position: fixed;
-    inset: 0;
+    top: 72px;
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 40;
     background: rgba(4, 6, 10, 0.45);
     opacity: 0;

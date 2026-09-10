@@ -35,9 +35,22 @@
       setMenuOpen(!nav.classList.contains("is-open"));
     });
     nav.querySelectorAll("a").forEach(function (link) {
-      link.addEventListener("click", function () {
-        if (isMobile()) setMenuOpen(false);
-        else closeMore();
+      link.addEventListener("click", function (event) {
+        if (!isMobile()) {
+          closeMore();
+          return;
+        }
+        event.stopPropagation();
+        var href = link.href;
+        if (!href) {
+          setMenuOpen(false);
+          return;
+        }
+        event.preventDefault();
+        setMenuOpen(false);
+        window.setTimeout(function () {
+          window.location.assign(href);
+        }, 0);
       });
     });
   }
