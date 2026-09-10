@@ -241,12 +241,12 @@ a {
 }
 
 .logo-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  background: linear-gradient(135deg, var(--accent), #167a52);
-  box-shadow: 0 0 18px rgba(61, 255, 164, 0.45);
-  animation: pulse 2.4s infinite;
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  box-shadow: 0 0 14px rgba(61, 255, 164, 0.28);
 }
 
 .nav {

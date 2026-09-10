@@ -121,7 +121,28 @@ function quantlab_render_crumbs(array $items): string
 
 function quantlab_icon_href(): string
 {
-    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2306080d'/%3E%3Cpath d='M7 22 L13 10 L19 18 L25 8' fill='none' stroke='%233dffa4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E";
+    return '/favicon.ico';
+}
+
+function quantlab_icon_links(): void
+{
+    ?>
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-48.png" type="image/png" sizes="48x48" />
+    <link rel="icon" href="/favicon-96.png" type="image/png" sizes="96x96" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <?php
+}
+
+function quantlab_render_logo(string $href = '/', string $extra = ''): void
+{
+    ?>
+          <a class="logo" href="<?= quantlab_h($href) ?>">
+            <img class="logo-mark" src="/favicon.svg" width="28" height="28" alt="" />
+            AM Quant<span>Lab</span><?= $extra !== '' ? quantlab_h($extra) : '' ?>
+          </a>
+    <?php
 }
 
 function quantlab_font_href(): string
@@ -257,7 +278,7 @@ function quantlab_render_start(array $meta): void
     <?php if ($modified !== ''): ?>
     <meta property="article:modified_time" content="<?= quantlab_h($modified) ?>" />
     <?php endif; ?>
-    <link rel="icon" href="<?= quantlab_icon_href() ?>" />
+    <?php quantlab_icon_links(); ?>
     <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
     <?= $extraHead ?>
@@ -275,10 +296,7 @@ function quantlab_render_start(array $meta): void
     <header class="header" id="top">
       <div class="container header-inner">
         <div class="logo-block">
-          <a class="logo" href="/">
-            <span class="logo-mark" aria-hidden="true"></span>
-            AM Quant<span>Lab</span>
-          </a>
+          <?php quantlab_render_logo('/'); ?>
           <span class="sys-status" aria-hidden="true"><span class="pulse"></span> live</span>
         </div>
         <?php quantlab_render_header_nav(['active' => $active]); ?>
@@ -309,7 +327,7 @@ function quantlab_render_end(): void
       <div class="container footer-inner">
         <div class="footer-top">
           <div>
-            <a class="logo" href="/">AM Quant<span>Lab</span></a>
+            <?php quantlab_render_logo('/'); ?>
             <p>Роботы на Node.js и Go. API Финам, Тинькофф Инвестиции, Bybit, OKX, Binance.</p>
           </div>
           <span class="sys-status"><span class="pulse"></span> systems online</span>

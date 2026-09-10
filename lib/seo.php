@@ -17,6 +17,7 @@ function quantlab_organization_schema(): array
         '@id' => quantlab_org_id(),
         'name' => 'AM QuantLab',
         'url' => quantlab_abs_url('/'),
+        'logo' => quantlab_abs_url('/favicon-512.png'),
         'email' => quantlab_site_email(),
         'description' => 'Разработка торговых роботов и финтех-сервисов под официальные API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.',
         'inLanguage' => 'ru-RU',

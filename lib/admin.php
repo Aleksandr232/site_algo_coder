@@ -82,7 +82,7 @@ function quantlab_admin_start(string $title): void
     <meta name="robots" content="noindex,nofollow" />
     <?php quantlab_head_verification(); ?>
     <link rel="canonical" href="<?= quantlab_h(quantlab_abs_url('/admin/')) ?>" />
-    <link rel="icon" href="<?= quantlab_icon_href() ?>" />
+    <?php quantlab_icon_links(); ?>
     <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
@@ -90,7 +90,7 @@ function quantlab_admin_start(string $title): void
     <div class="noise" aria-hidden="true"></div>
     <header class="header">
       <div class="container header-inner">
-        <a class="logo" href="/admin/">AM Quant<span>Lab</span> · админ</a>
+        <?php quantlab_render_logo('/admin/', ' · админ'); ?>
         <nav class="nav" id="nav">
           <a href="/admin/">Статьи</a>
           <a href="/admin/strategies.php">Стратегии</a>

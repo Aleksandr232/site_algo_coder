@@ -81,7 +81,7 @@ foreach ($posts as $i => $item) {
         'itemListElement' => $blogList,
     ]) ?>
     <?php endif; ?>
-    <link rel="icon" href="<?= quantlab_icon_href() ?>" />
+    <?php quantlab_icon_links(); ?>
     <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
@@ -98,10 +98,7 @@ foreach ($posts as $i => $item) {
     <header class="header" id="top">
       <div class="container header-inner">
         <div class="logo-block">
-          <a class="logo" href="#top">
-            <span class="logo-mark" aria-hidden="true"></span>
-            AM Quant<span>Lab</span>
-          </a>
+          <?php quantlab_render_logo('#top'); ?>
           <span class="sys-status" aria-hidden="true"><span class="pulse"></span> live</span>
         </div>
         <?php quantlab_render_header_nav(['home' => true, 'has_posts' => $posts !== []]); ?>
@@ -737,7 +734,7 @@ foreach ($posts as $i => $item) {
       <div class="container footer-inner">
         <div class="footer-top">
           <div>
-            <a class="logo" href="#top">AM Quant<span>Lab</span></a>
+            <?php quantlab_render_logo('#top'); ?>
             <p>Роботы на Node.js и Go. API Финам, Тинькофф Инвестиции, Bybit, OKX, Binance.</p>
           </div>
           <span class="sys-status"><span class="pulse"></span> systems online</span>
