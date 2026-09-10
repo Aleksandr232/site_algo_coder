@@ -23,7 +23,10 @@
     burger.setAttribute("aria-label", open ? "Закрыть меню" : "Открыть меню");
     document.body.classList.toggle("nav-open", open);
     if (backdrop) backdrop.classList.toggle("is-open", open);
-    if (!open) closeMore();
+    if (!open) {
+      closeMore();
+      showMobileCta();
+    }
   }
 
   if (burger && nav) {
@@ -66,4 +69,36 @@
   window.addEventListener("resize", function () {
     if (!isMobile()) setMenuOpen(false);
   });
+
+  var mobileCta = document.getElementById("mobile-cta");
+  var ctaHideAt = document.getElementById("contact")
+    || document.getElementById("order")
+    || document.querySelector(".js-ready-form");
+  var ctaTimer;
+
+  function ctaTargetInView() {
+    if (!ctaHideAt) return false;
+    var rect = ctaHideAt.getBoundingClientRect();
+    return rect.top < window.innerHeight - 80;
+  }
+
+  function showMobileCta() {
+    if (!mobileCta) return;
+    var show = isMobile() && !ctaTargetInView() && !document.body.classList.contains("nav-open");
+    mobileCta.classList.toggle("is-visible", show);
+  }
+
+  function onScrollCta() {
+    if (!mobileCta || !isMobile()) return;
+    mobileCta.classList.remove("is-visible");
+    clearTimeout(ctaTimer);
+    ctaTimer = setTimeout(showMobileCta, 220);
+  }
+
+  if (mobileCta) {
+    window.addEventListener("scroll", onScrollCta, { passive: true });
+    window.addEventListener("resize", function () {
+      if (!isMobile()) mobileCta.classList.remove("is-visible");
+    });
+  }
 })();

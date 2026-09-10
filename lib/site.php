@@ -186,6 +186,7 @@ function quantlab_render_header_nav(array $opts = []): void
         <button class="burger" id="burger" type="button" aria-label="Открыть меню" aria-controls="nav" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
+        <a class="mobile-cta" id="mobile-cta" href="<?= quantlab_h($cta) ?>">Заказать робота</a>
     <?php
 }
 
