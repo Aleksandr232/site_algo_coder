@@ -184,97 +184,42 @@ a {
 
 .scroll-trades {
   position: fixed;
-  inset: 0;
+  right: 16px;
   z-index: 34;
+  width: 168px;
+  height: 118px;
   pointer-events: none;
-}
-
-.scroll-trade {
-  position: absolute;
-  right: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transform: translateY(-50%);
-}
-
-.scroll-trade.is-live {
-  opacity: 1;
-  transition: top 0.08s linear, color 0.15s ease, opacity 0.22s ease;
-}
-
-.scroll-trade.is-live.is-off {
   opacity: 0;
+  transform: translateY(-50%);
+  transition: top 0.08s linear, opacity 0.25s ease;
 }
 
-.scroll-trade.is-flash {
-  animation: scroll-trade-pop 0.7s ease forwards;
+.scroll-trades.is-on {
+  opacity: 1;
 }
 
-.scroll-trade-candle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 10px;
-  filter: drop-shadow(0 0 8px currentColor);
-}
-
-.scroll-trade-candle i {
+.scroll-trades canvas {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.scroll-trade-candle .wick {
-  width: 1px;
-  background: currentColor;
-  opacity: 0.7;
+.scroll-trades-tag {
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  font: 700 10px/1 IBM Plex Mono, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px currentColor;
 }
 
-.scroll-trade-candle .body {
-  width: 8px;
-  border-radius: 1px;
-  background: currentColor;
-}
-
-.scroll-trade.is-long {
+.scroll-trades-tag.is-long {
   color: var(--pos);
 }
 
-.scroll-trade.is-short {
+.scroll-trades-tag.is-short {
   color: var(--neg);
-}
-
-.scroll-trade-meta {
-  display: grid;
-  gap: 1px;
-  font: 700 10px/1.1 IBM Plex Mono, monospace;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-shadow: 0 0 12px currentColor;
-}
-
-.scroll-trade-meta em {
-  font-style: normal;
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
-@keyframes scroll-trade-pop {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) translateX(8px) scale(0.7);
-  }
-  14% {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0) scale(1.06);
-  }
-  70% {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-50%) translateX(-6px) scale(0.92);
-  }
 }
 
 .header {

@@ -675,30 +675,24 @@
 
   function mountScrollTrades() {
     if (reduced) return;
-    const layer = document.createElement("div");
-    layer.className = "scroll-trades";
-    layer.setAttribute("aria-hidden", "true");
-    document.body.appendChild(layer);
+    const box = document.createElement("div");
+    box.className = "scroll-trades";
+    box.setAttribute("aria-hidden", "true");
+    const canvas = document.createElement("canvas");
+    const tag = document.createElement("div");
+    tag.className = "scroll-trades-tag";
+    box.appendChild(canvas);
+    box.appendChild(tag);
+    document.body.appendChild(box);
 
-    const live = document.createElement("div");
-    live.className = "scroll-trade is-live is-off is-long";
-    live.innerHTML =
-      '<span class="scroll-trade-candle">' +
-      '<i class="wick wick-t"></i><i class="body"></i><i class="wick wick-b"></i>' +
-      "</span>" +
-      '<span class="scroll-trade-meta"><b>Long</b><em>+0.0%</em></span>';
-    layer.appendChild(live);
-
-    const body = live.querySelector(".body");
-    const wickT = live.querySelector(".wick-t");
-    const wickB = live.querySelector(".wick-b");
-    const label = live.querySelector("b");
-    const pnlEl = live.querySelector("em");
-
+    const ctx = canvas.getContext("2d");
+    const bars = [];
+    let price = 100;
     let lastY = window.scrollY;
+    let acc = 0;
     let side = 0;
-    let pnl = 0;
     let idle;
+    let running = false;
 
     function thumbY() {
       const view = window.innerHeight;
@@ -708,55 +702,138 @@
       return 10 + p * (view - 20 - thumb) + thumb / 2;
     }
 
-    function paint() {
-      const h = Math.round(22 + Math.min(46, pnl * 14));
-      const wick = Math.round(6 + Math.min(12, pnl * 3));
-      body.style.height = h + "px";
-      wickT.style.height = wick + "px";
-      wickB.style.height = Math.round(wick * 0.7) + "px";
-      label.textContent = side < 0 ? "Long" : "Short";
-      pnlEl.textContent = "+" + pnl.toFixed(1) + "%";
-      live.classList.toggle("is-long", side < 0);
-      live.classList.toggle("is-short", side > 0);
-      live.style.top = Math.round(thumbY()) + "px";
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = box.clientWidth;
+      const h = box.clientHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas._w = w;
+      canvas._h = h;
     }
 
-    function flashClose() {
-      const ghost = live.cloneNode(true);
-      ghost.className = "scroll-trade is-flash " + (side < 0 ? "is-long" : "is-short");
-      ghost.style.top = live.style.top;
-      layer.appendChild(ghost);
-      window.setTimeout(function () {
-        ghost.remove();
-      }, 720);
+    function addBar(dir) {
+      const long = dir < 0;
+      const body = rand(0.35, 1.35);
+      const open = price;
+      const close = long ? open + body : open - body;
+      const wick = rand(0.12, 0.55);
+      bars.push({
+        open: open,
+        close: close,
+        high: Math.max(open, close) + wick,
+        low: Math.min(open, close) - wick,
+        long: long,
+        pnl: rand(0.4, 2.4),
+      });
+      price = close;
+      if (bars.length > 18) bars.shift();
+    }
+
+    function draw() {
+      const w = canvas._w;
+      const h = canvas._h;
+      if (!w) return;
+      ctx.clearRect(0, 0, w, h);
+      if (!bars.length) return;
+
+      const pad = { t: 22, r: 8, b: 10, l: 8 };
+      const lows = bars.map(function (c) { return c.low; });
+      const highs = bars.map(function (c) { return c.high; });
+      const min = Math.min.apply(null, lows);
+      const max = Math.max.apply(null, highs);
+      const span = max - min || 1;
+      const yAt = function (v) {
+        return pad.t + ((max - v) / span) * (h - pad.t - pad.b);
+      };
+      const step = (w - pad.l - pad.r) / Math.max(12, bars.length);
+      const bodyW = Math.max(3, Math.min(7, step * 0.55));
+
+      ctx.strokeStyle = "rgba(232,237,245,0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const y = pad.t + ((h - pad.t - pad.b) * i) / 2;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      bars.forEach(function (c, i) {
+        const x = pad.l + i * step + bodyW / 2;
+        const y = yAt(c.close);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "rgba(61,255,164,0.22)";
+      ctx.stroke();
+
+      bars.forEach(function (c, i) {
+        const x = pad.l + i * step + bodyW / 2;
+        const color = c.long ? "#3dffa4" : "#ff6b86";
+        const yOpen = yAt(c.open);
+        const yClose = yAt(c.close);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x, yAt(c.high));
+        ctx.lineTo(x, yAt(c.low));
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.fillRect(x - bodyW / 2, Math.min(yOpen, yClose), bodyW, Math.max(2, Math.abs(yClose - yOpen)));
+      });
+    }
+
+    function show(dir) {
+      side = dir;
+      const last = bars[bars.length - 1];
+      const long = dir < 0;
+      tag.className = "scroll-trades-tag " + (long ? "is-long" : "is-short");
+      tag.textContent = (long ? "Long +" : "Short +") + (last ? last.pnl.toFixed(1) : "0.8") + "%";
+      box.classList.add("is-on");
+      box.style.top = Math.round(thumbY()) + "px";
+      draw();
+      window.clearTimeout(idle);
+      idle = window.setTimeout(function () {
+        box.classList.remove("is-on");
+        side = 0;
+        acc = 0;
+        running = false;
+      }, 700);
     }
 
     function onScroll() {
       const y = window.scrollY;
       const delta = y - lastY;
       lastY = y;
-      if (Math.abs(delta) < 2) return;
-
+      if (Math.abs(delta) < 1) return;
       const next = delta > 0 ? 1 : -1;
-      if (side && next !== side) {
-        flashClose();
-        pnl = rand(0.3, 0.7);
-      } else {
-        pnl = Math.min(6.8, pnl + Math.min(1.1, Math.abs(delta) / 90));
-        if (!side) pnl = rand(0.4, 0.9);
+      if (side && next !== side) acc = 0;
+      acc += Math.abs(delta);
+      if (acc >= 18 || next !== side) {
+        addBar(next);
+        acc = 0;
       }
-      side = next;
-      live.classList.remove("is-off");
-      paint();
-      window.clearTimeout(idle);
-      idle = window.setTimeout(function () {
-        live.classList.add("is-off");
-        side = 0;
-        pnl = 0;
-      }, 420);
+      show(next);
     }
 
-    window.addEventListener("scroll", onScroll, { passive: true });
+    function loop() {
+      if (!running) return;
+      box.style.top = Math.round(thumbY()) + "px";
+      requestAnimationFrame(loop);
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    window.addEventListener("scroll", function () {
+      if (!running) {
+        running = true;
+        requestAnimationFrame(loop);
+      }
+      onScroll();
+    }, { passive: true });
   }
 
   mountCandles();
