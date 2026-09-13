@@ -686,7 +686,7 @@
       '<button class="scroll-robot-close" type="button" aria-label="Закрыть">×</button>' +
       '<a href="' + href + '"><strong>Оставь заявку</strong><span>Соберём робота под вашу площадку</span></a>' +
       "</div>" +
-      '<div class="scroll-robot-face" aria-hidden="true"></div>';
+      '<img class="scroll-robot-pic" src="/img/scroll-robot.png" width="148" height="197" alt="" />';
     document.body.appendChild(box);
 
     let timer;
