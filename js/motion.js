@@ -675,24 +675,19 @@
 
   function mountScrollTrades() {
     if (reduced) return;
-    const box = document.createElement("div");
-    box.className = "scroll-trades";
-    box.setAttribute("aria-hidden", "true");
-    const canvas = document.createElement("canvas");
-    const tag = document.createElement("div");
-    tag.className = "scroll-trades-tag";
-    box.appendChild(canvas);
-    box.appendChild(tag);
-    document.body.appendChild(box);
+    const layer = document.createElement("div");
+    layer.className = "scroll-trades";
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
 
-    const ctx = canvas.getContext("2d");
-    const bars = [];
-    let price = 100;
+    const nodes = [];
     let lastY = window.scrollY;
-    let acc = 0;
-    let side = 0;
-    let idle;
-    let running = false;
+    let lastAt = 0;
+    let lastTop = -999;
+
+    function syncH() {
+      layer.style.height = document.documentElement.scrollHeight + "px";
+    }
 
     function thumbY() {
       const view = window.innerHeight;
@@ -702,138 +697,46 @@
       return 10 + p * (view - 20 - thumb) + thumb / 2;
     }
 
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      const w = box.clientWidth;
-      const h = box.clientHeight;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      canvas._w = w;
-      canvas._h = h;
-    }
+    function plant(dir) {
+      const top = window.scrollY + thumbY();
+      if (Math.abs(top - lastTop) < 36) return;
+      lastTop = top;
+      syncH();
 
-    function addBar(dir) {
       const long = dir < 0;
-      const body = rand(0.35, 1.35);
-      const open = price;
-      const close = long ? open + body : open - body;
-      const wick = rand(0.12, 0.55);
-      bars.push({
-        open: open,
-        close: close,
-        high: Math.max(open, close) + wick,
-        low: Math.min(open, close) - wick,
-        long: long,
-        pnl: rand(0.4, 2.4),
-      });
-      price = close;
-      if (bars.length > 18) bars.shift();
-    }
-
-    function draw() {
-      const w = canvas._w;
-      const h = canvas._h;
-      if (!w) return;
-      ctx.clearRect(0, 0, w, h);
-      if (!bars.length) return;
-
-      const pad = { t: 22, r: 8, b: 10, l: 8 };
-      const lows = bars.map(function (c) { return c.low; });
-      const highs = bars.map(function (c) { return c.high; });
-      const min = Math.min.apply(null, lows);
-      const max = Math.max.apply(null, highs);
-      const span = max - min || 1;
-      const yAt = function (v) {
-        return pad.t + ((max - v) / span) * (h - pad.t - pad.b);
-      };
-      const step = (w - pad.l - pad.r) / Math.max(12, bars.length);
-      const bodyW = Math.max(3, Math.min(7, step * 0.55));
-
-      ctx.strokeStyle = "rgba(232,237,245,0.06)";
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 3; i++) {
-        const y = pad.t + ((h - pad.t - pad.b) * i) / 2;
-        ctx.beginPath();
-        ctx.moveTo(pad.l, y);
-        ctx.lineTo(w - pad.r, y);
-        ctx.stroke();
+      const high = Math.round(rand(40, 72));
+      const body = Math.round(high * rand(0.38, 0.62));
+      const bodyTop = Math.round((high - body) * rand(0.25, 0.55));
+      const pnl = rand(0.4, 2.6).toFixed(1);
+      const node = document.createElement("div");
+      node.className = "scroll-bar-candle " + (long ? "is-long" : "is-short");
+      node.style.top = Math.round(top) + "px";
+      node.innerHTML =
+        '<i class="scroll-ohlc" style="height:' + high + 'px">' +
+        '<i class="wick"></i>' +
+        '<i class="body" style="top:' + bodyTop + "px;height:" + body + 'px"></i>' +
+        "</i>" +
+        "<span>" + (long ? "Long" : "Short") + " +" + pnl + "%</span>";
+      layer.appendChild(node);
+      nodes.push(node);
+      if (nodes.length > 48) {
+        const old = nodes.shift();
+        if (old) old.remove();
       }
-
-      ctx.beginPath();
-      bars.forEach(function (c, i) {
-        const x = pad.l + i * step + bodyW / 2;
-        const y = yAt(c.close);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.strokeStyle = "rgba(61,255,164,0.22)";
-      ctx.stroke();
-
-      bars.forEach(function (c, i) {
-        const x = pad.l + i * step + bodyW / 2;
-        const color = c.long ? "#3dffa4" : "#ff6b86";
-        const yOpen = yAt(c.open);
-        const yClose = yAt(c.close);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.moveTo(x, yAt(c.high));
-        ctx.lineTo(x, yAt(c.low));
-        ctx.stroke();
-        ctx.fillStyle = color;
-        ctx.fillRect(x - bodyW / 2, Math.min(yOpen, yClose), bodyW, Math.max(2, Math.abs(yClose - yOpen)));
-      });
     }
 
-    function show(dir) {
-      side = dir;
-      const last = bars[bars.length - 1];
-      const long = dir < 0;
-      tag.className = "scroll-trades-tag " + (long ? "is-long" : "is-short");
-      tag.textContent = (long ? "Long +" : "Short +") + (last ? last.pnl.toFixed(1) : "0.8") + "%";
-      box.classList.add("is-on");
-      box.style.top = Math.round(thumbY()) + "px";
-      draw();
-      window.clearTimeout(idle);
-      idle = window.setTimeout(function () {
-        box.classList.remove("is-on");
-        side = 0;
-        acc = 0;
-        running = false;
-      }, 700);
-    }
-
-    function onScroll() {
+    window.addEventListener("scroll", function () {
       const y = window.scrollY;
       const delta = y - lastY;
       lastY = y;
-      if (Math.abs(delta) < 1) return;
-      const next = delta > 0 ? 1 : -1;
-      if (side && next !== side) acc = 0;
-      acc += Math.abs(delta);
-      if (acc >= 18 || next !== side) {
-        addBar(next);
-        acc = 0;
-      }
-      show(next);
-    }
-
-    function loop() {
-      if (!running) return;
-      box.style.top = Math.round(thumbY()) + "px";
-      requestAnimationFrame(loop);
-    }
-
-    resize();
-    window.addEventListener("resize", resize);
-    window.addEventListener("scroll", function () {
-      if (!running) {
-        running = true;
-        requestAnimationFrame(loop);
-      }
-      onScroll();
+      if (Math.abs(delta) < 3) return;
+      const now = Date.now();
+      if (now - lastAt < 70) return;
+      lastAt = now;
+      plant(delta > 0 ? 1 : -1);
     }, { passive: true });
+    window.addEventListener("resize", syncH);
+    syncH();
   }
 
   mountCandles();
