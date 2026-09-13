@@ -673,6 +673,92 @@
     sync();
   }
 
+  function mountScrollTrades() {
+    if (reduced) return;
+    const layer = document.createElement("div");
+    layer.className = "scroll-trades";
+    layer.setAttribute("aria-hidden", "true");
+    document.body.appendChild(layer);
+
+    const live = document.createElement("div");
+    live.className = "scroll-trade is-live is-off is-long";
+    live.innerHTML =
+      '<span class="scroll-trade-candle">' +
+      '<i class="wick wick-t"></i><i class="body"></i><i class="wick wick-b"></i>' +
+      "</span>" +
+      '<span class="scroll-trade-meta"><b>Long</b><em>+0.0%</em></span>';
+    layer.appendChild(live);
+
+    const body = live.querySelector(".body");
+    const wickT = live.querySelector(".wick-t");
+    const wickB = live.querySelector(".wick-b");
+    const label = live.querySelector("b");
+    const pnlEl = live.querySelector("em");
+
+    let lastY = window.scrollY;
+    let side = 0;
+    let pnl = 0;
+    let idle;
+
+    function thumbY() {
+      const view = window.innerHeight;
+      const max = document.documentElement.scrollHeight - view;
+      const p = max > 0 ? window.scrollY / max : 0;
+      const thumb = Math.max(44, view * view / document.documentElement.scrollHeight);
+      return 10 + p * (view - 20 - thumb) + thumb / 2;
+    }
+
+    function paint() {
+      const h = Math.round(22 + Math.min(46, pnl * 14));
+      const wick = Math.round(6 + Math.min(12, pnl * 3));
+      body.style.height = h + "px";
+      wickT.style.height = wick + "px";
+      wickB.style.height = Math.round(wick * 0.7) + "px";
+      label.textContent = side < 0 ? "Long" : "Short";
+      pnlEl.textContent = "+" + pnl.toFixed(1) + "%";
+      live.classList.toggle("is-long", side < 0);
+      live.classList.toggle("is-short", side > 0);
+      live.style.top = Math.round(thumbY()) + "px";
+    }
+
+    function flashClose() {
+      const ghost = live.cloneNode(true);
+      ghost.className = "scroll-trade is-flash " + (side < 0 ? "is-long" : "is-short");
+      ghost.style.top = live.style.top;
+      layer.appendChild(ghost);
+      window.setTimeout(function () {
+        ghost.remove();
+      }, 720);
+    }
+
+    function onScroll() {
+      const y = window.scrollY;
+      const delta = y - lastY;
+      lastY = y;
+      if (Math.abs(delta) < 2) return;
+
+      const next = delta > 0 ? 1 : -1;
+      if (side && next !== side) {
+        flashClose();
+        pnl = rand(0.3, 0.7);
+      } else {
+        pnl = Math.min(6.8, pnl + Math.min(1.1, Math.abs(delta) / 90));
+        if (!side) pnl = rand(0.4, 0.9);
+      }
+      side = next;
+      live.classList.remove("is-off");
+      paint();
+      window.clearTimeout(idle);
+      idle = window.setTimeout(function () {
+        live.classList.add("is-off");
+        side = 0;
+        pnl = 0;
+      }, 420);
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
+
   mountCandles();
   mountReveal();
   mountFx();
@@ -681,4 +767,5 @@
   mountLog();
   mountTilt();
   mountScrollProgress();
+  mountScrollTrades();
 })();

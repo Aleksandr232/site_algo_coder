@@ -182,6 +182,101 @@ a {
   pointer-events: none;
 }
 
+.scroll-trades {
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  pointer-events: none;
+}
+
+.scroll-trade {
+  position: absolute;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateY(-50%);
+}
+
+.scroll-trade.is-live {
+  opacity: 1;
+  transition: top 0.08s linear, color 0.15s ease, opacity 0.22s ease;
+}
+
+.scroll-trade.is-live.is-off {
+  opacity: 0;
+}
+
+.scroll-trade.is-flash {
+  animation: scroll-trade-pop 0.7s ease forwards;
+}
+
+.scroll-trade-candle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 10px;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.scroll-trade-candle i {
+  display: block;
+}
+
+.scroll-trade-candle .wick {
+  width: 1px;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.scroll-trade-candle .body {
+  width: 8px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.scroll-trade.is-long {
+  color: var(--pos);
+}
+
+.scroll-trade.is-short {
+  color: var(--neg);
+}
+
+.scroll-trade-meta {
+  display: grid;
+  gap: 1px;
+  font: 700 10px/1.1 IBM Plex Mono, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px currentColor;
+}
+
+.scroll-trade-meta em {
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+@keyframes scroll-trade-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(8px) scale(0.7);
+  }
+  14% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1.06);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-6px) scale(0.92);
+  }
+}
+
 .header {
   position: sticky;
   top: 0;
@@ -1746,6 +1841,7 @@ button.parsed-stamp.is-loading {
   .hero-panel::before,
   .btn::after,
   .scroll-progress,
+  .scroll-trades,
   .grid-bg {
     display: none;
   }
