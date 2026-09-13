@@ -673,70 +673,52 @@
     sync();
   }
 
-  function mountScrollTrades() {
-    if (reduced) return;
-    const layer = document.createElement("div");
-    layer.className = "scroll-trades";
-    layer.setAttribute("aria-hidden", "true");
-    document.body.appendChild(layer);
+  function mountScrollRobot() {
+    if (sessionStorage.getItem("ql-robot-off")) return;
+    const form = document.getElementById("contact")
+      || document.getElementById("order")
+      || document.querySelector(".js-ready-form");
+    const href = document.getElementById("contact") ? "#contact" : "/#contact";
+    const box = document.createElement("div");
+    box.className = "scroll-robot";
+    box.innerHTML =
+      '<div class="scroll-robot-bubble">' +
+      '<button class="scroll-robot-close" type="button" aria-label="Закрыть">×</button>' +
+      '<a href="' + href + '"><strong>Оставь заявку</strong><span>Соберём робота под вашу площадку</span></a>' +
+      "</div>" +
+      '<div class="scroll-robot-face" aria-hidden="true"></div>';
+    document.body.appendChild(box);
 
-    const nodes = [];
-    let lastY = window.scrollY;
-    let lastAt = 0;
-    let lastTop = -999;
+    let timer;
+    const closeBtn = box.querySelector(".scroll-robot-close");
 
-    function syncH() {
-      layer.style.height = document.documentElement.scrollHeight + "px";
+    function formInView() {
+      if (!form) return false;
+      return form.getBoundingClientRect().top < window.innerHeight - 80;
     }
 
-    function thumbY() {
-      const view = window.innerHeight;
-      const max = document.documentElement.scrollHeight - view;
-      const p = max > 0 ? window.scrollY / max : 0;
-      const thumb = Math.max(44, view * view / document.documentElement.scrollHeight);
-      return 10 + p * (view - 20 - thumb) + thumb / 2;
+    function hide() {
+      box.classList.remove("is-on");
     }
 
-    function plant(dir) {
-      const top = window.scrollY + thumbY();
-      if (Math.abs(top - lastTop) < 36) return;
-      lastTop = top;
-      syncH();
-
-      const long = dir < 0;
-      const high = Math.round(rand(40, 72));
-      const body = Math.round(high * rand(0.38, 0.62));
-      const bodyTop = Math.round((high - body) * rand(0.25, 0.55));
-      const pnl = rand(0.4, 2.6).toFixed(1);
-      const node = document.createElement("div");
-      node.className = "scroll-bar-candle " + (long ? "is-long" : "is-short");
-      node.style.top = Math.round(top) + "px";
-      node.innerHTML =
-        '<i class="scroll-ohlc" style="height:' + high + 'px">' +
-        '<i class="wick"></i>' +
-        '<i class="body" style="top:' + bodyTop + "px;height:" + body + 'px"></i>' +
-        "</i>" +
-        "<span>" + (long ? "Long" : "Short") + " +" + pnl + "%</span>";
-      layer.appendChild(node);
-      nodes.push(node);
-      if (nodes.length > 48) {
-        const old = nodes.shift();
-        if (old) old.remove();
-      }
+    function show() {
+      if (formInView()) return;
+      box.classList.add("is-on");
     }
+
+    closeBtn.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      sessionStorage.setItem("ql-robot-off", "1");
+      hide();
+      box.remove();
+    });
 
     window.addEventListener("scroll", function () {
-      const y = window.scrollY;
-      const delta = y - lastY;
-      lastY = y;
-      if (Math.abs(delta) < 3) return;
-      const now = Date.now();
-      if (now - lastAt < 70) return;
-      lastAt = now;
-      plant(delta > 0 ? 1 : -1);
+      hide();
+      clearTimeout(timer);
+      timer = setTimeout(show, 480);
     }, { passive: true });
-    window.addEventListener("resize", syncH);
-    syncH();
   }
 
   mountCandles();
@@ -747,5 +729,5 @@
   mountLog();
   mountTilt();
   mountScrollProgress();
-  mountScrollTrades();
+  mountScrollRobot();
 })();
