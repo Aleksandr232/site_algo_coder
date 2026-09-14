@@ -159,15 +159,62 @@ function quantlab_telegram_html(string $text): string
     return htmlspecialchars($text, ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function quantlab_telegram_has_price(string $text): bool
+{
+    if ($text === '') {
+        return false;
+    }
+    if (preg_match('/[₽€$]|руб(?:\.|лей|ля|лях|ль)?|\bRUB\b|\bUSD\b/u', $text)) {
+        return true;
+    }
+    if (preg_match('/\b(?:цен[аыу]|цен\b|стоимост[ьи]|прайс(?:-лист)?)\b/u', $text)) {
+        return true;
+    }
+    if (preg_match('/сколько\s+стоит|стоит\s+\d/u', $text)) {
+        return true;
+    }
+    if (preg_match('/от\s+\d[\d\s\x{00A0}]*(?:[.,]\d+)?(?:\s*(?:тыс(?:яч)?|к))?(?:\s*(?:₽|руб|дн(?:ей|я)?|день))?/u', $text)) {
+        return true;
+    }
+    return false;
+}
+
+function quantlab_telegram_strip_prices(string $text): string
+{
+    $text = trim($text);
+    if ($text === '') {
+        return '';
+    }
+    $parts = preg_split('/(?<=[.!?…])\s+/u', $text) ?: [$text];
+    $keep = [];
+    foreach ($parts as $part) {
+        $part = trim($part);
+        if ($part === '' || quantlab_telegram_has_price($part)) {
+            continue;
+        }
+        $keep[] = $part;
+    }
+    $clean = trim(implode(' ', $keep));
+    $clean = preg_replace('/от\s+\d[\d\s\x{00A0}]*(?:[.,]\d+)?(?:\s*(?:тыс(?:яч)?|к))?(?:\s*(?:₽|руб(?:лей|ля)?|дн(?:ей|я)?))?/u', '', $clean) ?? $clean;
+    $clean = preg_replace('/\s{2,}/u', ' ', $clean) ?? $clean;
+    $clean = preg_replace('/\s+([,.;:!?])/u', '$1', $clean) ?? $clean;
+    return trim($clean, " \t\n\r\0\x0B,;:—-");
+}
+
 function quantlab_telegram_caption(array $post): string
 {
     $title = trim((string) ($post['title'] ?? ''));
-    $excerpt = trim((string) ($post['excerpt'] ?? ''));
-    if ($excerpt === '') {
-        $excerpt = trim((string) ($post['seo_description'] ?? ''));
-    }
-    if ($excerpt === '') {
-        $excerpt = quantlab_telegram_plain((string) ($post['body'] ?? ''));
+    $candidates = [
+        trim((string) ($post['excerpt'] ?? '')),
+        trim((string) ($post['seo_description'] ?? '')),
+        quantlab_telegram_plain((string) ($post['body'] ?? '')),
+    ];
+    $excerpt = '';
+    foreach ($candidates as $candidate) {
+        $excerpt = quantlab_telegram_strip_prices($candidate);
+        if ($excerpt !== '') {
+            break;
+        }
     }
     $excerpt = quantlab_telegram_clip($excerpt, 280);
 
