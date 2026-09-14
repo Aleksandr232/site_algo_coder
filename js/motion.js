@@ -686,24 +686,71 @@
       '<button class="scroll-robot-close" type="button" aria-label="Закрыть">×</button>' +
       '<a href="' + href + '"><strong>Оставь заявку</strong><span>Соберём робота под вашу площадку</span></a>' +
       "</div>" +
-      '<img class="scroll-robot-pic" src="/img/scroll-robot.png" width="148" height="197" alt="" />';
+      '<div class="scroll-robot-body">' +
+      '<i class="scroll-robot-glow" aria-hidden="true"></i>' +
+      '<img class="scroll-robot-pic" src="/img/scroll-robot.png" width="148" height="197" alt="" />' +
+      "</div>";
     document.body.appendChild(box);
 
-    let timer;
     const closeBtn = box.querySelector(".scroll-robot-close");
+    const body = box.querySelector(".scroll-robot-body");
+    let idleTimer;
+    let hideTimer;
+    let shotTimer;
+    let lastShown = 0;
+    let visible = false;
+    let scrolled = 0;
 
     function formInView() {
       if (!form) return false;
       return form.getBoundingClientRect().top < window.innerHeight - 80;
     }
 
+    function stopShots() {
+      clearInterval(shotTimer);
+      shotTimer = 0;
+    }
+
+    function fireShot() {
+      if (reduced) return;
+      const shot = document.createElement("i");
+      const h = Math.round(rand(22, 36));
+      const bodyH = Math.round(h * rand(0.4, 0.6));
+      shot.className = "scroll-shot";
+      shot.style.setProperty("--sx", Math.round(rand(-90, -200)) + "px");
+      shot.style.setProperty("--sy", Math.round(rand(-40, -130)) + "px");
+      shot.innerHTML =
+        '<i class="scroll-shot-ohlc" style="height:' + h + 'px">' +
+        '<i class="wick"></i><i class="body" style="top:' + Math.round((h - bodyH) * 0.4) + "px;height:" + bodyH + 'px"></i>' +
+        "</i><b>+" + rand(0.6, 2.8).toFixed(1) + "%</b>";
+      body.appendChild(shot);
+      window.setTimeout(function () {
+        shot.remove();
+      }, 1200);
+    }
+
+    function startShots() {
+      stopShots();
+      if (reduced) return;
+      fireShot();
+      shotTimer = window.setInterval(fireShot, 520);
+    }
+
     function hide() {
+      visible = false;
       box.classList.remove("is-on");
+      stopShots();
+      clearTimeout(hideTimer);
     }
 
     function show() {
-      if (formInView()) return;
+      if (visible || formInView()) return;
+      if (Date.now() - lastShown < 90000) return;
+      visible = true;
+      lastShown = Date.now();
       box.classList.add("is-on");
+      startShots();
+      hideTimer = window.setTimeout(hide, 12000);
     }
 
     closeBtn.addEventListener("click", function (event) {
@@ -715,9 +762,14 @@
     });
 
     window.addEventListener("scroll", function () {
-      hide();
-      clearTimeout(timer);
-      timer = setTimeout(show, 480);
+      scrolled += 1;
+      clearTimeout(idleTimer);
+      if (formInView()) {
+        hide();
+        return;
+      }
+      if (scrolled < 8) return;
+      idleTimer = setTimeout(show, 1400);
     }, { passive: true });
   }
 
