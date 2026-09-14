@@ -264,6 +264,7 @@ a {
   position: relative;
   flex-shrink: 0;
   width: 148px;
+  transform-origin: 70% 100%;
 }
 
 .scroll-robot-pic {
@@ -294,6 +295,10 @@ a {
   animation: scroll-robot-in 0.55s cubic-bezier(0.22, 1, 0.32, 1);
 }
 
+.scroll-robot.is-on .scroll-robot-body {
+  animation: scroll-robot-idle 3.4s ease-in-out 0.5s infinite;
+}
+
 .scroll-robot.is-on .scroll-robot-glow {
   animation: scroll-robot-glow 1.4s ease-in-out infinite;
 }
@@ -306,6 +311,22 @@ a {
   100% {
     transform: none;
     filter: drop-shadow(0 10px 24px rgba(61, 255, 164, 0.22));
+  }
+}
+
+@keyframes scroll-robot-idle {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-1.2deg);
+  }
+  25% {
+    transform: translate(-6px, -8px) rotate(-3deg);
+  }
+  50% {
+    transform: translate(2px, -3px) rotate(1.6deg);
+  }
+  75% {
+    transform: translate(-4px, -10px) rotate(-2deg);
   }
 }
 
@@ -1956,7 +1977,11 @@ button.parsed-stamp.is-loading {
   .bar-fill,
   .dash-spark-line,
   .meter > i,
-  .mini-candles i {
+  .mini-candles i,
+  .scroll-robot-body,
+  .scroll-robot-pic,
+  .scroll-robot-glow,
+  .scroll-shot {
     animation: none !important;
   }
 
