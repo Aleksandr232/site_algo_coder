@@ -290,6 +290,11 @@ function quantlab_blog_all(): array
     return $items;
 }
 
+function quantlab_blog_page_url(int $page): string
+{
+    return $page <= 1 ? '/blog/' : '/blog/?page=' . $page;
+}
+
 function quantlab_blog_published(): array
 {
     return array_values(array_filter(quantlab_blog_all(), static function ($item) {
