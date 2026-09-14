@@ -688,36 +688,19 @@
       ["От 20 000 ₽", "Сроки от 2 дней, если логика ясна"],
     ];
     box.innerHTML =
-      '<div class="scroll-robot-stage">' +
       '<div class="scroll-robot-bubble">' +
       '<button class="scroll-robot-close" type="button" aria-label="Закрыть">×</button>' +
       '<a href="' + href + '"><strong>' + lines[0][0] + "</strong><span>" + lines[0][1] + "</span></a>" +
       "</div>" +
       '<div class="scroll-robot-body">' +
-      '<div class="scroll-robot-look">' +
-      '<div class="scroll-robot-depth"></div>' +
       '<i class="scroll-robot-glow" aria-hidden="true"></i>' +
-      '<i class="scroll-robot-shine" aria-hidden="true"></i>' +
-      '<img class="scroll-robot-pic" src="/img/scroll-robot.png" width="148" height="197" alt="" />' +
-      "</div></div></div>";
+      '<img class="scroll-robot-pic" src="/img/scroll-robot.png" width="168" height="224" alt="" />' +
+      "</div>";
     document.body.appendChild(box);
 
     const closeBtn = box.querySelector(".scroll-robot-close");
-    const stage = box.querySelector(".scroll-robot-stage");
-    const body = box.querySelector(".scroll-robot-look");
-    const depth = box.querySelector(".scroll-robot-depth");
+    const body = box.querySelector(".scroll-robot-body");
     const glow = box.querySelector(".scroll-robot-glow");
-    const shine = box.querySelector(".scroll-robot-shine");
-    const slices = reduced ? 1 : 12;
-    for (let i = 0; i < slices; i++) {
-      const slice = document.createElement("img");
-      slice.className = "scroll-robot-slice";
-      slice.src = "/img/scroll-robot.png";
-      slice.alt = "";
-      slice.style.transform = "translateZ(" + (i * 1.2) + "px)";
-      slice.style.filter = "brightness(" + (0.28 + (i / Math.max(1, slices - 1)) * 0.55) + ")";
-      depth.appendChild(slice);
-    }
     const titleEl = box.querySelector(".scroll-robot-bubble strong");
     const subEl = box.querySelector(".scroll-robot-bubble span");
     let idleTimer;
@@ -729,9 +712,6 @@
     let lastShown = 0;
     let visible = false;
     let scrolled = 0;
-    let lookX = 0;
-    let lookY = 0;
-    let spin = 0;
 
     function formInView() {
       if (!form) return false;
@@ -798,22 +778,11 @@
       talkTimer = window.setInterval(nextLine, 3200);
     }
 
-    function spin3d(now) {
-      if (!visible || reduced) return;
-      spin = now;
-      const idleY = Math.sin(now / 750) * 8;
-      const idleX = Math.cos(now / 980) * 4;
-      stage.style.transform =
-        "rotateY(" + (lookX + idleY).toFixed(2) + "deg) rotateX(" + (lookY + idleX).toFixed(2) + "deg)";
-      requestAnimationFrame(spin3d);
-    }
-
     function hide() {
       visible = false;
       box.classList.remove("is-on");
       stopLive();
       clearTimeout(hideTimer);
-      stage.style.transform = "";
     }
 
     function show() {
@@ -823,7 +792,6 @@
       lastShown = Date.now();
       box.classList.add("is-on");
       startLive();
-      if (!reduced) requestAnimationFrame(spin3d);
       hideTimer = window.setTimeout(hide, 14000);
     }
 
@@ -846,20 +814,6 @@
       idleTimer = setTimeout(show, 1400);
     }, { passive: true });
 
-    if (!reduced) {
-      window.addEventListener("pointermove", function (event) {
-        if (!visible) return;
-        const rect = stage.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / Math.max(1, rect.width) - 0.5;
-        const y = (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5;
-        lookX = x * 26;
-        lookY = -y * 16;
-        if (shine) {
-          shine.style.left = (8 + x * 22) + "%";
-          shine.style.top = (2 + y * 14) + "%";
-        }
-      }, { passive: true });
-    }
   }
 
   mountCandles();
