@@ -38,8 +38,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'keywords' => $_POST['keywords'] ?? '',
             'seo_description' => $_POST['seo_description'] ?? '',
             'status' => !empty($_POST['published']) ? 'published' : 'draft',
+            'telegram_notify' => !empty($_POST['telegram_notify']),
         ], $post['slug'] ?? null);
-        header('Location: /admin/edit.php?slug=' . rawurlencode($saved['slug']) . '&saved=1', true, 302);
+        $qs = 'saved=1';
+        $tg = $saved['_telegram'] ?? null;
+        if (is_array($tg) && !empty($tg['ok'])) {
+            $qs .= '&tg=1';
+        } elseif (is_array($tg) && (($tg['error'] ?? '') !== 'disabled') && (($tg['error'] ?? '') !== '')) {
+            $qs .= '&tg=err';
+        }
+        header('Location: /admin/edit.php?slug=' . rawurlencode($saved['slug']) . '&' . $qs, true, 302);
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -49,6 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $saved = isset($_GET['saved']);
+$tgOk = (string) ($_GET['tg'] ?? '') === '1';
+$tgErr = (string) ($_GET['tg'] ?? '') === 'err';
+$tgReady = function_exists('quantlab_telegram_enabled') && quantlab_telegram_enabled();
+$tgSent = !empty($post['slug']) && function_exists('quantlab_telegram_post_sent') && quantlab_telegram_post_sent((string) $post['slug']);
+$tgChecked = $tgReady && !$tgSent;
 quantlab_admin_start(($post ? 'Редактирование' : 'Новая статья') . ' — админка AM QuantLab');
 $slugJs = <<<'JS'
 (function () {
@@ -87,6 +100,7 @@ JS;
             <p class="eyebrow">Админка</p>
             <h1><?= $post ? 'Редактирование' : 'Новая статья' ?></h1>
             <?= quantlab_admin_storage_note() ?>
+            <?= quantlab_admin_telegram_note() ?>
           </div>
           <?php if (!empty($post['slug'])): ?>
             <a class="btn btn-ghost" href="<?= quantlab_h(quantlab_public_path('blog/' . $post['slug'])) ?>" target="_blank" rel="noopener">Открыть</a>
@@ -94,6 +108,11 @@ JS;
         </div>
         <?php if ($saved): ?>
           <p class="form-note" style="display:block">Сохранено. Публичный адрес: <a href="<?= quantlab_h(quantlab_public_path('blog/' . $post['slug'])) ?>"><?= quantlab_h(quantlab_public_path('blog/' . $post['slug'])) ?></a></p>
+        <?php endif; ?>
+        <?php if ($tgOk): ?>
+          <p class="form-note" style="display:block">Отправлено в Telegram-канал: картинка, короткий текст и кнопка «Читать на AM QuantLab».</p>
+        <?php elseif ($tgErr): ?>
+          <p class="form-note" style="display:block">Статья сохранена, но в Telegram не ушла. Проверьте токен бота и что бот — админ канала с правом публиковать.</p>
         <?php endif; ?>
         <?php if ($error): ?>
           <p class="form-note" style="display:block"><?= quantlab_h($error) ?></p>
@@ -146,6 +165,17 @@ JS;
             <input type="checkbox" name="published" value="1" <?= (($post['status'] ?? '') === 'published') ? 'checked' : '' ?> />
             Опубликовать — в sitemap, RSS и пинг Яндексу/Google
           </label>
+          <label class="check-row">
+            <input type="checkbox" name="telegram_notify" value="1" <?= $tgChecked ? 'checked' : '' ?> <?= $tgReady ? '' : 'disabled' ?> />
+            Отправить в Telegram-канал — обложка, короткий текст и кнопка «Читать на AM QuantLab»
+          </label>
+          <?php if ($tgSent): ?>
+            <span class="field-hint">Уже уходило в канал. Отметьте галочку, если нужно отправить ещё раз.</span>
+          <?php elseif (!$tgReady): ?>
+            <span class="field-hint">Сначала TELEGRAM_BOT_TOKEN в .env и бот-админ канала.</span>
+          <?php else: ?>
+            <span class="field-hint">Уйдёт вместе с публикацией. Черновик в канал не отправляется.</span>
+          <?php endif; ?>
           <div class="hero-actions">
             <button class="btn" type="submit">Сохранить</button>
             <a class="btn btn-ghost" href="/admin/">К списку</a>

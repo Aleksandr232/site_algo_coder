@@ -417,6 +417,9 @@ function quantlab_blog_save(array $input, ?string $currentSlug = null): array
         }
         quantlab_blog_set_redirect($currentSlug, $slug);
         quantlab_blog_write_redirect_stub($currentSlug, $slug);
+        if (function_exists('quantlab_telegram_rename_sent')) {
+            quantlab_telegram_rename_sent($currentSlug, $slug);
+        }
     }
 
     $pdo = function_exists('quantlab_db') ? quantlab_db() : null;
@@ -454,6 +457,9 @@ function quantlab_blog_save(array $input, ?string $currentSlug = null): array
     quantlab_write_seo_files();
     if ($status === 'published') {
         quantlab_ping_search_engines();
+        if (!empty($input['telegram_notify']) && function_exists('quantlab_telegram_share_post')) {
+            $post['_telegram'] = quantlab_telegram_share_post($post);
+        }
     }
     return $post;
 }
@@ -463,6 +469,9 @@ function quantlab_blog_delete(string $slug): void
     $post = quantlab_blog_load($slug);
     if ($post) {
         quantlab_blog_delete_image($post['image'] ?? null);
+    }
+    if (function_exists('quantlab_telegram_unmark_sent')) {
+        quantlab_telegram_unmark_sent($slug);
     }
     $path = quantlab_blog_post_path($slug);
     if (is_file($path)) {

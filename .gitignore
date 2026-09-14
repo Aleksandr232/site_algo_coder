@@ -2,6 +2,8 @@
 data/leads.json
 data/db-status.json
 data/mail-status.json
+data/telegram-status.json
+data/blog/telegram-sent.json
 node_modules/
 uploads/blog/*
 !uploads/blog/.gitkeep

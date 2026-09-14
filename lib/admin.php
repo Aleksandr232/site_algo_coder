@@ -137,6 +137,22 @@ function quantlab_admin_mail_note(): string
     return '<p class="admin-storage">Почта: SMTP готов, письма уйдут с новой заявки на ' . quantlab_h($to) . '</p>';
 }
 
+function quantlab_admin_telegram_note(): string
+{
+    if (!function_exists('quantlab_telegram_enabled') || !quantlab_telegram_enabled()) {
+        return '<p class="admin-storage admin-storage-warn">Telegram: задайте TELEGRAM_BOT_TOKEN в .env и сделайте бота админом канала с правом публиковать.</p>';
+    }
+    $status = function_exists('quantlab_telegram_status') ? quantlab_telegram_status() : [];
+    $channel = function_exists('quantlab_telegram_channel') ? quantlab_telegram_channel() : '';
+    if (!empty($status['ok'])) {
+        return '<p class="admin-storage">Telegram: посты уходят в ' . quantlab_h($channel) . '</p>';
+    }
+    if (!empty($status['error'])) {
+        return '<p class="admin-storage admin-storage-warn">Telegram не ушёл: ' . quantlab_h((string) $status['error']) . '</p>';
+    }
+    return '<p class="admin-storage">Telegram: бот готов, опубликованные статьи уйдут в ' . quantlab_h($channel) . '</p>';
+}
+
 function quantlab_admin_end(string $extraJs = ''): void
 {
     ?>
