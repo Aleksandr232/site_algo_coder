@@ -265,6 +265,13 @@ a {
   flex-shrink: 0;
   width: 148px;
   transform-origin: 70% 100%;
+  perspective: 420px;
+}
+
+.scroll-robot-look {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease-out;
 }
 
 .scroll-robot-pic {
@@ -301,6 +308,23 @@ a {
 
 .scroll-robot.is-on .scroll-robot-glow {
   animation: scroll-robot-glow 1.4s ease-in-out infinite;
+}
+
+.scroll-robot-glow.is-blink {
+  animation: none;
+  opacity: 0.08;
+  transform: scaleY(0.12);
+}
+
+.scroll-robot-glow.is-fire {
+  animation: none;
+  opacity: 1;
+  transform: scale(1.45);
+}
+
+.scroll-robot-bubble a strong,
+.scroll-robot-bubble a span {
+  transition: opacity 0.2s ease;
 }
 
 @keyframes scroll-robot-in {

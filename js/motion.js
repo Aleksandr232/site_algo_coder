@@ -681,22 +681,35 @@
     const href = document.getElementById("contact") ? "#contact" : "/#contact";
     const box = document.createElement("div");
     box.className = "scroll-robot";
+    const lines = [
+      ["Оставь заявку", "Соберём робота под вашу площадку"],
+      ["Есть идея?", "Опишите вход, стоп и риск"],
+      ["Нужен робот?", "Финам, Bybit, OKX или Binance"],
+      ["От 20 000 ₽", "Сроки от 2 дней, если логика ясна"],
+    ];
     box.innerHTML =
       '<div class="scroll-robot-bubble">' +
       '<button class="scroll-robot-close" type="button" aria-label="Закрыть">×</button>' +
-      '<a href="' + href + '"><strong>Оставь заявку</strong><span>Соберём робота под вашу площадку</span></a>' +
+      '<a href="' + href + '"><strong>' + lines[0][0] + "</strong><span>" + lines[0][1] + "</span></a>" +
       "</div>" +
       '<div class="scroll-robot-body">' +
+      '<div class="scroll-robot-look">' +
       '<i class="scroll-robot-glow" aria-hidden="true"></i>' +
       '<img class="scroll-robot-pic" src="/img/scroll-robot.png" width="148" height="197" alt="" />' +
-      "</div>";
+      "</div></div>";
     document.body.appendChild(box);
 
     const closeBtn = box.querySelector(".scroll-robot-close");
-    const body = box.querySelector(".scroll-robot-body");
+    const body = box.querySelector(".scroll-robot-look");
+    const glow = box.querySelector(".scroll-robot-glow");
+    const titleEl = box.querySelector(".scroll-robot-bubble strong");
+    const subEl = box.querySelector(".scroll-robot-bubble span");
     let idleTimer;
     let hideTimer;
     let shotTimer;
+    let talkTimer;
+    let blinkTimer;
+    let line = 0;
     let lastShown = 0;
     let visible = false;
     let scrolled = 0;
@@ -706,13 +719,40 @@
       return form.getBoundingClientRect().top < window.innerHeight - 80;
     }
 
-    function stopShots() {
+    function stopLive() {
       clearInterval(shotTimer);
+      clearInterval(talkTimer);
+      clearTimeout(blinkTimer);
       shotTimer = 0;
+    }
+
+    function blink() {
+      if (!glow) return;
+      glow.classList.add("is-blink");
+      window.setTimeout(function () {
+        glow.classList.remove("is-blink");
+      }, 120);
+      blinkTimer = window.setTimeout(blink, rand(2200, 4200));
+    }
+
+    function nextLine() {
+      line = (line + 1) % lines.length;
+      titleEl.style.opacity = "0";
+      subEl.style.opacity = "0";
+      window.setTimeout(function () {
+        titleEl.textContent = lines[line][0];
+        subEl.textContent = lines[line][1];
+        titleEl.style.opacity = "1";
+        subEl.style.opacity = "1";
+      }, 180);
     }
 
     function fireShot() {
       if (reduced) return;
+      glow.classList.add("is-fire");
+      window.setTimeout(function () {
+        glow.classList.remove("is-fire");
+      }, 140);
       const shot = document.createElement("i");
       const h = Math.round(rand(22, 36));
       const bodyH = Math.round(h * rand(0.4, 0.6));
@@ -729,18 +769,22 @@
       }, 1200);
     }
 
-    function startShots() {
-      stopShots();
-      if (reduced) return;
-      fireShot();
-      shotTimer = window.setInterval(fireShot, 520);
+    function startLive() {
+      stopLive();
+      if (!reduced) {
+        fireShot();
+        shotTimer = window.setInterval(fireShot, 520);
+        blink();
+      }
+      talkTimer = window.setInterval(nextLine, 3200);
     }
 
     function hide() {
       visible = false;
       box.classList.remove("is-on");
-      stopShots();
+      stopLive();
       clearTimeout(hideTimer);
+      if (body) body.style.transform = "";
     }
 
     function show() {
@@ -749,8 +793,8 @@
       visible = true;
       lastShown = Date.now();
       box.classList.add("is-on");
-      startShots();
-      hideTimer = window.setTimeout(hide, 12000);
+      startLive();
+      hideTimer = window.setTimeout(hide, 14000);
     }
 
     closeBtn.addEventListener("click", function (event) {
@@ -771,6 +815,17 @@
       if (scrolled < 8) return;
       idleTimer = setTimeout(show, 1400);
     }, { passive: true });
+
+    if (!reduced) {
+      window.addEventListener("pointermove", function (event) {
+        if (!visible) return;
+        const rect = body.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width - 0.5;
+        const y = (event.clientY - rect.top) / rect.height - 0.5;
+        body.style.transform =
+          "rotateY(" + (x * 10).toFixed(1) + "deg) rotateX(" + (-y * 7).toFixed(1) + "deg)";
+      }, { passive: true });
+    }
   }
 
   mountCandles();
