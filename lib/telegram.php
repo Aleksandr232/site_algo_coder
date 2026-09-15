@@ -136,6 +136,11 @@ function quantlab_telegram_plain(string $markdown): string
     return trim($text);
 }
 
+function quantlab_telegram_len(string $text): int
+{
+    return function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
+}
+
 function quantlab_telegram_clip(string $text, int $len): string
 {
     if (function_exists('quantlab_clip')) {
@@ -145,13 +150,26 @@ function quantlab_telegram_clip(string $text, int $len): string
         }
         return $cut;
     }
+    if (quantlab_telegram_len($text) <= $len) {
+        return $text;
+    }
     if (function_exists('mb_substr')) {
-        if (mb_strlen($text, 'UTF-8') <= $len) {
-            return $text;
-        }
         return rtrim(mb_substr($text, 0, $len - 1, 'UTF-8')) . '…';
     }
-    return strlen($text) <= $len ? $text : rtrim(substr($text, 0, $len - 1)) . '…';
+    return rtrim(substr($text, 0, $len - 1)) . '…';
+}
+
+function quantlab_telegram_clip_sentence(string $text, int $len): string
+{
+    $text = trim($text);
+    if ($text === '' || quantlab_telegram_len($text) <= $len) {
+        return $text;
+    }
+    $cut = rtrim(quantlab_telegram_clip($text, $len), " \t\n\r…");
+    if (preg_match('/^(.*[.!?…])(?:\s|$)/us', $cut, $match) && quantlab_telegram_len($match[1]) >= (int) ($len * 0.4)) {
+        return trim($match[1]);
+    }
+    return rtrim($cut) . '…';
 }
 
 function quantlab_telegram_html(string $text): string
@@ -201,31 +219,59 @@ function quantlab_telegram_strip_prices(string $text): string
     return trim($clean, " \t\n\r\0\x0B,;:—-");
 }
 
-function quantlab_telegram_caption(array $post): string
+function quantlab_telegram_body_preview(string $markdown): string
 {
-    $title = trim((string) ($post['title'] ?? ''));
-    $candidates = [
-        trim((string) ($post['excerpt'] ?? '')),
-        trim((string) ($post['seo_description'] ?? '')),
-        quantlab_telegram_plain((string) ($post['body'] ?? '')),
-    ];
-    $excerpt = '';
-    foreach ($candidates as $candidate) {
-        $excerpt = quantlab_telegram_strip_prices($candidate);
-        if ($excerpt !== '') {
+    $text = str_replace(["\r\n", "\r"], "\n", $markdown);
+    $text = preg_replace('/!\[[^\]]*\]\([^)]+\)/', '', $text) ?? $text;
+    $text = preg_replace('/\[([^\]]+)\]\([^)]+\)/', '$1', $text) ?? $text;
+    $text = preg_replace('/^#{1,6}\s+.*$/m', '', $text) ?? $text;
+    $text = preg_replace('/^\|.+$/m', '', $text) ?? $text;
+    $text = str_replace(['*', '_', '`', '~'], '', $text);
+    $text = preg_replace('/^>\s?/m', '', $text) ?? $text;
+    $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
+
+    $paragraphs = preg_split("/\n\s*\n/", trim($text)) ?: [];
+    $chunks = [];
+    foreach ($paragraphs as $paragraph) {
+        $paragraph = trim(preg_replace('/\s+/', ' ', $paragraph) ?? $paragraph);
+        $paragraph = quantlab_telegram_strip_prices($paragraph);
+        if ($paragraph === '') {
+            continue;
+        }
+        $chunks[] = $paragraph;
+        $joined = implode("\n\n", $chunks);
+        if (count($chunks) >= 3 || quantlab_telegram_len($joined) >= 520) {
             break;
         }
     }
-    $excerpt = quantlab_telegram_clip($excerpt, 280);
 
-    $caption = '<b>' . quantlab_telegram_html($title) . '</b>';
-    if ($excerpt !== '') {
-        $caption .= "\n\n" . quantlab_telegram_html($excerpt);
+    return quantlab_telegram_clip_sentence(implode("\n\n", $chunks), 720);
+}
+
+function quantlab_telegram_caption(array $post): string
+{
+    $title = trim((string) ($post['title'] ?? ''));
+    $titleHtml = '<b>' . quantlab_telegram_html($title) . '</b>';
+    $budget = 1024 - quantlab_telegram_len($titleHtml) - 2;
+    if ($budget < 120) {
+        $budget = 120;
     }
-    if (function_exists('mb_strlen') && mb_strlen($caption, 'UTF-8') > 1024) {
-        $caption = mb_substr($caption, 0, 1023, 'UTF-8');
-    } elseif (strlen($caption) > 1024) {
-        $caption = substr($caption, 0, 1023);
+    if ($budget > 720) {
+        $budget = 720;
+    }
+
+    $preview = quantlab_telegram_body_preview((string) ($post['body'] ?? ''));
+    if ($preview === '') {
+        $preview = quantlab_telegram_strip_prices(trim((string) ($post['excerpt'] ?? '')));
+    }
+    if ($preview === '') {
+        $preview = quantlab_telegram_strip_prices(trim((string) ($post['seo_description'] ?? '')));
+    }
+    $preview = quantlab_telegram_clip_sentence($preview, $budget);
+
+    $caption = $titleHtml;
+    if ($preview !== '') {
+        $caption .= "\n\n" . quantlab_telegram_html($preview);
     }
     return $caption;
 }
