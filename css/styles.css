@@ -2594,9 +2594,34 @@ button.parsed-stamp.is-loading {
   border-bottom: 1px solid rgba(61, 255, 164, 0.35);
 }
 
-.prose ul {
+.prose ul,
+.prose ol {
   margin: 0;
   padding-left: 20px;
+}
+
+.prose .table-wrap {
+  overflow: auto;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.prose th,
+.prose td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.admin-paste textarea {
+  min-height: 180px;
+  font-family: IBM Plex Mono, ui-monospace, monospace;
+  font-size: 13px;
 }
 
 .prose code,

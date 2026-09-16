@@ -509,6 +509,150 @@ function quantlab_blog_delete(string $slug): void
     quantlab_write_seo_files();
 }
 
+function quantlab_blog_looks_like_paste(string $text): bool
+{
+    return (bool) preg_match(
+        '/^\s{0,3}(?:\*\*)?(Title|Description|Keywords|Slug|Заголовок|Описание|Ключевые слова|Слаг):/u',
+        ltrim($text)
+    );
+}
+
+function quantlab_blog_parse_label(string $label): string
+{
+    $key = function_exists('mb_strtolower') ? mb_strtolower(trim($label), 'UTF-8') : strtolower(trim($label));
+    $map = [
+        'title' => 'title',
+        'заголовок' => 'title',
+        'description' => 'seo_description',
+        'описание' => 'seo_description',
+        'keywords' => 'keywords',
+        'ключевые слова' => 'keywords',
+        'slug' => 'slug',
+        'слаг' => 'slug',
+    ];
+    return $map[$key] ?? '';
+}
+
+function quantlab_blog_parse_paste(string $raw): array
+{
+    $raw = trim(str_replace(["\r\n", "\r"], "\n", $raw));
+    $out = [
+        'title' => '',
+        'slug' => '',
+        'excerpt' => '',
+        'seo_description' => '',
+        'keywords' => '',
+        'body' => $raw,
+    ];
+    if ($raw === '') {
+        return $out;
+    }
+
+    $lines = explode("\n", $raw);
+    $consumed = 0;
+    $i = 0;
+    $n = count($lines);
+    while ($i < $n) {
+        $line = trim($lines[$i]);
+        if ($line === '') {
+            $i++;
+            $consumed = $i;
+            continue;
+        }
+        if (preg_match('/^-{3,}$/', $line)) {
+            $i++;
+            $consumed = $i;
+            break;
+        }
+        if (preg_match('/^(?:\*\*)?(Title|Description|Keywords|Slug|Заголовок|Описание|Ключевые слова|Слаг):\s*(?:\*\*)?\s*(.*)$/u', $line, $match)) {
+            $field = quantlab_blog_parse_label($match[1]);
+            $value = trim($match[2]);
+            $value = trim($value, " \t`*");
+            if ($field !== '' && $value !== '') {
+                $out[$field] = $value;
+                if ($field === 'seo_description' && $out['excerpt'] === '') {
+                    $out['excerpt'] = $value;
+                }
+            }
+            $i++;
+            $consumed = $i;
+            continue;
+        }
+        break;
+    }
+
+    $body = trim(implode("\n", array_slice($lines, $consumed)));
+    if ($out['title'] !== '' && preg_match('/^#\s+([^\n]+)/u', $body, $heading)) {
+        $h = trim($heading[1]);
+        if (strcasecmp($h, $out['title']) === 0 || $h === $out['title']) {
+            $body = trim((string) preg_replace('/^#\s+[^\n]+\n*/u', '', $body, 1));
+        }
+    }
+    $out['body'] = $body !== '' ? $body : $raw;
+    if ($out['excerpt'] === '' && $out['seo_description'] !== '') {
+        $out['excerpt'] = $out['seo_description'];
+    }
+    return $out;
+}
+
+function quantlab_markdown_href(string $href): string
+{
+    $href = html_entity_decode(trim($href), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $href = trim($href, " \t\"'");
+    if ($href === '' || preg_match('/^\s*javascript:/i', $href)) {
+        return '';
+    }
+    if (preg_match('#^(https?:|mailto:|tel:|/)#i', $href) || $href[0] === '#') {
+        return $href;
+    }
+    return '';
+}
+
+function quantlab_markdown_table(string $block): ?string
+{
+    $lines = preg_split("/\n/", $block) ?: [];
+    $rows = [];
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || !preg_match('/^\|(.+)\|$/u', $line, $m)) {
+            return null;
+        }
+        $cells = array_map('trim', explode('|', trim($m[1])));
+        if ($cells === []) {
+            return null;
+        }
+        $isSep = true;
+        foreach ($cells as $cell) {
+            if (!preg_match('/^:?-{3,}:?$/', $cell)) {
+                $isSep = false;
+                break;
+            }
+        }
+        if ($isSep) {
+            continue;
+        }
+        $rows[] = $cells;
+    }
+    if (count($rows) < 2) {
+        return null;
+    }
+    $head = array_shift($rows);
+    $html = '<div class="table-wrap"><table><thead><tr>';
+    foreach ($head as $cell) {
+        $html .= '<th>' . quantlab_inline_md($cell) . '</th>';
+    }
+    $html .= '</tr></thead><tbody>';
+    foreach ($rows as $row) {
+        $html .= '<tr>';
+        foreach ($row as $cell) {
+            $html .= '<td>' . quantlab_inline_md($cell) . '</td>';
+        }
+        $html .= '</tr>';
+    }
+    $html .= '</tbody></table></div>';
+    return $html;
+}
+
 function quantlab_markdown(string $text): string
 {
     $text = str_replace(["\r\n", "\r"], "\n", $text);
@@ -518,6 +662,9 @@ function quantlab_markdown(string $text): string
     foreach ($blocks ?: [] as $block) {
         $block = trim($block);
         if ($block === '') {
+            continue;
+        }
+        if (preg_match('/^-{3,}$/', $block)) {
             continue;
         }
         if (preg_match('/^```(?:\w+)?\n?(.*?)```$/s', $block, $m)) {
@@ -536,19 +683,38 @@ function quantlab_markdown(string $text): string
             $html[] = '<h2>' . quantlab_inline_md($m[1]) . '</h2>';
             continue;
         }
+        $table = quantlab_markdown_table($block);
+        if ($table !== null) {
+            $html[] = $table;
+            continue;
+        }
         $lines = explode("\n", $block);
-        $isList = true;
+        $isUl = true;
         foreach ($lines as $line) {
             if (!preg_match('/^\s*[-*]\s+/', $line)) {
-                $isList = false;
+                $isUl = false;
                 break;
             }
         }
-        if ($isList) {
+        if ($isUl) {
             $items = array_map(static function ($line) {
                 return '<li>' . quantlab_inline_md(preg_replace('/^\s*[-*]\s+/', '', $line)) . '</li>';
             }, $lines);
             $html[] = '<ul>' . implode('', $items) . '</ul>';
+            continue;
+        }
+        $isOl = true;
+        foreach ($lines as $line) {
+            if (!preg_match('/^\s*\d+\.\s+/', $line)) {
+                $isOl = false;
+                break;
+            }
+        }
+        if ($isOl) {
+            $items = array_map(static function ($line) {
+                return '<li>' . quantlab_inline_md(preg_replace('/^\s*\d+\.\s+/', '', $line)) . '</li>';
+            }, $lines);
+            $html[] = '<ol>' . implode('', $items) . '</ol>';
             continue;
         }
         $html[] = '<p>' . quantlab_inline_md(str_replace("\n", "<br />\n", $block)) . '</p>';
@@ -558,13 +724,30 @@ function quantlab_markdown(string $text): string
 
 function quantlab_inline_md(string $text): string
 {
+    $text = preg_replace_callback(
+        '/\[([^\]]+)\]\(([^)\s]+)\)/u',
+        static function ($m) {
+            $href = quantlab_markdown_href($m[2]);
+            if ($href === '') {
+                return $m[1];
+            }
+            $safe = htmlspecialchars($href, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $ext = (bool) preg_match('#^https?://#i', $href)
+                && stripos($href, 'amquantlab.ru') === false;
+            $rel = $ext ? ' target="_blank" rel="noopener"' : '';
+            return '<a href="' . $safe . '"' . $rel . '>' . $m[1] . '</a>';
+        },
+        $text
+    );
     $text = preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $text);
-    $text = preg_replace('/\*(.+?)\*/u', '<em>$1</em>', $text);
+    $text = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/u', '<em>$1</em>', $text);
     $text = preg_replace('/`([^`]+)`/', '<code>$1</code>', $text);
     $text = preg_replace_callback(
-        '/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[a-z0-9][^)\s]*)\)/i',
+        '/(?<!["\'>=])(https?:\/\/[^\s<]+)/i',
         static function ($m) {
-            return '<a href="' . $m[2] . '">' . $m[1] . '</a>';
+            $href = rtrim($m[1], '.,;)');
+            $safe = htmlspecialchars($href, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            return '<a href="' . $safe . '" target="_blank" rel="noopener">' . $safe . '</a>';
         },
         $text
     );
