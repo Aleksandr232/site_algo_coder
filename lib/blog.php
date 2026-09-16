@@ -879,6 +879,7 @@ function quantlab_robots_txt(): string
         . "Allow: /favicon-96.png\n"
         . "Allow: /favicon-512.png\n"
         . "Allow: /apple-touch-icon.png\n"
+        . "Allow: /manifest.json\n"
         . "Allow: /llms.txt\n"
         . "Disallow: /admin/\n"
         . "Disallow: /lib/\n"

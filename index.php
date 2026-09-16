@@ -56,7 +56,10 @@ foreach ($posts as $i => $item) {
     <meta property="og:title" content="<?= quantlab_h($title) ?>" />
     <meta property="og:description" content="<?= quantlab_h($description) ?>" />
     <meta property="og:url" content="<?= quantlab_h($canonical) ?>" />
+    <meta property="og:image" content="<?= quantlab_h(quantlab_abs_url('/favicon-512.png')) ?>" />
+    <meta property="og:image:alt" content="AM QuantLab" />
     <meta name="twitter:card" content="summary" />
+    <meta name="twitter:image" content="<?= quantlab_h(quantlab_abs_url('/favicon-512.png')) ?>" />
     <?= quantlab_json_ld([
         '@context' => 'https://schema.org',
         '@graph' => [
