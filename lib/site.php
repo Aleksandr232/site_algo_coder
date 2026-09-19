@@ -211,7 +211,8 @@ function quantlab_render_author(string $variant = 'section'): void
       <div class="author-copy">
         <?php if (!$compact): ?>
           <p class="eyebrow">Автор</p>
-          <h2><?= $name ?></h2>
+          <h2>Кто делает роботов</h2>
+          <p class="author-name"><?= $name ?></p>
         <?php else: ?>
           <p class="author-name"><?= $name ?></p>
         <?php endif; ?>

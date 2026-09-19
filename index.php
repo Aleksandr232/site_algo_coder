@@ -658,11 +658,6 @@ foreach ($posts as $i => $item) {
 
       <section class="section" id="author">
         <div class="container">
-          <div class="section-head">
-            <p class="eyebrow">Автор</p>
-            <h2>Кто делает роботов</h2>
-            <p>Делюсь опытом, разрабатываю и придумываю новые идеи для торговых алгоритмов. Пишу роботов и сам торгую тем же контуром.</p>
-          </div>
           <?php quantlab_render_author('section'); ?>
         </div>
       </section>

@@ -2054,6 +2054,19 @@ button.parsed-stamp.is-loading {
     grid-template-columns: 1fr;
   }
 
+  .author-panel,
+  .author-card {
+    grid-template-areas:
+      "photo"
+      "copy";
+    justify-items: start;
+  }
+
+  .author-photo {
+    max-width: 280px;
+    height: 320px;
+  }
+
   .dash-hero-card {
     grid-row: auto;
   }
@@ -2647,30 +2660,37 @@ button.parsed-stamp.is-loading {
 .author-panel,
 .author-card {
   display: grid;
-  gap: 28px;
-  align-items: center;
+  gap: 28px 40px;
+  align-items: start;
 }
 
 .author-panel {
-  grid-template-columns: minmax(220px, 280px) 1fr;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  grid-template-areas: "photo copy";
   margin-top: 8px;
 }
 
 .author-card {
-  grid-template-columns: 96px 1fr;
+  grid-template-columns: 96px minmax(0, 1fr);
+  grid-template-areas: "photo copy";
+  align-items: center;
   margin: 36px 0 8px;
   max-width: 760px;
 }
 
 .author-photo {
+  grid-area: photo;
   width: 100%;
-  max-width: 280px;
-  height: 340px;
+  max-width: 300px;
+  height: 380px;
   object-fit: cover;
   object-position: center top;
   border-radius: 22px;
   background: #ece8e3;
-  justify-self: center;
+}
+
+.author-copy {
+  grid-area: copy;
 }
 
 .author-card .author-photo {
@@ -2684,9 +2704,19 @@ button.parsed-stamp.is-loading {
   color: var(--muted);
 }
 
+.author-panel h2 {
+  margin: 0 0 6px;
+}
+
 .author-name {
   margin: 0 0 4px;
   font-weight: 700;
+}
+
+.author-panel .author-name {
+  margin-top: 10px;
+  font-size: 18px;
+  color: var(--text);
 }
 
 .author-role {
