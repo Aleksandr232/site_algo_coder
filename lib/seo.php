@@ -115,6 +115,17 @@ function quantlab_metrika_id(): string
     return preg_replace('/\D+/', '', quantlab_env('YANDEX_METRIKA_ID', quantlab_env('YANDEX_METRIKA'))) ?? '';
 }
 
+function quantlab_metrika_goals(): array
+{
+    return [
+        ['id' => 'lead', 'name' => 'Заявка с сайта', 'price' => 20000, 'when' => 'Форма на главной ушла'],
+        ['id' => 'robot_order', 'name' => 'Заказ готового робота', 'price' => 25000, 'when' => 'Оформление с /robots/'],
+        ['id' => 'telegram', 'name' => 'Клик в Telegram', 'price' => 0, 'when' => 'Любая ссылка t.me'],
+        ['id' => 'email', 'name' => 'Клик на почту', 'price' => 0, 'when' => 'Ссылка mailto'],
+        ['id' => 'contact', 'name' => 'Клик «Заказать робота»', 'price' => 0, 'when' => 'Кнопка в шапке и «Обсудить задачу»'],
+    ];
+}
+
 function quantlab_render_metrika(): void
 {
     $id = quantlab_metrika_id();
@@ -122,6 +133,15 @@ function quantlab_render_metrika(): void
         return;
     }
     $n = (int) $id;
+    $goals = json_encode(array_column(quantlab_metrika_goals(), 'id'), JSON_UNESCAPED_UNICODE);
+    $meta = [];
+    foreach (quantlab_metrika_goals() as $goal) {
+        $meta[$goal['id']] = [
+            'name' => $goal['name'],
+            'price' => (int) ($goal['price'] ?? 0),
+        ];
+    }
+    $metaJson = json_encode($meta, JSON_UNESCAPED_UNICODE);
     ?>
     <!-- Yandex.Metrika counter -->
     <script>
@@ -141,14 +161,32 @@ function quantlab_render_metrika(): void
       accurateTrackBounce: true,
       trackLinks: true
     });
+    window.QUANTLAB_METRIKA_ID = <?= $n ?>;
+    window.QUANTLAB_METRIKA_GOALS = <?= $goals ?>;
+    window.QUANTLAB_METRIKA_GOAL_META = <?= $metaJson ?>;
     window.quantlabMetrikaGoal = function (name, params) {
-      try { ym(<?= $n ?>, "reachGoal", name, params || {}); } catch (e) {}
+      if (!name) return;
+      params = params || {};
+      var meta = (window.QUANTLAB_METRIKA_GOAL_META || {})[name];
+      if (meta && meta.price && params.order_price == null) {
+        params.order_price = meta.price;
+        params.currency = "RUB";
+      }
+      try { ym(<?= $n ?>, "reachGoal", name, params); } catch (e) {}
     };
     document.addEventListener("click", function (event) {
-      var link = event.target && event.target.closest ? event.target.closest("a") : null;
-      if (!link || !link.href) return;
-      if (link.href.indexOf("t.me/") !== -1) window.quantlabMetrikaGoal("telegram");
-      if (link.href.indexOf("mailto:") === 0) window.quantlabMetrikaGoal("email");
+      var node = event.target && event.target.closest ? event.target.closest("[data-metrika-goal], a") : null;
+      if (!node) return;
+      var named = node.getAttribute && node.getAttribute("data-metrika-goal");
+      if (named) {
+        window.quantlabMetrikaGoal(named);
+        return;
+      }
+      var href = node.href || "";
+      if (href.indexOf("t.me/") !== -1 || href.indexOf("telegram.me/") !== -1) {
+        window.quantlabMetrikaGoal("telegram");
+      }
+      if (href.indexOf("mailto:") === 0) window.quantlabMetrikaGoal("email");
     });
     </script>
     <noscript><div><img src="https://mc.yandex.ru/watch/<?= $n ?>" style="position:absolute;left:-9999px" alt="" /></div></noscript>

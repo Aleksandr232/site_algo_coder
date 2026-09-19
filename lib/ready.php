@@ -683,6 +683,10 @@ function quantlab_render_ready_page(string $slug): void
           var form = document.querySelector(".js-ready-form");
           if (!form) return;
           var note = form.querySelector(".js-ready-note");
+          if (new URLSearchParams(location.search).get("sent") === "1") {
+            if (typeof window.quantlabMetrikaGoal === "function") window.quantlabMetrikaGoal("robot_order");
+            history.replaceState({}, "", location.pathname + (location.hash || ""));
+          }
           form.addEventListener("submit", function (event) {
             event.preventDefault();
             var data = new FormData(form);

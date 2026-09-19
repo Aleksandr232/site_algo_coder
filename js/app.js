@@ -555,6 +555,7 @@
       note.hidden = false;
       note.textContent = "Скоро мы с вами свяжемся";
       metrikaGoal("lead");
+      history.replaceState({}, "", location.pathname + (location.hash || "#contact"));
     }
     form.addEventListener("submit", async (event) => {
       event.preventDefault();

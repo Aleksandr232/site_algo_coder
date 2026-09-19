@@ -232,7 +232,7 @@ function quantlab_render_author(string $variant = 'section'): void
         </ul>
         <?php if (!$compact): ?>
           <div class="hero-actions">
-            <a class="btn" href="#contact">Обсудить задачу</a>
+            <a class="btn" href="#contact" data-metrika-goal="contact">Обсудить задачу</a>
             <a class="btn btn-ghost" href="<?= quantlab_h(function_exists('quantlab_telegram_url') ? quantlab_telegram_url() : 'https://t.me/where_is_Lebowskis_money') ?>" target="_blank" rel="noopener">Telegram</a>
           </div>
         <?php endif; ?>
@@ -272,11 +272,11 @@ function quantlab_render_header_nav(array $opts = []): void
             </div>
           </div>
         </nav>
-        <a class="btn btn-sm header-cta" href="<?= quantlab_h($cta) ?>">Заказать робота</a>
+        <a class="btn btn-sm header-cta" href="<?= quantlab_h($cta) ?>" data-metrika-goal="contact">Заказать робота</a>
         <button class="burger" id="burger" type="button" aria-label="Открыть меню" aria-controls="nav" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
-        <a class="mobile-cta" id="mobile-cta" href="<?= quantlab_h($cta) ?>">Заказать робота</a>
+        <a class="mobile-cta" id="mobile-cta" href="<?= quantlab_h($cta) ?>" data-metrika-goal="contact">Заказать робота</a>
     <?php
 }
 
