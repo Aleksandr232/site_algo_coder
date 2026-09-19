@@ -541,6 +541,12 @@
     }
   }
 
+  function metrikaGoal(name, params) {
+    if (typeof window.quantlabMetrikaGoal === "function") {
+      window.quantlabMetrikaGoal(name, params);
+    }
+  }
+
   function mountForm() {
     const form = $("#lead-form");
     const note = $("#form-note");
@@ -548,6 +554,7 @@
     if (new URLSearchParams(location.search).get("sent") === "1") {
       note.hidden = false;
       note.textContent = "Скоро мы с вами свяжемся";
+      metrikaGoal("lead");
     }
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -573,6 +580,7 @@
           throw new Error(json.error || json.message || "Не удалось отправить заявку");
         }
         note.textContent = "Скоро мы с вами свяжемся";
+        metrikaGoal("lead");
         form.reset();
       } catch (err) {
         note.textContent = (err && err.message) || "Не удалось отправить заявку. Попробуйте ещё раз.";
@@ -642,6 +650,7 @@
           throw new Error(json.error || json.message || "Не удалось оформить");
         }
         if (note) note.textContent = "Заявка ушла на почту. Скоро свяжемся.";
+        metrikaGoal("robot_order");
         form.reset();
         if (slugInput) slugInput.value = "";
       } catch (err) {

@@ -700,6 +700,7 @@ function quantlab_render_ready_page(string $slug): void
                   throw new Error(out.json.error || out.json.message || "Не удалось отправить");
                 }
                 if (note) note.textContent = "Заявка ушла на почту. Скоро свяжемся.";
+                if (typeof window.quantlabMetrikaGoal === "function") window.quantlabMetrikaGoal("robot_order");
                 form.reset();
               })
               .catch(function (err) {

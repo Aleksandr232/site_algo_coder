@@ -110,6 +110,52 @@ function quantlab_faq_schema(): array
     ];
 }
 
+function quantlab_metrika_id(): string
+{
+    return preg_replace('/\D+/', '', quantlab_env('YANDEX_METRIKA_ID', quantlab_env('YANDEX_METRIKA'))) ?? '';
+}
+
+function quantlab_render_metrika(): void
+{
+    $id = quantlab_metrika_id();
+    if ($id === '') {
+        return;
+    }
+    $n = (int) $id;
+    ?>
+    <!-- Yandex.Metrika counter -->
+    <script>
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=<?= $n ?>", "ym");
+    ym(<?= $n ?>, "init", {
+      ssr: true,
+      webvisor: true,
+      clickmap: true,
+      ecommerce: "dataLayer",
+      referrer: document.referrer,
+      url: location.href,
+      accurateTrackBounce: true,
+      trackLinks: true
+    });
+    window.quantlabMetrikaGoal = function (name, params) {
+      try { ym(<?= $n ?>, "reachGoal", name, params || {}); } catch (e) {}
+    };
+    document.addEventListener("click", function (event) {
+      var link = event.target && event.target.closest ? event.target.closest("a") : null;
+      if (!link || !link.href) return;
+      if (link.href.indexOf("t.me/") !== -1) window.quantlabMetrikaGoal("telegram");
+      if (link.href.indexOf("mailto:") === 0) window.quantlabMetrikaGoal("email");
+    });
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/<?= $n ?>" style="position:absolute;left:-9999px" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
+    <?php
+}
+
 function quantlab_llms_txt(): string
 {
     $site = rtrim(quantlab_site_url(), '/');

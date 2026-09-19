@@ -88,6 +88,7 @@ foreach ($posts as $i => $item) {
     <?php quantlab_icon_links(); ?>
     <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
+    <?php if (function_exists('quantlab_render_metrika')) quantlab_render_metrika(); ?>
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>

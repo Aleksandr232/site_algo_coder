@@ -351,6 +351,7 @@ function quantlab_render_start(array $meta): void
     <?php quantlab_font_links(); ?>
     <link rel="stylesheet" href="/css/styles.css" />
     <?= $extraHead ?>
+    <?php if (function_exists('quantlab_render_metrika')) quantlab_render_metrika(); ?>
   </head>
   <body class="<?= quantlab_h((string) ($meta['body_class'] ?? 'page-inner')) ?>">
     <div class="noise" aria-hidden="true"></div>
