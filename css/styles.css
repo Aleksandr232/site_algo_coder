@@ -2042,7 +2042,6 @@ button.parsed-stamp.is-loading {
   .cards-5,
   .case-grid,
   .contact-grid,
-  .author-panel,
   .author-card,
   .metrics,
   .steps,
@@ -2052,19 +2051,6 @@ button.parsed-stamp.is-loading {
   .dash-bento,
   .dash-kpis {
     grid-template-columns: 1fr;
-  }
-
-  .author-panel,
-  .author-card {
-    grid-template-areas:
-      "photo"
-      "copy";
-    justify-items: start;
-  }
-
-  .author-photo {
-    max-width: 280px;
-    height: 320px;
   }
 
   .dash-hero-card {
@@ -2748,6 +2734,84 @@ button.parsed-stamp.is-loading {
 
 .author-panel .hero-actions {
   margin: 22px 0 0;
+}
+
+@media (max-width: 960px) {
+  .author-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 20px 16px 18px;
+  }
+
+  .author-panel .author-photo {
+    grid-area: auto;
+    width: 100%;
+    max-width: none;
+    height: 440px;
+    align-self: stretch;
+    border-radius: 22px;
+  }
+
+  .author-panel .author-copy {
+    grid-area: auto;
+    min-width: 0;
+  }
+
+  .author-panel h2 {
+    font-size: 26px;
+    line-height: 1.25;
+  }
+
+  .author-stats {
+    gap: 8px;
+  }
+
+  .author-stats li {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .author-panel .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin: 16px 0 0;
+    gap: 10px;
+  }
+
+  .author-panel .hero-actions .btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .author-panel {
+    padding: 16px 14px 14px;
+    gap: 14px;
+  }
+
+  .author-panel .author-photo {
+    width: 100%;
+    max-width: none;
+    height: 420px;
+    border-radius: 20px;
+  }
+
+  .author-panel h2 {
+    font-size: 24px;
+  }
+
+  .author-copy p {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .author-stats li {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
 }
 
 .related {
