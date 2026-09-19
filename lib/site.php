@@ -126,16 +126,25 @@ function quantlab_icon_href(): string
 
 function quantlab_icon_links(): void
 {
-    $png512 = quantlab_h(quantlab_abs_url('/favicon-512.png'));
-    $png96 = quantlab_h(quantlab_abs_url('/favicon-96.png'));
-    $png48 = quantlab_h(quantlab_abs_url('/favicon-48.png'));
+    $svg = quantlab_h(quantlab_abs_url('/favicon.svg'));
     $ico = quantlab_h(quantlab_abs_url('/favicon.ico'));
+    $png120 = quantlab_h(quantlab_abs_url('/favicon-120.png'));
+    $png48 = quantlab_h(quantlab_abs_url('/favicon-48.png'));
+    $png32 = quantlab_h(quantlab_abs_url('/favicon-32.png'));
+    $png16 = quantlab_h(quantlab_abs_url('/favicon-16.png'));
+    $png96 = quantlab_h(quantlab_abs_url('/favicon-96.png'));
+    $png512 = quantlab_h(quantlab_abs_url('/favicon-512.png'));
     $apple = quantlab_h(quantlab_abs_url('/apple-touch-icon.png'));
     $manifest = quantlab_h(quantlab_abs_url('/manifest.json'));
     ?>
+    <link rel="icon" href="<?= $svg ?>" type="image/svg+xml" />
+    <link rel="icon" href="<?= $ico ?>" type="image/x-icon" />
+    <link rel="icon" href="<?= $png120 ?>" type="image/png" sizes="120x120" />
+    <link rel="icon" href="<?= $png48 ?>" type="image/png" sizes="48x48" />
+    <link rel="icon" href="<?= $png32 ?>" type="image/png" sizes="32x32" />
+    <link rel="icon" href="<?= $png16 ?>" type="image/png" sizes="16x16" />
     <link rel="icon" href="<?= $png96 ?>" type="image/png" sizes="96x96" />
     <link rel="icon" href="<?= $png512 ?>" type="image/png" sizes="512x512" />
-    <link rel="icon" href="<?= $png48 ?>" type="image/png" sizes="48x48" />
     <link rel="shortcut icon" href="<?= $ico ?>" type="image/x-icon" />
     <link rel="apple-touch-icon" href="<?= $apple ?>" sizes="180x180" />
     <link rel="manifest" href="<?= $manifest ?>" />
