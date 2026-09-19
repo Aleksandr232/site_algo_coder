@@ -4,6 +4,11 @@ data/db-status.json
 data/mail-status.json
 data/telegram-status.json
 data/blog/telegram-sent.json
+data/bybit-closed.json
+data/bybit-closed-*.json
+data/bybit-exec-*.json
+data/bybit-daily-*.json
+data/bybit-case-*.json
 node_modules/
 uploads/blog/*
 !uploads/blog/.gitkeep

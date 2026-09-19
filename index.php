@@ -73,6 +73,7 @@ foreach ($posts as $i => $item) {
                 'potentialAction' => ['@type' => 'ReadAction', 'target' => quantlab_abs_url('blog')],
             ],
             quantlab_organization_schema(),
+            quantlab_person_schema(),
         ],
     ]) ?>
     <?= quantlab_json_ld(quantlab_faq_schema()) ?>
@@ -655,6 +656,17 @@ foreach ($posts as $i => $item) {
         </div>
       </section>
 
+      <section class="section" id="author">
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">Автор</p>
+            <h2>Кто делает роботов</h2>
+            <p>Делюсь опытом, разрабатываю и придумываю новые идеи для торговых алгоритмов. Пишу роботов и сам торгую тем же контуром.</p>
+          </div>
+          <?php quantlab_render_author('section'); ?>
+        </div>
+      </section>
+
       <section class="section" id="faq">
         <div class="container">
           <div class="section-head">
@@ -747,6 +759,7 @@ foreach ($posts as $i => $item) {
           <a href="/blog/">Блог</a>
           <a href="/robots/">Роботы</a>
           <a href="#case">Кейсы</a>
+          <a href="#author">Автор</a>
           <a href="#contact">Контакт</a>
           <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
           <a href="#privacy" data-privacy>Политика конфиденциальности</a>

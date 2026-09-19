@@ -180,6 +180,66 @@ function quantlab_head_verification(): void
     }
 }
 
+function quantlab_author(): array
+{
+    return [
+        'name' => 'Александр',
+        'role' => 'Основатель AM QuantLab',
+        'photo' => '/img/author.jpg',
+        'years_dev' => '5+',
+        'years_fintech' => '3',
+        'return' => '30%',
+    ];
+}
+
+function quantlab_author_id(): string
+{
+    return rtrim(quantlab_site_url(), '/') . '/#author';
+}
+
+function quantlab_render_author(string $variant = 'section'): void
+{
+    $a = quantlab_author();
+    $photo = quantlab_h($a['photo']);
+    $name = quantlab_h($a['name']);
+    $role = quantlab_h($a['role']);
+    $compact = $variant === 'card';
+    $class = $compact ? 'author-card glass pad' : 'author-panel glass pad';
+    ?>
+    <aside class="<?= $class ?>">
+      <img class="author-photo" src="<?= $photo ?>" alt="<?= $name ?>, <?= $role ?>" width="640" height="960" <?= $compact ? 'loading="lazy"' : 'loading="eager"' ?> />
+      <div class="author-copy">
+        <?php if (!$compact): ?>
+          <p class="eyebrow">Автор</p>
+          <h2><?= $name ?></h2>
+        <?php else: ?>
+          <p class="author-name"><?= $name ?></p>
+        <?php endif; ?>
+        <p class="author-role"><?= $role ?></p>
+        <p>
+          Больше 5 лет в разработке. Три года собираю продукты для финтеха и торговые алгоритмы:
+          роботы, API-контуры и журналы сделок под Финам, Тинькофф, Bybit, OKX и Binance.
+        </p>
+        <p>
+          Есть своя стратегия: средняя годовая доходность около 30%. Это мой контур, не обещание по чужому счёту.
+          Доходность в прошлом не гарантирует результат в будущем.
+        </p>
+        <ul class="author-stats">
+          <li><strong><?= quantlab_h($a['years_dev']) ?></strong> лет в разработке</li>
+          <li><strong><?= quantlab_h($a['years_fintech']) ?></strong> года финтех и алгоритмы</li>
+          <li><strong>~<?= quantlab_h($a['return']) ?></strong> ср. годовых по своей стратегии</li>
+        </ul>
+        <?php if (!$compact): ?>
+          <div class="hero-actions">
+            <a class="btn" href="#contact">Обсудить задачу</a>
+            <a class="btn btn-ghost" href="<?= quantlab_h(function_exists('quantlab_telegram_url') ? quantlab_telegram_url() : 'https://t.me/where_is_Lebowskis_money') ?>" target="_blank" rel="noopener">Telegram</a>
+          </div>
+        <?php endif; ?>
+      </div>
+    </aside>
+    <?php
+}
+
 function quantlab_render_header_nav(array $opts = []): void
 {
     $home = !empty($opts['home']);
@@ -205,6 +265,7 @@ function quantlab_render_header_nav(array $opts = []): void
               <?php $item($p . '#algos', 'Продукты'); ?>
               <?php $item($p . '#dashboards', 'Дашборды'); ?>
               <?php $item($p . '#process', 'Процесс'); ?>
+              <?php $item($p . '#author', 'Автор'); ?>
               <?php $item($p . '#faq', 'FAQ'); ?>
               <?php $item($p . '#contact', 'Контакт'); ?>
             </div>
@@ -344,6 +405,7 @@ function quantlab_render_end(): void
           <a href="/blog/">Блог</a>
           <a href="/robots/">Роботы</a>
           <a href="/#case">Кейсы</a>
+          <a href="/#author">Автор</a>
           <a href="/#faq">FAQ</a>
           <a href="/#contact">Контакт</a>
           <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>

@@ -37,9 +37,11 @@ $venueJs = <<<'JS'
 (function () {
   var venue = document.getElementById("venue");
   var comon = document.getElementById("comon-fields");
-  if (!venue || !comon) return;
+  var bybit = document.getElementById("bybit-fields");
+  if (!venue) return;
   function sync() {
-    comon.hidden = venue.value !== "comon";
+    if (comon) comon.hidden = venue.value !== "comon";
+    if (bybit) bybit.hidden = venue.value !== "bybit";
   }
   venue.addEventListener("change", sync);
   sync();
@@ -76,7 +78,7 @@ JS;
                 <option value="<?= quantlab_h($key) ?>" <?= (($row['venue'] ?? 'comon') === $key) ? 'selected' : '' ?>><?= quantlab_h($label) ?></option>
               <?php endforeach; ?>
             </select>
-            <span class="field-hint">Пока Comon и Bybit. У Bybit цифры с API-ключей в .env.</span>
+            <span class="field-hint">У Bybit можно завести отдельно спот и фьючерс. Цифры с API-ключей в .env.</span>
           </label>
           <label>
             Название на слайде
@@ -105,6 +107,27 @@ JS;
             Инструмент
             <input type="text" name="instrument" value="<?= quantlab_h($row['instrument'] ?? '') ?>" placeholder="CNYRUB или BTCUSDT" />
           </label>
+          <div id="bybit-fields">
+            <label>
+              Рынок Bybit
+              <select name="bybit_market">
+                <?php foreach (quantlab_strategy_bybit_markets() as $key => $label): ?>
+                  <option value="<?= quantlab_h($key) ?>" <?= (quantlab_strategy_bybit_market($row['bybit_market'] ?? 'linear') === $key) ? 'selected' : '' ?>><?= quantlab_h($label) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <span class="field-hint">Спот и фьючерс считаются отдельно. Можно завести два слайда: BTCUSDT спот и BTCUSDT фьючерс.</span>
+            </label>
+            <label>
+              Считать с даты
+              <input type="date" name="since_date" value="<?= quantlab_h(($row['since_date'] ?? '') !== '' ? $row['since_date'] : (($row['slug'] ?? '') === 'bybit-btc' ? '2026-08-31' : date('Y-m-d'))) ?>" />
+              <span class="field-hint">Доходность и график только после этой даты — когда стратегию добавили.</span>
+            </label>
+            <label>
+              Стартовый баланс, USDT
+              <input type="text" name="start_balance" value="<?= quantlab_h($row['start_balance'] ?? '') ?>" placeholder="необязательно" />
+              <span class="field-hint">Если пусто, старт берётся по счёту на дату запуска. Для второй стратегии на том же счёте лучше указать депозит.</span>
+            </label>
+          </div>
           <label>
             Ссылка на источник
             <input type="url" name="source_url" value="<?= quantlab_h($row['source_url'] ?? '') ?>" />

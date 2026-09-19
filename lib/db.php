@@ -225,6 +225,9 @@ function quantlab_db_migrate(PDO $pdo): void
         quantlab_db_ensure_column($pdo, 'ready_robots', 'keywords', 'keywords VARCHAR(1000) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_title', 'seo_title VARCHAR(500) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_description', 'seo_description VARCHAR(1000) NULL');
+        quantlab_db_ensure_column($pdo, 'strategies', 'bybit_market', 'bybit_market VARCHAR(16) NULL');
+        quantlab_db_ensure_column($pdo, 'strategies', 'since_date', 'since_date DATE NULL');
+        quantlab_db_ensure_column($pdo, 'strategies', 'start_balance', 'start_balance VARCHAR(32) NULL');
     } catch (Throwable $e) {
         // старая таблица leads без прав на ALTER — заявки на роботов уйдут в JSON-поля сообщения
     }

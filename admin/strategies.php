@@ -67,6 +67,8 @@ quantlab_admin_start('Стратегии — админка AM QuantLab');
                       <code><?= quantlab_h($item['dot']) ?></code>
                       <?php if ($item['venue'] === 'comon' && $item['comon_id'] !== ''): ?>
                         <br /><span class="field-hint">Comon ID <?= quantlab_h($item['comon_id']) ?></span>
+                      <?php elseif ($item['venue'] === 'bybit'): ?>
+                        <br /><span class="field-hint"><?= quantlab_h((quantlab_strategy_bybit_markets()[quantlab_strategy_bybit_market($item['bybit_market'] ?? '')] ?? 'Фьючерс') . ' ' . ($item['instrument'] ?: 'BTCUSDT') . ' · с ' . quantlab_strategy_since_date($item)) ?></span>
                       <?php endif; ?>
                     </td>
                     <td><?= quantlab_h($venues[$item['venue']] ?? $item['venue']) ?></td>

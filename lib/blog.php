@@ -982,7 +982,7 @@ function quantlab_render_public_article(string $slug): void
             '@type' => 'WebPage',
             '@id' => $canonical,
         ],
-        'author' => ['@id' => quantlab_org_id()],
+        'author' => ['@id' => quantlab_author_id()],
         'publisher' => ['@id' => quantlab_org_id()],
         'isAccessibleForFree' => true,
         'speakable' => [
@@ -999,7 +999,7 @@ function quantlab_render_public_article(string $slug): void
     unset($schema['@context']);
     $extra = quantlab_json_ld([
         '@context' => 'https://schema.org',
-        '@graph' => [quantlab_organization_schema(), $schema],
+        '@graph' => [quantlab_organization_schema(), quantlab_person_schema(), $schema],
     ]);
 
     quantlab_render_start([
@@ -1046,6 +1046,7 @@ function quantlab_render_public_article(string $slug): void
         <div class="prose">
           <?= $post['body'] !== '' ? quantlab_markdown($post['body']) : '<p>Текст статьи скоро появится.</p>' ?>
         </div>
+        <?php quantlab_render_author('card'); ?>
         <?php if ($related): ?>
           <aside class="related">
             <h2>Ещё из блога</h2>

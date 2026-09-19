@@ -30,6 +30,7 @@ function quantlab_organization_schema(): array
             'Bybit API',
             'MOEX',
         ],
+        'founder' => ['@id' => quantlab_author_id()],
         'sameAs' => [quantlab_telegram_url()],
         'contactPoint' => [
             [
@@ -43,13 +44,29 @@ function quantlab_organization_schema(): array
     ];
 }
 
+function quantlab_person_schema(): array
+{
+    $a = quantlab_author();
+    return [
+        '@type' => 'Person',
+        '@id' => quantlab_author_id(),
+        'name' => $a['name'],
+        'jobTitle' => $a['role'],
+        'image' => quantlab_abs_url($a['photo']),
+        'url' => quantlab_abs_url('/#author'),
+        'worksFor' => ['@id' => quantlab_org_id()],
+        'sameAs' => [quantlab_telegram_url()],
+        'description' => 'Основатель AM QuantLab. Больше 5 лет в разработке, 3 года — финтех-продукты и торговые алгоритмы. Своя стратегия со средней годовой доходностью около 30%.',
+    ];
+}
+
 function quantlab_faq_items(): array
 {
     $email = quantlab_site_email();
     return [
         [
             'q' => 'Кто такой AM QuantLab?',
-            'a' => 'AM QuantLab пишет торговых роботов и сервисы для финтеха. Роботы ходят в официальные API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance — без кликеров терминала.',
+            'a' => 'AM QuantLab — лаборатория Александра: больше 5 лет в разработке, 3 года — финтех и торговые алгоритмы. Роботы ходят в официальные API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance — без кликеров терминала.',
         ],
         [
             'q' => 'Для каких площадок делаете торговых роботов?',

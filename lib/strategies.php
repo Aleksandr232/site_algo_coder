@@ -56,6 +56,9 @@ function quantlab_strategy_defaults(): array
             'target' => '',
             'comon_id' => '',
             'instrument' => 'BTCUSDT',
+            'bybit_market' => 'linear',
+            'since_date' => '2026-08-31',
+            'start_balance' => '',
             'source_url' => 'https://www.bybit.com/',
             'is_test' => 1,
             'created_at' => $now,
@@ -87,10 +90,57 @@ function quantlab_strategy_normalize(array $row): array
         'target' => (string) ($row['target'] ?? ''),
         'comon_id' => preg_replace('/\D+/', '', (string) ($row['comon_id'] ?? '')),
         'instrument' => (string) ($row['instrument'] ?? ''),
+        'bybit_market' => quantlab_strategy_bybit_market($row['bybit_market'] ?? ''),
+        'since_date' => quantlab_strategy_since_date($row),
+        'start_balance' => trim((string) ($row['start_balance'] ?? '')),
         'source_url' => (string) ($row['source_url'] ?? ''),
         'is_test' => !empty($row['is_test']) ? 1 : 0,
         'created_at' => $row['created_at'] ?? date('c'),
         'updated_at' => $row['updated_at'] ?? date('c'),
+    ];
+}
+
+function quantlab_strategy_bybit_markets(): array
+{
+    return [
+        'linear' => 'Фьючерс',
+        'spot' => 'Спот',
+    ];
+}
+
+function quantlab_strategy_bybit_market($value): string
+{
+    $market = strtolower(trim((string) $value));
+    return $market === 'spot' ? 'spot' : 'linear';
+}
+
+function quantlab_strategy_since_date(array $row): string
+{
+    $day = substr(trim((string) ($row['since_date'] ?? '')), 0, 10);
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+        return $day;
+    }
+    if (($row['slug'] ?? '') === 'bybit-btc') {
+        return '2026-08-31';
+    }
+    $created = substr((string) ($row['created_at'] ?? ''), 0, 10);
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $created)) {
+        return $created;
+    }
+    return date('Y-m-d');
+}
+
+function quantlab_bybit_config_from_row(array $row): array
+{
+    $symbol = strtoupper(preg_replace('/\s+/', '', (string) ($row['instrument'] ?? '')) ?: 'BTCUSDT');
+    return [
+        'slug' => (string) ($row['slug'] ?? 'bybit-btc'),
+        'title' => (string) ($row['title'] ?? 'Bybit'),
+        'symbol' => $symbol !== '' ? $symbol : 'BTCUSDT',
+        'category' => quantlab_strategy_bybit_market($row['bybit_market'] ?? 'linear'),
+        'since' => quantlab_strategy_since_date($row),
+        'start_balance' => (float) str_replace(',', '.', (string) ($row['start_balance'] ?? '0')),
+        'is_test' => !empty($row['is_test']) ? 1 : 0,
     ];
 }
 
@@ -173,13 +223,14 @@ function quantlab_strategies_seed_if_empty(): void
 function quantlab_strategy_insert_row(PDO $pdo, array $row): void
 {
     $st = $pdo->prepare(
-        'INSERT INTO strategies (slug, venue, status, sort_order, dot, eyebrow, title, lead, notes, entry, stop, target, comon_id, instrument, source_url, is_test, created_at, updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        'INSERT INTO strategies (slug, venue, status, sort_order, dot, eyebrow, title, lead, notes, entry, stop, target, comon_id, instrument, bybit_market, since_date, start_balance, source_url, is_test, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON DUPLICATE KEY UPDATE
             venue=VALUES(venue), status=VALUES(status), sort_order=VALUES(sort_order), dot=VALUES(dot),
             eyebrow=VALUES(eyebrow), title=VALUES(title), lead=VALUES(lead), notes=VALUES(notes),
             entry=VALUES(entry), stop=VALUES(stop), target=VALUES(target), comon_id=VALUES(comon_id),
-            instrument=VALUES(instrument), source_url=VALUES(source_url), is_test=VALUES(is_test),
+            instrument=VALUES(instrument), bybit_market=VALUES(bybit_market), since_date=VALUES(since_date),
+            start_balance=VALUES(start_balance), source_url=VALUES(source_url), is_test=VALUES(is_test),
             updated_at=VALUES(updated_at)'
     );
     $st->execute([
@@ -197,6 +248,9 @@ function quantlab_strategy_insert_row(PDO $pdo, array $row): void
         $row['target'],
         $row['comon_id'],
         $row['instrument'],
+        $row['bybit_market'],
+        $row['since_date'] !== '' ? $row['since_date'] : null,
+        $row['start_balance'],
         $row['source_url'],
         $row['is_test'],
         quantlab_dt_sql($row['created_at']) ?: date('Y-m-d H:i:s'),
@@ -264,6 +318,10 @@ function quantlab_strategy_save(array $input, ?string $currentSlug = null): arra
     if ($venue === 'comon' && $comonId === '') {
         throw new InvalidArgumentException('Для Comon нужен ID стратегии, например 131208');
     }
+    $instrument = strtoupper(preg_replace('/\s+/', '', trim((string) ($input['instrument'] ?? ''))));
+    if ($venue === 'bybit' && $instrument === '') {
+        throw new InvalidArgumentException('Для Bybit укажите инструмент, например BTCUSDT');
+    }
 
     $slugSource = trim((string) ($input['slug'] ?? ''));
     if ($slugSource === '') {
@@ -290,7 +348,10 @@ function quantlab_strategy_save(array $input, ?string $currentSlug = null): arra
         'stop' => trim((string) ($input['stop'] ?? '')),
         'target' => trim((string) ($input['target'] ?? '')),
         'comon_id' => $comonId,
-        'instrument' => trim((string) ($input['instrument'] ?? '')),
+        'instrument' => $instrument !== '' ? $instrument : trim((string) ($input['instrument'] ?? '')),
+        'bybit_market' => $input['bybit_market'] ?? 'linear',
+        'since_date' => trim((string) ($input['since_date'] ?? '')) ?: ($existing['since_date'] ?? ($venue === 'bybit' ? date('Y-m-d') : '')),
+        'start_balance' => trim((string) ($input['start_balance'] ?? '')),
         'source_url' => trim((string) ($input['source_url'] ?? '')),
         'is_test' => !empty($input['is_test']) ? 1 : 0,
         'created_at' => $existing['created_at'] ?? $now,
@@ -488,15 +549,21 @@ function quantlab_render_bybit_slide(array $row, array $notes, string $url, stri
 {
     $id = quantlab_h($row['slug']);
     $instrument = $row['instrument'] !== '' ? $row['instrument'] : 'BTCUSDT';
+    $market = quantlab_strategy_bybit_market($row['bybit_market'] ?? 'linear');
+    $marketLabel = quantlab_strategy_bybit_markets()[$market] ?? 'Фьючерс';
+    $since = quantlab_strategy_since_date($row);
+    $sinceText = date('d.m.Y', strtotime($since) ?: time());
     ?>
-              <article class="case-slide" id="slide-<?= $id ?>" data-venue="bybit" data-slug="<?= $id ?>" data-instrument="<?= quantlab_h($instrument) ?>">
+              <article class="case-slide" id="slide-<?= $id ?>" data-venue="bybit" data-slug="<?= $id ?>" data-instrument="<?= quantlab_h($instrument) ?>" data-market="<?= quantlab_h($market) ?>" data-since="<?= quantlab_h($since) ?>">
           <div class="section-head case-head">
             <div>
               <p class="eyebrow"><?= quantlab_h($row['eyebrow'] ?: 'Кейс · Bybit') ?></p>
               <h2 class="js-title"><?= quantlab_h($row['title']) ?></h2>
               <p class="case-meta">
                 <?= !empty($row['is_test']) ? 'Тестовый контур' : 'Боевой контур' ?>
+                · <?= quantlab_h($marketLabel) ?>
                 <?= quantlab_h($instrument) ?>
+                · с <?= quantlab_h($sinceText) ?>
                 <?php if ($url !== ''): ?>
                   · <a href="<?= quantlab_h($url) ?>" target="_blank" rel="noopener"><?= quantlab_h($host) ?></a>
                 <?php endif; ?>
@@ -509,7 +576,7 @@ function quantlab_render_bybit_slide(array $row, array $notes, string $url, stri
             <div class="chart-toolbar">
               <div>
                 <h3>Кривая баланса</h3>
-                <p>Дневная доходность счёта Unified, %</p>
+                <p>Доходность с <?= quantlab_h($sinceText) ?>, <?= quantlab_h($marketLabel) ?> <?= quantlab_h($instrument) ?></p>
               </div>
               <div class="pills js-pills" role="tablist" aria-label="Период графика Bybit">
                 <button type="button" class="pill is-active" data-range="all">Всё время</button>
@@ -528,7 +595,7 @@ function quantlab_render_bybit_slide(array $row, array $notes, string $url, stri
               <?php if ($row['lead'] !== ''): ?><p><?= quantlab_h($row['lead']) ?></p><?php endif; ?>
               <div class="rule-row">
                 <div><span>Площадка</span><strong>Bybit</strong><em>Unified API</em></div>
-                <div><span>Инструмент</span><strong><?= quantlab_h($instrument) ?></strong><em>Perp</em></div>
+                <div><span>Инструмент</span><strong><?= quantlab_h($instrument) ?></strong><em><?= quantlab_h($marketLabel) ?></em></div>
                 <div><span>Счёт</span><strong class="js-equity">—</strong><em>текущий баланс</em></div>
               </div>
               <?php if ($notes): ?>

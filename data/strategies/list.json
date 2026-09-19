@@ -32,6 +32,9 @@
     "target": "",
     "comon_id": "",
     "instrument": "BTCUSDT",
+    "bybit_market": "linear",
+    "since_date": "2026-08-31",
+    "start_balance": "",
     "source_url": "https://www.bybit.com/",
     "is_test": 1
   }

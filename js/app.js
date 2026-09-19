@@ -2,16 +2,9 @@
   const REFRESH_MS = 20 * 1000;
   const stores = {};
   const charts = [];
-  let loadingBybit = false;
+  const loadingBybit = {};
   let loadingTinkoff = false;
   const loadingComon = {};
-
-  const bybit = {
-    strategy: null,
-    equity: [],
-    source: "fallback",
-    fetchedAt: null,
-  };
 
   const tinkoff = {
     strategy: null,
@@ -186,23 +179,32 @@
     if (slide.dataset.hero === "1") fillHero(strategy, data.equity);
   }
 
-  function bybitPositionText(strategy, instrument) {
+  function bybitUnit(instrument) {
+    return String(instrument || "").replace(/USDT|USDC|USD$/i, "") || instrument || "";
+  }
+
+  function bybitPositionText(strategy, instrument, market) {
     const pos = strategy.position || {};
     if (!pos.size) return "позиции нет";
+    const unit = bybitUnit(instrument);
+    if (market === "spot" || strategy.market === "spot") {
+      return "спот " + pos.size + (unit ? " " + unit : "");
+    }
     const side = pos.side === "Sell" ? "шорт" : "лонг";
-    const unit = instrument && instrument.indexOf("BTC") === 0 ? "BTC" : instrument || "";
     return side + " " + pos.size + (unit ? " " + unit : "");
   }
 
   function fillBybitSlide(slide) {
-    const strategy = bybit.strategy;
+    const data = storeFor(slide);
+    const strategy = data.strategy;
     if (!strategy) return;
     const q = (sel) => slide.querySelector(sel);
     const instrument = slide.dataset.instrument || "BTCUSDT";
+    const market = slide.dataset.market || strategy.market || "linear";
     const equity = q(".js-equity");
     if (equity) equity.textContent = moneyUsd(strategy.equity);
     const pos = q(".js-position");
-    if (pos) pos.textContent = bybitPositionText(strategy, instrument);
+    if (pos) pos.textContent = bybitPositionText(strategy, instrument, market);
     const avg = q(".js-avg");
     if (avg) {
       avg.textContent = strategy.position && strategy.position.avgPrice
@@ -217,8 +219,8 @@
     const free = q(".js-free");
     if (free) free.textContent = moneyUsd(strategy.available);
 
-    const when = bybit.fetchedAt ? fmtTime(bybit.fetchedAt) : "";
-    if (bybit.source === "live") setStamp(q(".js-stamp"), "live", "Live с Bybit · " + when);
+    const when = data.fetchedAt ? fmtTime(data.fetchedAt) : "";
+    if (data.source === "live") setStamp(q(".js-stamp"), "live", "Live с Bybit · " + when);
     else setStamp(q(".js-stamp"), "cache", "Кэш Bybit · " + when);
 
     const metrics = [
@@ -227,7 +229,7 @@
       ["7 дней", fmtPct(strategy.profit7Days), strategy.profit7Days >= 0 ? "pos" : "neg"],
       ["Баланс", moneyUsd(strategy.equity), ""],
       ["Нереализ. PnL", (strategy.unrealized >= 0 ? "+" : "") + Number(strategy.unrealized).toFixed(2), strategy.unrealized >= 0 ? "pos" : "neg"],
-      ["Позиция", bybitPositionText(strategy, instrument), ""],
+      ["Позиция", bybitPositionText(strategy, instrument, market), ""],
     ];
     const box = q(".js-metrics");
     if (box) {
@@ -384,6 +386,18 @@
     return { xAt, yAt, pad, cssW, cssH };
   }
 
+  function pointsInRange(all, range) {
+    if (!all || !all.length || range === "all") return all || [];
+    const end = String(all[all.length - 1].date || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) return all.slice(-Number(range));
+    const [y, m, d] = end.split("-").map(Number);
+    const from = new Date(Date.UTC(y, m - 1, d));
+    from.setUTCDate(from.getUTCDate() - Number(range));
+    const fromKey = from.toISOString().slice(0, 10);
+    const view = all.filter((point) => String(point.date || "").slice(0, 10) >= fromKey);
+    return view.length ? view : all;
+  }
+
   function mountSlideChart(slide, getPoints, tipMoney) {
     const chart = slide.querySelector(".js-chart");
     const tip = slide.querySelector(".js-tip");
@@ -393,7 +407,7 @@
     let view = [];
     const paint = () => {
       const all = getPoints() || [];
-      view = range === "all" ? all : all.slice(-Number(range));
+      view = pointsInRange(all, range);
       geometry = drawLine(chart, view, {
         pad: { t: 16, r: 14, b: 26, l: 48 },
         grid: true,
@@ -478,31 +492,28 @@
     }
   }
 
-  async function loadBybit(silent) {
-    const slides = $$('.case-slide[data-venue="bybit"]');
-    if (!slides.length || loadingBybit) return;
-    loadingBybit = true;
-    slides.forEach((slide) => {
-      const stamp = slide.querySelector(".js-stamp");
-      if (stamp && (!silent || !bybit.equity.length)) setStamp(stamp, "loading", "Обновить с Bybit");
-    });
+  async function loadBybit(slide, silent) {
+    const slug = slide && slide.dataset ? slide.dataset.slug : "";
+    if (!slug || loadingBybit[slug]) return;
+    loadingBybit[slug] = true;
+    const data = storeFor(slide);
+    const stamp = slide.querySelector(".js-stamp");
+    if (stamp && (!silent || !data.equity.length)) setStamp(stamp, "loading", "Обновить с Bybit");
     try {
-      const res = await fetchJson("/api/bybit.php");
+      const res = await fetchJson("/api/bybit.php?slug=" + encodeURIComponent(slug) + "&t=" + Date.now());
       const payload = res.json;
       if (!payload || !payload.strategy || !payload.series) throw new Error("bad bybit payload");
-      bybit.strategy = payload.strategy;
-      bybit.equity = payload.series;
-      bybit.source = res.source === "cache" ? "cache" : "live";
-      bybit.fetchedAt = new Date();
-      slides.forEach((slide) => fillBybitSlide(slide));
+      data.strategy = payload.strategy;
+      data.equity = payload.series;
+      data.source = res.source === "cache" ? "cache" : "live";
+      data.fetchedAt = new Date();
+      fillBybitSlide(slide);
       charts.forEach((c) => c.refresh && c.refresh());
     } catch (error) {
-      console.warn("Bybit load failed", error);
-      if (!silent) {
-        slides.forEach((slide) => setStamp(slide.querySelector(".js-stamp"), "cache", "Bybit недоступен"));
-      }
+      console.warn("Bybit load failed", slug, error);
+      if (!silent) setStamp(stamp, "cache", "Bybit недоступен");
     } finally {
-      loadingBybit = false;
+      loadingBybit[slug] = false;
     }
   }
 
@@ -687,13 +698,12 @@
       if (stamp) stamp.addEventListener("click", () => loadComon(slide));
       loadComon(slide);
     });
-    const bybitSlides = $$('.case-slide[data-venue="bybit"]');
-    bybitSlides.forEach((slide) => {
-      charts.push(mountSlideChart(slide, () => bybit.equity, "usd"));
+    $$('.case-slide[data-venue="bybit"]').forEach((slide) => {
+      charts.push(mountSlideChart(slide, () => storeFor(slide).equity, "usd"));
       const stamp = slide.querySelector(".js-stamp");
-      if (stamp) stamp.addEventListener("click", () => loadBybit());
+      if (stamp) stamp.addEventListener("click", () => loadBybit(slide));
+      loadBybit(slide);
     });
-    if (bybitSlides.length) loadBybit();
   }
 
   mountSlider();
@@ -709,13 +719,13 @@
 
   window.setInterval(() => {
     $$('.case-slide[data-venue="comon"]').forEach((slide) => loadComon(slide, true));
-    loadBybit(true);
+    $$('.case-slide[data-venue="bybit"]').forEach((slide) => loadBybit(slide, true));
     if (tinkoffVisible()) loadTinkoff(true);
   }, REFRESH_MS);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       $$('.case-slide[data-venue="comon"]').forEach((slide) => loadComon(slide, true));
-      loadBybit(true);
+      $$('.case-slide[data-venue="bybit"]').forEach((slide) => loadBybit(slide, true));
       if (tinkoffVisible()) loadTinkoff(true);
     }
   });
