@@ -97,6 +97,7 @@ function quantlab_admin_start(string $title): void
           <a href="/admin/ready.php">Роботы</a>
           <a href="/admin/leads.php">Заявки</a>
           <a href="/admin/metrika.php">Метрика</a>
+          <a href="/admin/author.php">Автор</a>
           <a href="/admin/edit.php">Новая</a>
           <a href="/blog/">Блог</a>
           <a href="/">Сайт</a>

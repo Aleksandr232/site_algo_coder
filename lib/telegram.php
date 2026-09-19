@@ -296,11 +296,18 @@ function quantlab_telegram_keyboard(string $url): string
 
 function quantlab_telegram_local_image(?string $webPath): ?string
 {
-    if (!$webPath || !preg_match('#^/uploads/blog/([a-zA-Z0-9._-]+)$#', $webPath, $match)) {
+    if (!$webPath) {
         return null;
     }
-    $abs = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'blog' . DIRECTORY_SEPARATOR . $match[1];
-    return is_file($abs) ? $abs : null;
+    if (preg_match('#^/uploads/blog/([a-zA-Z0-9._-]+)$#', $webPath, $match)) {
+        $abs = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'blog' . DIRECTORY_SEPARATOR . $match[1];
+        return is_file($abs) ? $abs : null;
+    }
+    if (preg_match('#^/img/([a-zA-Z0-9._-]+)$#', $webPath, $match)) {
+        $abs = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'img' . DIRECTORY_SEPARATOR . $match[1];
+        return is_file($abs) ? $abs : null;
+    }
+    return null;
 }
 
 function quantlab_telegram_mime(string $path): string
@@ -453,4 +460,178 @@ function quantlab_telegram_share_post(array $post): array
         quantlab_telegram_status(false, $error);
         return ['ok' => false, 'error' => $error];
     }
+}
+
+function quantlab_telegram_message_id(array $data): int
+{
+    return (int) ($data['result']['message_id'] ?? 0);
+}
+
+function quantlab_telegram_author_state_path(): string
+{
+    return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'telegram-author.json';
+}
+
+function quantlab_telegram_author_state(?array $write = null): array
+{
+    $path = quantlab_telegram_author_state_path();
+    if ($write !== null) {
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+        file_put_contents($path, json_encode($write, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
+        return $write;
+    }
+    if (!is_file($path)) {
+        return [];
+    }
+    $data = json_decode((string) file_get_contents($path), true);
+    return is_array($data) ? $data : [];
+}
+
+function quantlab_telegram_author_url(): string
+{
+    return rtrim(quantlab_site_url(), '/') . '/#author';
+}
+
+function quantlab_telegram_author_keyboard(): string
+{
+    return json_encode([
+        'inline_keyboard' => [[
+            [
+                'text' => 'Кто пишет роботов',
+                'url' => quantlab_telegram_author_url(),
+            ],
+        ]],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+}
+
+function quantlab_telegram_author_caption(): string
+{
+    $lines = [
+        '<b>Кто пишет роботов в AM QuantLab</b>',
+        '',
+        'Александр, основатель. Больше 5 лет в разработке, три года — финтех и торговые алгоритмы.',
+        '',
+        'Раньше работал разработчиком у алготрейдера Ильи Петрова: роботы и контуры под живой счёт, не под презентацию. Поэтому знаю, как выглядят риск, API и журнал сделок изнутри.',
+        '',
+        'Пишу сам. Исполнение только через официальные API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Не продаю сигналы и не обещаю чужую доходность.',
+        '',
+        'Есть свой контур. Это мой счёт, не гарантия по вашему.',
+    ];
+    return implode("\n", $lines);
+}
+
+function quantlab_telegram_pin_message(int $messageId): void
+{
+    if ($messageId <= 0) {
+        throw new RuntimeException('Нет message_id для закрепа');
+    }
+    quantlab_telegram_api('pinChatMessage', [
+        'chat_id' => quantlab_telegram_channel(),
+        'message_id' => $messageId,
+        'disable_notification' => 'true',
+    ]);
+}
+
+function quantlab_telegram_unpin_message(int $messageId): void
+{
+    if ($messageId <= 0) {
+        return;
+    }
+    try {
+        quantlab_telegram_api('unpinChatMessage', [
+            'chat_id' => quantlab_telegram_channel(),
+            'message_id' => $messageId,
+        ]);
+    } catch (Throwable $e) {
+        // уже снят или нет прав — не блокируем новый пост
+    }
+}
+
+function quantlab_telegram_share_author(bool $pin = true): array
+{
+    if (!quantlab_telegram_enabled()) {
+        return ['ok' => false, 'error' => 'disabled', 'message_id' => 0, 'pinned' => false];
+    }
+
+    $caption = quantlab_telegram_author_caption();
+    $markup = quantlab_telegram_author_keyboard();
+    $chat = quantlab_telegram_channel();
+    $photo = '/img/author.jpg';
+    $local = quantlab_telegram_local_image($photo);
+    $messageId = 0;
+
+    try {
+        if ($local && class_exists('CURLFile')) {
+            $sent = quantlab_telegram_api('sendPhoto', [
+                'chat_id' => $chat,
+                'photo' => new CURLFile($local, quantlab_telegram_mime($local), basename($local)),
+                'caption' => $caption,
+                'parse_mode' => 'HTML',
+                'reply_markup' => $markup,
+            ]);
+        } else {
+            $sent = quantlab_telegram_api('sendPhoto', [
+                'chat_id' => $chat,
+                'photo' => quantlab_abs_url($photo),
+                'caption' => $caption,
+                'parse_mode' => 'HTML',
+                'reply_markup' => $markup,
+            ]);
+        }
+        $messageId = quantlab_telegram_message_id($sent);
+    } catch (Throwable $e) {
+        try {
+            $sent = quantlab_telegram_api('sendMessage', [
+                'chat_id' => $chat,
+                'text' => $caption,
+                'parse_mode' => 'HTML',
+                'disable_web_page_preview' => 'false',
+                'reply_markup' => $markup,
+            ]);
+            $messageId = quantlab_telegram_message_id($sent);
+        } catch (Throwable $last) {
+            quantlab_telegram_status(false, $last->getMessage());
+            return ['ok' => false, 'error' => $last->getMessage(), 'message_id' => 0, 'pinned' => false];
+        }
+    }
+
+    $pinned = false;
+    if ($pin && $messageId > 0) {
+        $prev = (int) (quantlab_telegram_author_state()['message_id'] ?? 0);
+        if ($prev > 0 && $prev !== $messageId) {
+            quantlab_telegram_unpin_message($prev);
+        }
+        try {
+            quantlab_telegram_pin_message($messageId);
+            $pinned = true;
+        } catch (Throwable $e) {
+            quantlab_telegram_author_state([
+                'ok' => true,
+                'pinned' => false,
+                'message_id' => $messageId,
+                'error' => $e->getMessage(),
+                'at' => date('c'),
+            ]);
+            quantlab_telegram_status(true, '');
+            return [
+                'ok' => true,
+                'error' => 'Пост ушёл, закреп не вышел: ' . $e->getMessage(),
+                'message_id' => $messageId,
+                'pinned' => false,
+            ];
+        }
+    }
+
+    quantlab_telegram_author_state([
+        'ok' => true,
+        'pinned' => $pinned,
+        'message_id' => $messageId,
+        'error' => '',
+        'at' => date('c'),
+    ]);
+    quantlab_telegram_status(true, '');
+    return ['ok' => true, 'error' => '', 'message_id' => $messageId, 'pinned' => $pinned];
 }
