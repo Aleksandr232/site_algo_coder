@@ -250,12 +250,17 @@ function quantlab_lead_last_reply(int $id): array
     return is_array($row) ? $row : [];
 }
 
-function quantlab_lead_mark_replied(int $id, string $to, string $subject): void
+function quantlab_lead_mark_replied(int $id, string $to, string $subject, bool $ok = true, string $error = ''): void
 {
+    if ($id <= 0) {
+        return;
+    }
     $map = quantlab_lead_replies_map();
     $map[(string) $id] = [
+        'ok' => $ok,
         'to' => $to,
         'subject' => $subject,
+        'error' => $error,
         'at' => date('c'),
     ];
     file_put_contents(
@@ -263,4 +268,37 @@ function quantlab_lead_mark_replied(int $id, string $to, string $subject): void
         json_encode($map, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
         LOCK_EX
     );
+}
+
+function quantlab_lead_reply_status(array $last): array
+{
+    if ($last === []) {
+        return [
+            'key' => 'none',
+            'label' => 'Не отправляли',
+            'class' => 'badge',
+            'hint' => '',
+        ];
+    }
+    $at = '';
+    if (!empty($last['at'])) {
+        $ts = strtotime((string) $last['at']);
+        $at = $ts ? date('d.m.Y H:i', $ts) : (string) $last['at'];
+    }
+    $ok = array_key_exists('ok', $last) ? !empty($last['ok']) : true;
+    if ($ok) {
+        return [
+            'key' => 'ok',
+            'label' => 'Отправлено',
+            'class' => 'badge badge-ok',
+            'hint' => $at !== '' ? $at : '',
+        ];
+    }
+    $error = trim((string) ($last['error'] ?? ''));
+    return [
+        'key' => 'err',
+        'label' => 'Не ушло',
+        'class' => 'badge badge-warn',
+        'hint' => $error !== '' ? $error : $at,
+    ];
 }

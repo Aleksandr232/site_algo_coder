@@ -891,6 +891,8 @@ h3 {
 .spec dt,
 .parsed-stamp,
 .form-note,
+.form-note-ok,
+.form-note-err,
 .disclaimer,
 .fine-list,
 .case-meta {
@@ -1868,7 +1870,21 @@ button.parsed-stamp.is-loading {
   color: var(--text);
   border-radius: 14px;
   padding: 12px 14px;
-  font: 500 15px Manrope, sans-serif;
+  font: 500 15px/1.45 Manrope, system-ui, sans-serif;
+  appearance: none;
+  outline: none;
+}
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus {
+  border-color: rgba(61, 255, 164, 0.55);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.form input[readonly] {
+  color: var(--muted);
+  background: rgba(9, 13, 20, 0.55);
 }
 
 .form textarea {
@@ -2852,6 +2868,14 @@ button.parsed-stamp.is-loading {
   background: rgba(255, 193, 77, 0.12);
 }
 
+.form-note-ok {
+  color: var(--accent);
+}
+
+.form-note-err {
+  color: var(--neg);
+}
+
 .admin-head {
   display: flex;
   justify-content: space-between;
@@ -2885,25 +2909,9 @@ button.parsed-stamp.is-loading {
   margin-top: 8px;
 }
 
-.lead-reply-modal-form label {
-  display: grid;
-  gap: 6px;
-}
-
-.lead-reply-modal-form input,
 .lead-reply-modal-form textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(5, 7, 12, 0.45);
-  color: var(--text);
-  font: inherit;
-}
-
-.lead-reply-modal-form textarea {
+  min-height: 220px;
   resize: vertical;
-  min-height: 180px;
 }
 
 #lead-reply-task {

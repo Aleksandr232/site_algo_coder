@@ -319,10 +319,17 @@ function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '
     if (!str_contains($body, 'AM QuantLab')) {
         $text .= "\r\n\r\n— AM QuantLab\r\n" . $from . "\r\n" . $site . "\r\n";
     }
-    quantlab_mail_send($subject, $text, '', $from, [$email]);
     $id = (int) ($lead['id'] ?? 0);
-    if ($id > 0 && function_exists('quantlab_lead_mark_replied')) {
-        quantlab_lead_mark_replied($id, $email, $subject);
+    try {
+        quantlab_mail_send($subject, $text, '', $from, [$email]);
+    } catch (Throwable $e) {
+        if (function_exists('quantlab_lead_mark_replied')) {
+            quantlab_lead_mark_replied($id, $email, $subject, false, $e->getMessage());
+        }
+        throw $e;
+    }
+    if (function_exists('quantlab_lead_mark_replied')) {
+        quantlab_lead_mark_replied($id, $email, $subject, true, '');
     }
     return ['ok' => true, 'to' => $email, 'from' => $from, 'subject' => $subject, 'name' => $name];
 }
