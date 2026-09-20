@@ -2875,6 +2875,32 @@ button.parsed-stamp.is-loading {
   white-space: pre-wrap;
 }
 
+.lead-reply {
+  min-width: 260px;
+}
+
+.lead-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lead-reply-form input,
+.lead-reply-form textarea {
+  width: 100%;
+  min-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(5, 7, 12, 0.45);
+  color: var(--text);
+  font: inherit;
+}
+
+.lead-reply-form textarea {
+  resize: vertical;
+}
+
 .admin-login {
   max-width: 420px;
 }

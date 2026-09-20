@@ -203,3 +203,64 @@ function quantlab_leads_all(): array
     $rows = json_decode((string) file_get_contents($path), true);
     return is_array($rows) ? array_reverse($rows) : [];
 }
+
+function quantlab_lead_by_id(int $id): ?array
+{
+    if ($id <= 0) {
+        return null;
+    }
+    $pdo = quantlab_db();
+    if ($pdo) {
+        $st = $pdo->prepare('SELECT * FROM leads WHERE id = ? LIMIT 1');
+        $st->execute([$id]);
+        $row = $st->fetch();
+        if (!$row) {
+            return null;
+        }
+        $row['created_at'] = quantlab_dt_iso($row['created_at'] ?? null);
+        return $row;
+    }
+    foreach (quantlab_leads_all() as $row) {
+        if ((int) ($row['id'] ?? 0) === $id) {
+            return $row;
+        }
+    }
+    return null;
+}
+
+function quantlab_lead_replies_path(): string
+{
+    return quantlab_data_dir() . DIRECTORY_SEPARATOR . 'lead-replies.json';
+}
+
+function quantlab_lead_replies_map(): array
+{
+    $path = quantlab_lead_replies_path();
+    if (!is_file($path)) {
+        return [];
+    }
+    $data = json_decode((string) file_get_contents($path), true);
+    return is_array($data) ? $data : [];
+}
+
+function quantlab_lead_last_reply(int $id): array
+{
+    $map = quantlab_lead_replies_map();
+    $row = $map[(string) $id] ?? null;
+    return is_array($row) ? $row : [];
+}
+
+function quantlab_lead_mark_replied(int $id, string $to, string $subject): void
+{
+    $map = quantlab_lead_replies_map();
+    $map[(string) $id] = [
+        'to' => $to,
+        'subject' => $subject,
+        'at' => date('c'),
+    ];
+    file_put_contents(
+        quantlab_lead_replies_path(),
+        json_encode($map, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+        LOCK_EX
+    );
+}

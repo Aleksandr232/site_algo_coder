@@ -295,3 +295,34 @@ function quantlab_lead_ack_mail(array $lead): bool
     quantlab_mail_send($subject, $text, '', $from, [$email]);
     return true;
 }
+
+function quantlab_lead_reply_mail(array $lead, string $body, string $subject = ''): array
+{
+    $email = quantlab_lead_email($lead);
+    if ($email === '') {
+        throw new InvalidArgumentException('В заявке нет почты — ответить письмом нельзя');
+    }
+    $body = trim($body);
+    if ($body === '') {
+        throw new InvalidArgumentException('Напишите текст ответа');
+    }
+    $from = quantlab_env('SMTP_FROM', quantlab_env('SMTP_USER', 'info@amquantlab.ru'));
+    $site = function_exists('quantlab_site_url') ? quantlab_site_url() : 'https://amquantlab.ru';
+    $name = trim((string) ($lead['name'] ?? ''));
+    if ($subject === '') {
+        $robotTitle = trim((string) ($lead['robot_title'] ?? ''));
+        $subject = $robotTitle !== ''
+            ? ('AM QuantLab: по заявке «' . $robotTitle . '»')
+            : 'AM QuantLab: по вашей заявке';
+    }
+    $text = $body;
+    if (!str_contains($body, 'AM QuantLab')) {
+        $text .= "\r\n\r\n— AM QuantLab\r\n" . $from . "\r\n" . $site . "\r\n";
+    }
+    quantlab_mail_send($subject, $text, '', $from, [$email]);
+    $id = (int) ($lead['id'] ?? 0);
+    if ($id > 0 && function_exists('quantlab_lead_mark_replied')) {
+        quantlab_lead_mark_replied($id, $email, $subject);
+    }
+    return ['ok' => true, 'to' => $email, 'from' => $from, 'subject' => $subject, 'name' => $name];
+}
