@@ -447,6 +447,11 @@ $replyJs = <<<JS
     try { return JSON.parse(raw); } catch (e) { return {}; }
   }
   document.addEventListener("click", function (event) {
+    if (event.target.closest("[data-lead-close]")) {
+      event.preventDefault();
+      close();
+      return;
+    }
     var btn = event.target.closest(".js-lead-reply");
     if (btn) {
       event.preventDefault();
@@ -458,9 +463,7 @@ $replyJs = <<<JS
     var row = event.target.closest("tr.js-lead-open[data-lead]");
     if (row) {
       open(readLead(row));
-      return;
     }
-    if (event.target.closest("[data-lead-close]")) close();
   });
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && !modal.hidden) close();
