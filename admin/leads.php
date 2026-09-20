@@ -98,6 +98,18 @@ $synced = (string) ($_GET['sync'] ?? '') === '1';
 $openId = (int) ($_GET['open'] ?? 0);
 $fromBox = function_exists('quantlab_env') ? quantlab_env('SMTP_FROM', 'info@amquantlab.ru') : 'info@amquantlab.ru';
 $threads = [];
+if ($leads) {
+    usort($leads, static function ($a, $b) {
+        $ida = (int) ($a['id'] ?? 0);
+        $idb = (int) ($b['id'] ?? 0);
+        $ua = $ida > 0 ? quantlab_lead_thread_unread($ida) : 0;
+        $ub = $idb > 0 ? quantlab_lead_thread_unread($idb) : 0;
+        if ($ua !== $ub) {
+            return $ub <=> $ua;
+        }
+        return $idb <=> $ida;
+    });
+}
 
 quantlab_admin_start('Заявки — админка AM QuantLab');
 ?>
@@ -153,7 +165,7 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                   <th>Контакт</th>
                   <th>Рынок / робот</th>
                   <th>Задача</th>
-                  <th>Ответ</th>
+                  <th>Диалог</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,6 +187,7 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                         }
                     }
                     $status = quantlab_lead_reply_status($last, $unread, $hasIn);
+                    $preview = quantlab_lead_thread_preview($thread);
                     $name = trim((string) ($lead['name'] ?? ''));
                     $payload = [
                         'id' => $leadId,
@@ -192,8 +205,12 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                     if ($openId > 0 && $openId === $leadId) {
                         $openLead = array_merge($openLead, $payload);
                     }
+                    $rowClass = 'js-lead-open';
+                    if ($unread > 0) {
+                        $rowClass .= ' is-unread';
+                    }
                   ?>
-                  <tr>
+                  <tr class="<?= quantlab_h($rowClass) ?>"<?= $email !== '' ? ' data-lead="' . quantlab_h((string) json_encode($payload, JSON_UNESCAPED_UNICODE)) . '"' : '' ?>>
                     <td><?= quantlab_h($when) ?></td>
                     <td><?= quantlab_h((string) ($lead['name'] ?? '')) ?></td>
                     <td>
@@ -215,21 +232,20 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                         <?php endif; ?>
                       <?php endif; ?>
                     </td>
-                    <td class="lead-msg"><?= quantlab_h((string) ($lead['message'] ?? '')) ?></td>
+                    <td class="lead-msg"><?= quantlab_h(quantlab_text_clip((string) ($lead['message'] ?? ''), 140)) ?></td>
                     <td class="lead-reply">
                       <?php if ($email === ''): ?>
                         <span class="badge">Нет почты</span>
                       <?php else: ?>
                         <span class="<?= quantlab_h($status['class']) ?>"><?= quantlab_h($status['label']) ?></span>
-                        <?php if ($status['hint'] !== ''): ?>
-                          <br /><span class="field-hint"><?= quantlab_h($status['hint']) ?></span>
+                        <?php if ($preview['text'] !== ''): ?>
+                          <span class="lead-preview"><?= quantlab_h($preview['label'] . ': ' . $preview['text']) ?></span>
                         <?php endif; ?>
-                        <br />
                         <button
                           class="btn btn-sm js-lead-reply"
                           type="button"
                           data-lead="<?= quantlab_h((string) json_encode($payload, JSON_UNESCAPED_UNICODE)) ?>"
-                        ><?= $unread > 0 || $hasIn ? 'Диалог' : 'Ответить' ?></button>
+                        ><?= $unread > 0 || $hasIn ? 'Открыть' : 'Написать' ?></button>
                       <?php endif; ?>
                     </td>
                   </tr>
@@ -240,33 +256,30 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
 
           <div class="modal" id="lead-reply-modal" hidden>
             <div class="modal-backdrop" data-lead-close></div>
-            <div class="modal-card modal-card-dialog glass pad" role="dialog" aria-modal="true" aria-labelledby="lead-reply-title">
-              <button class="modal-close" type="button" data-lead-close aria-label="Закрыть">×</button>
-              <p class="eyebrow">Диалог</p>
-              <h2 id="lead-reply-title">Переписка с клиентом</h2>
-              <p class="modal-date" id="lead-reply-meta"></p>
+            <div class="modal-card modal-card-dialog glass" role="dialog" aria-modal="true" aria-labelledby="lead-reply-title">
+              <header class="lead-chat-head">
+                <button class="modal-close" type="button" data-lead-close aria-label="Закрыть">×</button>
+                <p class="eyebrow">Диалог</p>
+                <h2 id="lead-reply-title">Переписка</h2>
+                <p class="lead-chat-meta" id="lead-reply-meta"></p>
+                <p class="lead-chat-task" id="lead-reply-task"></p>
+              </header>
               <div class="lead-thread" id="lead-thread"></div>
-              <p class="form-note form-note-err" id="lead-reply-status" <?= $error !== '' ? '' : 'hidden' ?>><?= $error !== '' ? quantlab_h('Статус: не ушло. ' . $error) : '' ?></p>
-              <form class="form admin-form lead-reply-modal-form" method="post" id="lead-reply-form">
+              <p class="form-note form-note-err lead-chat-status" id="lead-reply-status" <?= $error !== '' ? '' : 'hidden' ?>><?= $error !== '' ? quantlab_h('Статус: не ушло. ' . $error) : '' ?></p>
+              <form class="form lead-chat-composer" method="post" id="lead-reply-form">
                 <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
                 <input type="hidden" name="action" value="reply" />
                 <input type="hidden" name="lead_id" id="lead-reply-id" value="" />
-                <label>
-                  Кому
-                  <input id="lead-reply-to" type="email" readonly tabindex="-1" />
+                <input id="lead-reply-to" type="hidden" />
+                <input id="lead-reply-subject" type="hidden" name="subject" value="" />
+                <label class="lead-chat-input">
+                  <span class="visually-hidden">Ответ</span>
+                  <textarea id="lead-reply-body" name="body" rows="2" required placeholder="Написать ответ…"></textarea>
                 </label>
-                <label>
-                  Тема
-                  <input id="lead-reply-subject" type="text" name="subject" required autocomplete="off" />
-                </label>
-                <label>
-                  Письмо
-                  <textarea id="lead-reply-body" name="body" rows="10" required placeholder="Текст письма клиенту"></textarea>
-                </label>
-                <p class="hero-actions">
-                  <button class="btn" type="submit" id="lead-reply-submit">Отправить с <?= quantlab_h($fromBox) ?></button>
-                  <button class="btn btn-ghost" type="button" data-lead-close>Отмена</button>
-                </p>
+                <div class="lead-chat-bar">
+                  <span class="field-hint">Ctrl + Enter — отправить с <?= quantlab_h($fromBox) ?></span>
+                  <button class="btn" type="submit" id="lead-reply-submit">Отправить</button>
+                </div>
               </form>
             </div>
           </div>
@@ -283,24 +296,63 @@ $replyJs = <<<JS
   var toInput = document.getElementById("lead-reply-to");
   var subjectInput = document.getElementById("lead-reply-subject");
   var bodyInput = document.getElementById("lead-reply-body");
+  var title = document.getElementById("lead-reply-title");
   var meta = document.getElementById("lead-reply-meta");
+  var task = document.getElementById("lead-reply-task");
   var threadBox = document.getElementById("lead-thread");
   var status = document.getElementById("lead-reply-status");
   var form = document.getElementById("lead-reply-form");
   var submit = document.getElementById("lead-reply-submit");
   var threads = {$threadsJson} || {};
   var csrf = {$csrfJs};
-  function fmtTime(raw) {
-    if (!raw) return "";
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function parseDate(raw) {
+    if (!raw) return null;
     var d = new Date(raw);
-    if (isNaN(d.getTime())) return raw;
-    var p = function (n) { return n < 10 ? "0" + n : "" + n; };
-    return p(d.getDate()) + "." + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function fmtTime(raw) {
+    var d = parseDate(raw);
+    if (!d) return raw || "";
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function dayKey(raw) {
+    var d = parseDate(raw);
+    if (!d) return "";
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+  function dayLabel(raw) {
+    var d = parseDate(raw);
+    if (!d) return "";
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var then = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    if (then === today) return "Сегодня";
+    if (then === today - 86400000) return "Вчера";
+    return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear();
+  }
+  function threadRows(id) {
+    return threads[String(id)] || [];
+  }
+  function hasConversation(id) {
+    return threadRows(id).some(function (msg) {
+      return msg.kind === "reply" || msg.kind === "ack";
+    });
+  }
+  function lastSubject(id, fallback) {
+    var rows = threadRows(id);
+    for (var i = rows.length - 1; i >= 0; i--) {
+      if (rows[i].subject) {
+        var subj = String(rows[i].subject);
+        return /^re:/i.test(subj) ? subj : "Re: " + subj;
+      }
+    }
+    return fallback || "";
   }
   function renderThread(id) {
     if (!threadBox) return;
     threadBox.innerHTML = "";
-    var rows = threads[String(id)] || [];
+    var rows = threadRows(id);
     if (!rows.length) {
       var empty = document.createElement("p");
       empty.className = "field-hint";
@@ -308,14 +360,25 @@ $replyJs = <<<JS
       threadBox.appendChild(empty);
       return;
     }
+    var lastDay = "";
     rows.forEach(function (msg) {
+      var day = dayKey(msg.at);
+      if (day && day !== lastDay) {
+        lastDay = day;
+        var sep = document.createElement("div");
+        sep.className = "lead-day";
+        sep.textContent = dayLabel(msg.at);
+        threadBox.appendChild(sep);
+      }
       var wrap = document.createElement("div");
       wrap.className = "lead-bubble " + (msg.dir === "out" ? "lead-bubble-out" : "lead-bubble-in");
+      if (msg.dir === "in" && msg.kind === "reply" && !msg.read) wrap.classList.add("is-unread");
       var who = document.createElement("div");
       who.className = "lead-bubble-meta";
-      var label = msg.kind === "lead" ? "Заявка с сайта" : (msg.dir === "out" ? "AM QuantLab" : "Клиент");
+      var label = msg.kind === "lead" ? "Заявка с сайта" : (msg.dir === "out" ? "Вы" : "Клиент");
       who.textContent = label + (msg.at ? " · " + fmtTime(msg.at) : "");
       var text = document.createElement("div");
+      text.className = "lead-bubble-text";
       text.textContent = msg.body || "";
       wrap.appendChild(who);
       wrap.appendChild(text);
@@ -323,8 +386,15 @@ $replyJs = <<<JS
     });
     threadBox.scrollTop = threadBox.scrollHeight;
   }
+  function grow() {
+    if (!bodyInput) return;
+    bodyInput.style.height = "auto";
+    bodyInput.style.height = Math.min(180, Math.max(64, bodyInput.scrollHeight)) + "px";
+  }
   function markSeen(id) {
     if (!id) return;
+    var rows = threadRows(id);
+    rows.forEach(function (msg) { msg.read = true; });
     var fd = new FormData();
     fd.append("csrf", csrf);
     fd.append("action", "seen");
@@ -336,21 +406,32 @@ $replyJs = <<<JS
       headers: { Accept: "application/json" }
     }).catch(function () {});
   }
-  function fill(data) {
+  function fill(data, keepDraft) {
     if (idInput) idInput.value = data.id || "";
     if (toInput) toInput.value = data.email || "";
-    if (subjectInput) subjectInput.value = data.subject || "";
-    if (bodyInput) bodyInput.value = data.body || "";
+    if (subjectInput) subjectInput.value = lastSubject(data.id, data.subject);
+    if (bodyInput) {
+      if (keepDraft && data.body) {
+        bodyInput.value = data.body;
+      } else {
+        bodyInput.value = hasConversation(data.id) ? "" : (data.body || "");
+      }
+    }
+    if (title) title.textContent = data.name || "Переписка";
     if (meta) {
       var bits = [];
-      if (data.name) bits.push(data.name);
       if (data.email) bits.push(data.email);
       meta.textContent = bits.join(" · ");
     }
+    if (task) {
+      task.textContent = data.task ? data.task : "";
+      task.hidden = !data.task;
+    }
     renderThread(data.id || 0);
+    grow();
   }
   function open(data, keepStatus) {
-    fill(data || {});
+    fill(data || {}, !!keepStatus);
     if (status && !keepStatus) {
       status.hidden = true;
       status.textContent = "";
@@ -368,13 +449,22 @@ $replyJs = <<<JS
     modal.hidden = true;
     document.body.classList.remove("modal-open");
   }
+  function readLead(el) {
+    var raw = el && el.getAttribute("data-lead") || "{}";
+    try { return JSON.parse(raw); } catch (e) { return {}; }
+  }
   document.addEventListener("click", function (event) {
     var btn = event.target.closest(".js-lead-reply");
     if (btn) {
-      var raw = btn.getAttribute("data-lead") || "{}";
-      var data = {};
-      try { data = JSON.parse(raw); } catch (e) { data = {}; }
-      open(data);
+      event.preventDefault();
+      event.stopPropagation();
+      open(readLead(btn));
+      return;
+    }
+    if (event.target.closest("a, button, input, textarea, label")) return;
+    var row = event.target.closest("tr.js-lead-open[data-lead]");
+    if (row) {
+      open(readLead(row));
       return;
     }
     if (event.target.closest("[data-lead-close]")) close();
@@ -382,14 +472,23 @@ $replyJs = <<<JS
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && !modal.hidden) close();
   });
+  if (bodyInput) {
+    bodyInput.addEventListener("input", grow);
+    bodyInput.addEventListener("keydown", function (event) {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        if (form) form.requestSubmit();
+      }
+    });
+  }
   if (form && submit) {
     form.addEventListener("submit", function () {
       submit.disabled = true;
       submit.textContent = "Отправляем…";
       if (status) {
         status.hidden = false;
-        status.className = "form-note";
-        status.textContent = "Статус: отправляем письмо с info@amquantlab.ru";
+        status.className = "form-note lead-chat-status";
+        status.textContent = "Отправляем письмо";
       }
     });
   }

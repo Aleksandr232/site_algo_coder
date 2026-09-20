@@ -2899,60 +2899,131 @@ button.parsed-stamp.is-loading {
   color: var(--warn);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .admin-table .lead-msg {
-  max-width: 360px;
-  white-space: pre-wrap;
+  max-width: 260px;
+  white-space: normal;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.admin-table tr.js-lead-open {
+  cursor: pointer;
+}
+
+.admin-table tr.js-lead-open:hover td {
+  background: rgba(61, 255, 164, 0.04);
+}
+
+.admin-table tr.is-unread td {
+  background: rgba(122, 162, 255, 0.07);
 }
 
 .lead-reply {
-  min-width: 120px;
+  min-width: 180px;
 }
 
-.lead-reply-modal-form {
-  display: grid;
-  gap: 14px;
-  margin-top: 8px;
-}
-
-.lead-reply-modal-form textarea {
-  min-height: 140px;
-  resize: vertical;
+.lead-preview {
+  display: block;
+  margin: 6px 0 8px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 240px;
 }
 
 .modal-card-dialog {
-  width: min(760px, 100%);
+  width: min(780px, calc(100vw - 24px));
+  height: min(92vh, 900px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.lead-chat-head {
+  flex-shrink: 0;
+  padding: 20px 56px 14px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lead-chat-head h2 {
+  margin: 0 0 4px;
+}
+
+.lead-chat-meta {
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.lead-chat-task {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-height: 4.6em;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 .lead-thread {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 38vh;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  margin: 0 0 16px;
-  padding: 2px 2px 8px;
+  margin: 0;
+  padding: 16px 20px 12px;
+  background: rgba(5, 7, 12, 0.35);
+}
+
+.lead-day {
+  align-self: center;
+  margin: 4px 0;
+  color: var(--muted);
+  font: 600 11px IBM Plex Mono, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .lead-bubble {
-  max-width: 86%;
+  max-width: 78%;
   border-radius: 16px;
   padding: 10px 14px;
   white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 14px;
+  overflow-wrap: anywhere;
+  font-size: 15px;
   line-height: 1.5;
 }
 
 .lead-bubble-in {
   align-self: flex-start;
-  background: rgba(16, 22, 34, 0.92);
+  background: #121826;
   border: 1px solid rgba(232, 237, 245, 0.1);
 }
 
 .lead-bubble-out {
   align-self: flex-end;
-  background: rgba(61, 255, 164, 0.12);
-  border: 1px solid rgba(61, 255, 164, 0.22);
+  background: rgba(61, 255, 164, 0.14);
+  border: 1px solid rgba(61, 255, 164, 0.24);
+}
+
+.lead-bubble.is-unread {
+  box-shadow: 0 0 0 1px rgba(122, 162, 255, 0.55);
 }
 
 .lead-bubble-meta {
@@ -2960,6 +3031,44 @@ button.parsed-stamp.is-loading {
   font-size: 11px;
   margin-bottom: 6px;
   letter-spacing: 0.03em;
+}
+
+.lead-chat-status {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 20px 8px;
+}
+
+.lead-chat-composer {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+  background: #080c14;
+}
+
+.lead-chat-input {
+  display: block;
+  margin: 0;
+}
+
+.lead-chat-composer textarea {
+  min-height: 64px;
+  max-height: 180px;
+  resize: none;
+  line-height: 1.45;
+}
+
+.lead-chat-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.lead-chat-bar .btn {
+  margin: 0;
 }
 
 .admin-login {
@@ -3155,6 +3264,14 @@ body.modal-open {
   padding: 28px 28px 24px;
 }
 
+.modal-card.modal-card-dialog {
+  width: min(780px, calc(100vw - 24px));
+  height: min(92vh, 900px);
+  max-height: 92vh;
+  overflow: hidden;
+  padding: 0;
+}
+
 .modal-card h2 {
   margin-bottom: 8px;
 }
@@ -3188,5 +3305,25 @@ body.modal-open {
   .admin-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .modal {
+    padding: 8px;
+  }
+
+  .modal-card.modal-card-dialog {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 16px;
+  }
+
+  .lead-bubble {
+    max-width: 92%;
+  }
+
+  .lead-chat-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

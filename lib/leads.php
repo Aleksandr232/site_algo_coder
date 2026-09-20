@@ -284,6 +284,41 @@ function quantlab_lead_thread_unread(int $id): int
     return $n;
 }
 
+function quantlab_text_clip(string $text, int $len = 110): string
+{
+    $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    if ($text === '') {
+        return '';
+    }
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        if (mb_strlen($text) <= $len) {
+            return $text;
+        }
+        return rtrim(mb_substr($text, 0, $len - 1)) . '…';
+    }
+    if (strlen($text) <= $len) {
+        return $text;
+    }
+    return rtrim(substr($text, 0, $len - 1)) . '…';
+}
+
+function quantlab_lead_thread_preview(array $thread): array
+{
+    if ($thread === []) {
+        return ['text' => '', 'dir' => '', 'kind' => '', 'label' => ''];
+    }
+    $last = $thread[count($thread) - 1];
+    $kind = (string) ($last['kind'] ?? '');
+    $dir = (string) ($last['dir'] ?? 'in');
+    $label = $kind === 'lead' ? 'Заявка' : ($dir === 'out' ? 'Вы' : 'Клиент');
+    return [
+        'text' => quantlab_text_clip((string) ($last['body'] ?? ''), 96),
+        'dir' => $dir,
+        'kind' => $kind,
+        'label' => $label,
+    ];
+}
+
 function quantlab_lead_thread_last_ref(int $id): string
 {
     $rows = quantlab_lead_thread($id);
