@@ -885,6 +885,7 @@ function quantlab_robots_txt(): string
         . "Allow: /manifest.json\n"
         . "Allow: /llms.txt\n"
         . "Disallow: /admin/\n"
+        . "Disallow: /cron/\n"
         . "Disallow: /lib/\n"
         . "Disallow: /api/\n"
         . "Disallow: /install.php\n"

@@ -16,47 +16,88 @@ $openLead = [
     'task' => '',
 ];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') === 'reply') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quantlab_csrf_check();
-    $id = (int) ($_POST['lead_id'] ?? 0);
-    $lead = quantlab_lead_by_id($id);
-    $openLead['id'] = $id;
-    $openLead['subject'] = trim((string) ($_POST['subject'] ?? ''));
-    $openLead['body'] = (string) ($_POST['body'] ?? '');
-    if ($lead) {
-        $openLead['email'] = quantlab_lead_email($lead);
-        $openLead['name'] = (string) ($lead['name'] ?? '');
-        $openLead['task'] = (string) ($lead['message'] ?? '');
-    }
-    if (!$lead) {
-        $error = 'Заявка не найдена';
-    } elseif (!quantlab_mail_enabled()) {
-        $error = 'Сначала SMTP в .env — письмо должно уйти с info@amquantlab.ru';
-        if (function_exists('quantlab_lead_mark_replied')) {
-            quantlab_lead_mark_replied($id, (string) $openLead['email'], $openLead['subject'], false, $error);
+    $action = (string) ($_POST['action'] ?? '');
+    if ($action === 'seen') {
+        $id = (int) ($_POST['lead_id'] ?? 0);
+        if ($id > 0 && function_exists('quantlab_lead_thread_mark_read')) {
+            quantlab_lead_thread_mark_read($id);
         }
-    } else {
-        try {
-            $sent = quantlab_lead_reply_mail(
-                $lead,
-                $openLead['body'],
-                $openLead['subject']
-            );
-            header('Location: /admin/leads.php?sent=1&to=' . rawurlencode((string) $sent['to']), true, 302);
+        if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
             exit;
-        } catch (Throwable $e) {
-            $error = $e->getMessage();
+        }
+        header('Location: /admin/leads.php', true, 302);
+        exit;
+    }
+    if ($action === 'sync') {
+        if (function_exists('quantlab_inbox_sync')) {
+            try {
+                quantlab_inbox_sync(true);
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
+            }
+        }
+        if ($error === '') {
+            header('Location: /admin/leads.php?sync=1', true, 302);
+            exit;
+        }
+    }
+    if ($action === 'reply') {
+        $id = (int) ($_POST['lead_id'] ?? 0);
+        $lead = quantlab_lead_by_id($id);
+        $openLead['id'] = $id;
+        $openLead['subject'] = trim((string) ($_POST['subject'] ?? ''));
+        $openLead['body'] = (string) ($_POST['body'] ?? '');
+        if ($lead) {
+            $openLead['email'] = quantlab_lead_email($lead);
+            $openLead['name'] = (string) ($lead['name'] ?? '');
+            $openLead['task'] = (string) ($lead['message'] ?? '');
+        }
+        if (!$lead) {
+            $error = 'Заявка не найдена';
+        } elseif (!quantlab_mail_enabled()) {
+            $error = 'Сначала SMTP в .env — письмо должно уйти с info@amquantlab.ru';
             if (function_exists('quantlab_lead_mark_replied')) {
                 quantlab_lead_mark_replied($id, (string) $openLead['email'], $openLead['subject'], false, $error);
             }
+        } else {
+            try {
+                $sent = quantlab_lead_reply_mail(
+                    $lead,
+                    $openLead['body'],
+                    $openLead['subject']
+                );
+                header('Location: /admin/leads.php?sent=1&to=' . rawurlencode((string) $sent['to']) . '&open=' . $id, true, 302);
+                exit;
+            } catch (Throwable $e) {
+                $error = $e->getMessage();
+                if (function_exists('quantlab_lead_mark_replied')) {
+                    quantlab_lead_mark_replied($id, (string) $openLead['email'], $openLead['subject'], false, $error);
+                }
+            }
         }
+    }
+}
+
+$inbox = ['ok' => null, 'imported' => 0, 'error' => ''];
+if (function_exists('quantlab_inbox_sync') && quantlab_mail_enabled() && $error === '') {
+    try {
+        $inbox = quantlab_inbox_sync(false);
+    } catch (Throwable $e) {
+        $inbox = ['ok' => false, 'error' => $e->getMessage(), 'imported' => 0];
     }
 }
 
 $leads = quantlab_leads_all();
 $sentOk = (string) ($_GET['sent'] ?? '') === '1';
 $sentTo = trim((string) ($_GET['to'] ?? ''));
+$synced = (string) ($_GET['sync'] ?? '') === '1';
+$openId = (int) ($_GET['open'] ?? 0);
 $fromBox = function_exists('quantlab_env') ? quantlab_env('SMTP_FROM', 'info@amquantlab.ru') : 'info@amquantlab.ru';
+$threads = [];
 
 quantlab_admin_start('Заявки — админка AM QuantLab');
 ?>
@@ -69,15 +110,30 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
           <div>
             <p class="eyebrow">Админка</p>
             <h1>Заявки с формы</h1>
-            <p class="lead">Клиенты с главной страницы. <?= count($leads) ?> шт. Ответ уходит с <?= quantlab_h($fromBox) ?>.</p>
+            <p class="lead">Клиенты с главной страницы. <?= count($leads) ?> шт. Ответ уходит с <?= quantlab_h($fromBox) ?>. Если клиент напишет на эту почту — письмо попадёт в диалог.</p>
             <?= quantlab_admin_storage_note() ?>
             <?= quantlab_admin_mail_note() ?>
           </div>
-          <a class="btn btn-ghost" href="/admin/">К статьям</a>
+          <div class="hero-actions">
+            <form method="post">
+              <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
+              <input type="hidden" name="action" value="sync" />
+              <button class="btn btn-ghost" type="submit">Проверить почту</button>
+            </form>
+            <a class="btn btn-ghost" href="/admin/">К статьям</a>
+          </div>
         </div>
 
         <?php if ($sentOk): ?>
           <p class="form-note form-note-ok" style="display:block">Статус: отправлено<?= $sentTo !== '' ? ' на ' . quantlab_h($sentTo) : '' ?> с <?= quantlab_h($fromBox) ?>.</p>
+        <?php endif; ?>
+        <?php if ($synced && empty($inbox['error'])): ?>
+          <p class="form-note form-note-ok" style="display:block">Почта проверена<?= !empty($inbox['imported']) ? ': новых писем ' . (int) $inbox['imported'] : '' ?>.</p>
+        <?php endif; ?>
+        <?php if (!empty($inbox['error'])): ?>
+          <p class="form-note form-note-err" style="display:block">Входящие: <?= quantlab_h((string) $inbox['error']) ?></p>
+        <?php elseif (!empty($inbox['imported'])): ?>
+          <p class="form-note form-note-ok" style="display:block">Подтянули <?= (int) $inbox['imported'] ?> входящих писем в диалоги.</p>
         <?php endif; ?>
         <?php if ($error !== ''): ?>
           <p class="form-note form-note-err" style="display:block">Статус: не ушло. <?= quantlab_h($error) ?></p>
@@ -109,7 +165,16 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                     $email = function_exists('quantlab_lead_email') ? quantlab_lead_email($lead) : '';
                     $leadId = (int) ($lead['id'] ?? 0);
                     $last = $leadId > 0 ? quantlab_lead_last_reply($leadId) : [];
-                    $status = quantlab_lead_reply_status($last);
+                    $thread = $leadId > 0 ? quantlab_lead_thread($leadId, $lead) : [];
+                    $unread = $leadId > 0 ? quantlab_lead_thread_unread($leadId) : 0;
+                    $hasIn = false;
+                    foreach ($thread as $msg) {
+                        if (($msg['dir'] ?? '') === 'in' && ($msg['kind'] ?? '') === 'reply') {
+                            $hasIn = true;
+                            break;
+                        }
+                    }
+                    $status = quantlab_lead_reply_status($last, $unread, $hasIn);
                     $name = trim((string) ($lead['name'] ?? ''));
                     $payload = [
                         'id' => $leadId,
@@ -121,6 +186,12 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                         'body' => ($name !== '' ? ('Здравствуйте, ' . $name . '.') : 'Здравствуйте.') . "\n\n",
                         'task' => (string) ($lead['message'] ?? ''),
                     ];
+                    if ($leadId > 0) {
+                        $threads[(string) $leadId] = $thread;
+                    }
+                    if ($openId > 0 && $openId === $leadId) {
+                        $openLead = array_merge($openLead, $payload);
+                    }
                   ?>
                   <tr>
                     <td><?= quantlab_h($when) ?></td>
@@ -158,7 +229,7 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                           class="btn btn-sm js-lead-reply"
                           type="button"
                           data-lead="<?= quantlab_h((string) json_encode($payload, JSON_UNESCAPED_UNICODE)) ?>"
-                        >Ответить</button>
+                        ><?= $unread > 0 || $hasIn ? 'Диалог' : 'Ответить' ?></button>
                       <?php endif; ?>
                     </td>
                   </tr>
@@ -169,12 +240,12 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
 
           <div class="modal" id="lead-reply-modal" hidden>
             <div class="modal-backdrop" data-lead-close></div>
-            <div class="modal-card glass pad" role="dialog" aria-modal="true" aria-labelledby="lead-reply-title">
+            <div class="modal-card modal-card-dialog glass pad" role="dialog" aria-modal="true" aria-labelledby="lead-reply-title">
               <button class="modal-close" type="button" data-lead-close aria-label="Закрыть">×</button>
-              <p class="eyebrow">Ответ клиенту</p>
-              <h2 id="lead-reply-title">Написать на почту</h2>
+              <p class="eyebrow">Диалог</p>
+              <h2 id="lead-reply-title">Переписка с клиентом</h2>
               <p class="modal-date" id="lead-reply-meta"></p>
-              <p class="field-hint" id="lead-reply-task"></p>
+              <div class="lead-thread" id="lead-thread"></div>
               <p class="form-note form-note-err" id="lead-reply-status" <?= $error !== '' ? '' : 'hidden' ?>><?= $error !== '' ? quantlab_h('Статус: не ушло. ' . $error) : '' ?></p>
               <form class="form admin-form lead-reply-modal-form" method="post" id="lead-reply-form">
                 <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
@@ -202,6 +273,8 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
         <?php endif; ?>
 <?php
 $openJson = json_encode($openLead, JSON_UNESCAPED_UNICODE);
+$threadsJson = json_encode($threads, JSON_UNESCAPED_UNICODE);
+$csrfJs = json_encode(quantlab_csrf_token(), JSON_UNESCAPED_UNICODE);
 $replyJs = <<<JS
 (function () {
   var modal = document.getElementById("lead-reply-modal");
@@ -211,10 +284,58 @@ $replyJs = <<<JS
   var subjectInput = document.getElementById("lead-reply-subject");
   var bodyInput = document.getElementById("lead-reply-body");
   var meta = document.getElementById("lead-reply-meta");
-  var task = document.getElementById("lead-reply-task");
+  var threadBox = document.getElementById("lead-thread");
   var status = document.getElementById("lead-reply-status");
   var form = document.getElementById("lead-reply-form");
   var submit = document.getElementById("lead-reply-submit");
+  var threads = {$threadsJson} || {};
+  var csrf = {$csrfJs};
+  function fmtTime(raw) {
+    if (!raw) return "";
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return raw;
+    var p = function (n) { return n < 10 ? "0" + n : "" + n; };
+    return p(d.getDate()) + "." + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function renderThread(id) {
+    if (!threadBox) return;
+    threadBox.innerHTML = "";
+    var rows = threads[String(id)] || [];
+    if (!rows.length) {
+      var empty = document.createElement("p");
+      empty.className = "field-hint";
+      empty.textContent = "Пока только заявка с сайта.";
+      threadBox.appendChild(empty);
+      return;
+    }
+    rows.forEach(function (msg) {
+      var wrap = document.createElement("div");
+      wrap.className = "lead-bubble " + (msg.dir === "out" ? "lead-bubble-out" : "lead-bubble-in");
+      var who = document.createElement("div");
+      who.className = "lead-bubble-meta";
+      var label = msg.kind === "lead" ? "Заявка с сайта" : (msg.dir === "out" ? "AM QuantLab" : "Клиент");
+      who.textContent = label + (msg.at ? " · " + fmtTime(msg.at) : "");
+      var text = document.createElement("div");
+      text.textContent = msg.body || "";
+      wrap.appendChild(who);
+      wrap.appendChild(text);
+      threadBox.appendChild(wrap);
+    });
+    threadBox.scrollTop = threadBox.scrollHeight;
+  }
+  function markSeen(id) {
+    if (!id) return;
+    var fd = new FormData();
+    fd.append("csrf", csrf);
+    fd.append("action", "seen");
+    fd.append("lead_id", id);
+    fetch("/admin/leads.php", {
+      method: "POST",
+      body: fd,
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    }).catch(function () {});
+  }
   function fill(data) {
     if (idInput) idInput.value = data.id || "";
     if (toInput) toInput.value = data.email || "";
@@ -226,7 +347,7 @@ $replyJs = <<<JS
       if (data.email) bits.push(data.email);
       meta.textContent = bits.join(" · ");
     }
-    if (task) task.textContent = data.task ? ("Заявка: " + data.task) : "";
+    renderThread(data.id || 0);
   }
   function open(data, keepStatus) {
     fill(data || {});
@@ -236,6 +357,7 @@ $replyJs = <<<JS
     }
     modal.hidden = false;
     document.body.classList.add("modal-open");
+    markSeen(data && data.id);
     if (bodyInput) {
       bodyInput.focus();
       var len = bodyInput.value.length;

@@ -262,7 +262,7 @@ function quantlab_mail_payload(array $headers, string $text, string $html): stri
     return implode("\r\n", $headers) . "\r\n\r\n" . $altBody;
 }
 
-function quantlab_mail_send(string $subject, string $text, string $html = '', ?string $replyTo = null, ?array $to = null): void
+function quantlab_mail_send(string $subject, string $text, string $html = '', ?string $replyTo = null, ?array $to = null, array $meta = []): string
 {
     if (!quantlab_mail_enabled()) {
         throw new RuntimeException('SMTP не настроен: укажите SMTP_USER и SMTP_PASSWORD в .env');
@@ -288,7 +288,10 @@ function quantlab_mail_send(string $subject, string $text, string $html = '', ?s
     }
 
     $domain = substr(strrchr($from, '@') ?: '@amquantlab.ru', 1);
-    $messageId = '<ql.' . date('YmdHis') . '.' . bin2hex(random_bytes(8)) . '@' . $domain . '>';
+    $leadId = (int) ($meta['lead_id'] ?? 0);
+    $messageId = $leadId > 0
+        ? '<ql.lead.' . $leadId . '.' . date('YmdHis') . '.' . bin2hex(random_bytes(4)) . '@' . $domain . '>'
+        : '<ql.' . date('YmdHis') . '.' . bin2hex(random_bytes(8)) . '@' . $domain . '>';
     $toHeader = implode(', ', $recipients);
     $headers = [
         'Date: ' . date('r'),
@@ -301,6 +304,17 @@ function quantlab_mail_send(string $subject, string $text, string $html = '', ?s
         'MIME-Version: 1.0',
         'Content-Language: ru',
     ];
+    if ($leadId > 0) {
+        $headers[] = 'X-QL-Lead: ' . $leadId;
+    }
+    $ref = trim((string) ($meta['in_reply_to'] ?? ''));
+    if ($ref !== '') {
+        if ($ref[0] !== '<') {
+            $ref = '<' . trim($ref, '<>') . '>';
+        }
+        $headers[] = 'In-Reply-To: ' . $ref;
+        $headers[] = 'References: ' . $ref;
+    }
 
     $payload = quantlab_mail_payload($headers, $text, $html);
     $ports = [$port];
@@ -312,7 +326,7 @@ function quantlab_mail_send(string $subject, string $text, string $html = '', ?s
         try {
             quantlab_smtp_deliver($host, $tryPort, $domain, $user, $pass, $from, $recipients, $payload);
             quantlab_mail_status(true, '');
-            return;
+            return $messageId;
         } catch (Throwable $e) {
             $lastError = $e->getMessage();
         }
@@ -458,7 +472,9 @@ function quantlab_lead_mail(array $lead): void
         'cta_label' => 'Открыть заявки',
     ]);
 
-    quantlab_mail_send($subject, $text, $html, $email !== '' ? $email : null);
+    quantlab_mail_send($subject, $text, $html, $email !== '' ? $email : null, null, [
+        'lead_id' => (int) ($lead['id'] ?? 0),
+    ]);
 }
 
 function quantlab_lead_ack_mail(array $lead): bool
@@ -495,7 +511,20 @@ function quantlab_lead_ack_mail(array $lead): bool
         'cta_href' => $site,
         'cta_label' => 'Открыть AM QuantLab',
     ]);
-    quantlab_mail_send($subject, $text, $html, $from, [$email]);
+    $id = (int) ($lead['id'] ?? 0);
+    $mid = quantlab_mail_send($subject, $text, $html, $from, [$email], ['lead_id' => $id]);
+    if (function_exists('quantlab_lead_thread_add')) {
+        quantlab_lead_thread_add($id, [
+            'dir' => 'out',
+            'kind' => 'ack',
+            'from' => $from,
+            'to' => $email,
+            'subject' => $subject,
+            'body' => $text,
+            'message_id' => $mid,
+            'read' => true,
+        ]);
+    }
     return true;
 }
 
@@ -533,13 +562,30 @@ function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '
         'cta_label' => 'Открыть AM QuantLab',
     ]);
     $id = (int) ($lead['id'] ?? 0);
+    $ref = function_exists('quantlab_lead_thread_last_ref') ? quantlab_lead_thread_last_ref($id) : '';
     try {
-        quantlab_mail_send($subject, $text, $html, $from, [$email]);
+        $mid = quantlab_mail_send($subject, $text, $html, $from, [$email], [
+            'lead_id' => $id,
+            'in_reply_to' => $ref,
+        ]);
     } catch (Throwable $e) {
         if (function_exists('quantlab_lead_mark_replied')) {
             quantlab_lead_mark_replied($id, $email, $subject, false, $e->getMessage());
         }
         throw $e;
+    }
+    if (function_exists('quantlab_lead_thread_add')) {
+        quantlab_lead_thread_add($id, [
+            'dir' => 'out',
+            'kind' => 'reply',
+            'from' => $from,
+            'to' => $email,
+            'subject' => $subject,
+            'body' => $body,
+            'message_id' => $mid,
+            'in_reply_to' => $ref,
+            'read' => true,
+        ]);
     }
     if (function_exists('quantlab_lead_mark_replied')) {
         quantlab_lead_mark_replied($id, $email, $subject, true, '');

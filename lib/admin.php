@@ -131,7 +131,14 @@ function quantlab_admin_mail_note(): string
     $status = function_exists('quantlab_mail_status') ? quantlab_mail_status() : [];
     $to = quantlab_env('SMTP_TO');
     if (!empty($status['ok'])) {
-        return '<p class="admin-storage">Почта: SMTP Timeweb → ' . quantlab_h($to) . '</p>';
+        $inbox = function_exists('quantlab_inbox_state') ? quantlab_inbox_state() : [];
+        $inNote = '';
+        if (!empty($inbox['error'])) {
+            $inNote = ' Входящие: ' . $inbox['error'];
+        } elseif (!empty($inbox['ok'])) {
+            $inNote = ' Входящие с ящика подтягиваются в диалог.';
+        }
+        return '<p class="admin-storage">Почта: SMTP Timeweb → ' . quantlab_h($to) . '.' . quantlab_h($inNote) . '</p>';
     }
     if (!empty($status['error'])) {
         return '<p class="admin-storage admin-storage-warn">Почта не ушла: ' . quantlab_h((string) $status['error']) . '</p>';

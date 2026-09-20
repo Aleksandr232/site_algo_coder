@@ -2868,6 +2868,11 @@ button.parsed-stamp.is-loading {
   background: rgba(255, 193, 77, 0.12);
 }
 
+.badge-in {
+  color: var(--blue);
+  background: rgba(122, 162, 255, 0.14);
+}
+
 .form-note-ok {
   color: var(--accent);
 }
@@ -2910,15 +2915,51 @@ button.parsed-stamp.is-loading {
 }
 
 .lead-reply-modal-form textarea {
-  min-height: 220px;
+  min-height: 140px;
   resize: vertical;
 }
 
-#lead-reply-task {
-  white-space: pre-wrap;
-  max-height: 5.5em;
+.modal-card-dialog {
+  width: min(760px, 100%);
+}
+
+.lead-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 38vh;
   overflow: auto;
-  margin: 0 0 8px;
+  margin: 0 0 16px;
+  padding: 2px 2px 8px;
+}
+
+.lead-bubble {
+  max-width: 86%;
+  border-radius: 16px;
+  padding: 10px 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.lead-bubble-in {
+  align-self: flex-start;
+  background: rgba(16, 22, 34, 0.92);
+  border: 1px solid rgba(232, 237, 245, 0.1);
+}
+
+.lead-bubble-out {
+  align-self: flex-end;
+  background: rgba(61, 255, 164, 0.12);
+  border: 1px solid rgba(61, 255, 164, 0.22);
+}
+
+.lead-bubble-meta {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
 }
 
 .admin-login {

@@ -165,6 +165,7 @@ function quantlab_db_migrate(PDO $pdo): void
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
             contact VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NULL,
             market VARCHAR(64) NOT NULL,
             message TEXT NOT NULL,
             ip VARCHAR(64) NULL,
@@ -222,6 +223,7 @@ function quantlab_db_migrate(PDO $pdo): void
         quantlab_db_ensure_column($pdo, 'leads', 'robot_slug', 'robot_slug VARCHAR(191) NULL');
         quantlab_db_ensure_column($pdo, 'leads', 'robot_title', 'robot_title VARCHAR(500) NULL');
         quantlab_db_ensure_column($pdo, 'leads', 'robot_price', 'robot_price VARCHAR(120) NULL');
+        quantlab_db_ensure_column($pdo, 'leads', 'email', 'email VARCHAR(255) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'keywords', 'keywords VARCHAR(1000) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_title', 'seo_title VARCHAR(500) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_description', 'seo_description VARCHAR(1000) NULL');

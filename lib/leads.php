@@ -16,6 +16,9 @@ function quantlab_lead_save(array $input): array
     if ($email !== '' && function_exists('quantlab_mail_is_email') && !quantlab_mail_is_email($email)) {
         throw new InvalidArgumentException('Укажите почту в формате name@mail.ru');
     }
+    if ($email === '' && function_exists('quantlab_lead_email')) {
+        $email = quantlab_lead_email(['email' => '', 'contact' => $contact]);
+    }
     $market = trim((string) ($input['market'] ?? ''));
     $message = trim((string) ($input['message'] ?? ''));
     $robotSlug = trim((string) ($input['robot_slug'] ?? ''));
@@ -62,12 +65,13 @@ function quantlab_lead_save(array $input): array
         }
         try {
             $st = $pdo->prepare(
-                'INSERT INTO leads (name, contact, market, message, ip, created_at, robot_slug, robot_title, robot_price)
-                 VALUES (?,?,?,?,?,?,?,?,?)'
+                'INSERT INTO leads (name, contact, email, market, message, ip, created_at, robot_slug, robot_title, robot_price)
+                 VALUES (?,?,?,?,?,?,?,?,?,?)'
             );
             $st->execute([
                 $lead['name'],
                 $lead['contact'],
+                $lead['email'] !== '' ? $lead['email'] : null,
                 $lead['market'],
                 $lead['message'],
                 $lead['ip'],
@@ -115,8 +119,194 @@ function quantlab_lead_save(array $input): array
     return $lead;
 }
 
+function quantlab_lead_find_by_email(string $email): ?array
+{
+    $email = strtolower(trim($email));
+    if ($email === '' || !function_exists('quantlab_mail_is_email') || !quantlab_mail_is_email($email)) {
+        return null;
+    }
+    $best = null;
+    $bestId = 0;
+    foreach (quantlab_leads_all() as $lead) {
+        $got = function_exists('quantlab_lead_email') ? strtolower(quantlab_lead_email($lead)) : '';
+        if ($got !== $email) {
+            continue;
+        }
+        $id = (int) ($lead['id'] ?? 0);
+        if ($id >= $bestId) {
+            $best = $lead;
+            $bestId = $id;
+        }
+    }
+    return $best;
+}
+
+function quantlab_lead_messages_path(): string
+{
+    return quantlab_data_dir() . DIRECTORY_SEPARATOR . 'lead-messages.json';
+}
+
+function quantlab_lead_messages_all(): array
+{
+    $path = quantlab_lead_messages_path();
+    if (!is_file($path)) {
+        return [];
+    }
+    $data = json_decode((string) file_get_contents($path), true);
+    return is_array($data) ? $data : [];
+}
+
+function quantlab_lead_messages_write(array $data): void
+{
+    file_put_contents(
+        quantlab_lead_messages_path(),
+        json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+        LOCK_EX
+    );
+}
+
+function quantlab_lead_thread_seed(array $lead): void
+{
+    $id = (int) ($lead['id'] ?? 0);
+    if ($id <= 0) {
+        return;
+    }
+    $email = function_exists('quantlab_lead_email') ? quantlab_lead_email($lead) : '';
+    quantlab_lead_thread_add($id, [
+        'dir' => 'in',
+        'kind' => 'lead',
+        'from' => $email !== '' ? $email : (string) ($lead['contact'] ?? ''),
+        'to' => function_exists('quantlab_site_email') ? quantlab_site_email() : 'info@amquantlab.ru',
+        'subject' => !empty($lead['robot_title'])
+            ? ('Заявка: ' . $lead['robot_title'])
+            : 'Заявка с сайта',
+        'body' => (string) ($lead['message'] ?? ''),
+        'at' => (string) ($lead['created_at'] ?? date('c')),
+        'message_id' => 'lead-' . $id,
+        'read' => true,
+    ]);
+}
+
+function quantlab_lead_thread(int $id, ?array $lead = null): array
+{
+    $all = quantlab_lead_messages_all();
+    $rows = $all[(string) $id] ?? [];
+    $rows = is_array($rows) ? $rows : [];
+    if ($rows === [] && $lead) {
+        $email = function_exists('quantlab_lead_email') ? quantlab_lead_email($lead) : '';
+        $rows[] = [
+            'id' => 'lead-' . $id,
+            'dir' => 'in',
+            'kind' => 'lead',
+            'from' => $email !== '' ? $email : (string) ($lead['contact'] ?? ''),
+            'to' => '',
+            'subject' => !empty($lead['robot_title'])
+                ? ('Заявка: ' . $lead['robot_title'])
+                : 'Заявка с сайта',
+            'body' => (string) ($lead['message'] ?? ''),
+            'at' => (string) ($lead['created_at'] ?? ''),
+            'message_id' => 'lead-' . $id,
+            'read' => true,
+        ];
+    }
+    usort($rows, static function ($a, $b) {
+        return strcmp((string) ($a['at'] ?? ''), (string) ($b['at'] ?? ''));
+    });
+    return array_values($rows);
+}
+
+function quantlab_lead_thread_add(int $id, array $msg): bool
+{
+    if ($id <= 0) {
+        return false;
+    }
+    $mid = trim((string) ($msg['message_id'] ?? ''));
+    $all = quantlab_lead_messages_all();
+    if ($mid !== '') {
+        foreach ($all as $rows) {
+            if (!is_array($rows)) {
+                continue;
+            }
+            foreach ($rows as $row) {
+                if (strcasecmp((string) ($row['message_id'] ?? ''), $mid) === 0) {
+                    return false;
+                }
+            }
+        }
+    }
+    $key = (string) $id;
+    if (!isset($all[$key]) || !is_array($all[$key])) {
+        $all[$key] = [];
+    }
+    $all[$key][] = [
+        'id' => $mid !== '' ? $mid : ('ql-' . bin2hex(random_bytes(6))),
+        'dir' => (($msg['dir'] ?? 'in') === 'out') ? 'out' : 'in',
+        'kind' => (string) ($msg['kind'] ?? 'reply'),
+        'from' => (string) ($msg['from'] ?? ''),
+        'to' => (string) ($msg['to'] ?? ''),
+        'subject' => (string) ($msg['subject'] ?? ''),
+        'body' => (string) ($msg['body'] ?? ''),
+        'at' => (string) ($msg['at'] ?? date('c')),
+        'message_id' => $mid,
+        'in_reply_to' => (string) ($msg['in_reply_to'] ?? ''),
+        'read' => !empty($msg['read']) || (($msg['dir'] ?? '') === 'out'),
+        'imap_uid' => (int) ($msg['imap_uid'] ?? 0),
+    ];
+    quantlab_lead_messages_write($all);
+    return true;
+}
+
+function quantlab_lead_thread_mark_read(int $id): void
+{
+    if ($id <= 0) {
+        return;
+    }
+    $all = quantlab_lead_messages_all();
+    $key = (string) $id;
+    if (empty($all[$key]) || !is_array($all[$key])) {
+        return;
+    }
+    foreach ($all[$key] as &$row) {
+        $row['read'] = true;
+    }
+    unset($row);
+    quantlab_lead_messages_write($all);
+}
+
+function quantlab_lead_thread_unread(int $id): int
+{
+    $n = 0;
+    foreach (quantlab_lead_thread($id) as $row) {
+        if (($row['dir'] ?? '') === 'in' && empty($row['read']) && ($row['kind'] ?? '') !== 'lead') {
+            $n++;
+        }
+    }
+    return $n;
+}
+
+function quantlab_lead_thread_last_ref(int $id): string
+{
+    $rows = quantlab_lead_thread($id);
+    for ($i = count($rows) - 1; $i >= 0; $i--) {
+        $mid = trim((string) ($rows[$i]['message_id'] ?? ''));
+        if ($mid !== '' && ($rows[$i]['dir'] ?? '') === 'in') {
+            return $mid;
+        }
+    }
+    for ($i = count($rows) - 1; $i >= 0; $i--) {
+        $mid = trim((string) ($rows[$i]['message_id'] ?? ''));
+        if ($mid !== '') {
+            return $mid;
+        }
+    }
+    return '';
+}
+
 function quantlab_lead_notify(array $lead): void
 {
+    if (function_exists('quantlab_lead_thread_seed')) {
+        quantlab_lead_thread_seed($lead);
+    }
     if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
         if (function_exists('quantlab_mail_status')) {
             quantlab_mail_status(false, 'SMTP не настроен: в .env пустой SMTP_PASSWORD для info@amquantlab.ru');
@@ -270,8 +460,24 @@ function quantlab_lead_mark_replied(int $id, string $to, string $subject, bool $
     );
 }
 
-function quantlab_lead_reply_status(array $last): array
+function quantlab_lead_reply_status(array $last, int $unread = 0, bool $hasIn = false): array
 {
+    if ($unread > 0) {
+        return [
+            'key' => 'in',
+            'label' => $unread === 1 ? 'Написал' : ('Написал · ' . $unread),
+            'class' => 'badge badge-in',
+            'hint' => 'Новое письмо в диалоге',
+        ];
+    }
+    if ($hasIn) {
+        return [
+            'key' => 'dialog',
+            'label' => 'Диалог',
+            'class' => 'badge badge-ok',
+            'hint' => '',
+        ];
+    }
     if ($last === []) {
         return [
             'key' => 'none',
