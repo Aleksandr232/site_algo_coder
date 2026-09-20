@@ -712,6 +712,7 @@ foreach ($posts as $i => $item) {
             <label>
               Telegram или email
               <input type="text" name="contact" required placeholder="@username или mail@mail.ru" />
+              <span class="field-hint">Если оставите почту — придёт письмо, и мы ответим на неё.</span>
             </label>
             <label>
               Рынок

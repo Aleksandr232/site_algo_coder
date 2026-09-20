@@ -12,6 +12,10 @@ function quantlab_lead_save(array $input): array
 {
     $name = trim((string) ($input['name'] ?? ''));
     $contact = trim((string) ($input['contact'] ?? ''));
+    $email = trim((string) ($input['email'] ?? ''));
+    if ($email !== '' && function_exists('quantlab_mail_is_email') && !quantlab_mail_is_email($email)) {
+        throw new InvalidArgumentException('Укажите почту в формате name@mail.ru');
+    }
     $market = trim((string) ($input['market'] ?? ''));
     $message = trim((string) ($input['message'] ?? ''));
     $robotSlug = trim((string) ($input['robot_slug'] ?? ''));
@@ -41,6 +45,7 @@ function quantlab_lead_save(array $input): array
     $lead = [
         'name' => $name,
         'contact' => $contact,
+        'email' => $email,
         'market' => $market !== '' ? $market : 'finam',
         'message' => $message,
         'robot_slug' => $robotSlug,
@@ -123,6 +128,16 @@ function quantlab_lead_notify(array $lead): void
     } catch (Throwable $e) {
         if (function_exists('quantlab_mail_status')) {
             quantlab_mail_status(false, $e->getMessage());
+        }
+        return;
+    }
+    try {
+        if (function_exists('quantlab_lead_ack_mail')) {
+            quantlab_lead_ack_mail($lead);
+        }
+    } catch (Throwable $e) {
+        if (function_exists('quantlab_mail_status')) {
+            quantlab_mail_status(true, 'Заявка вам ушла, клиенту нет: ' . $e->getMessage());
         }
     }
 }

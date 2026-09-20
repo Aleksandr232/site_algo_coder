@@ -50,7 +50,20 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                   <tr>
                     <td><?= quantlab_h($when) ?></td>
                     <td><?= quantlab_h((string) ($lead['name'] ?? '')) ?></td>
-                    <td><?= quantlab_h((string) ($lead['contact'] ?? '')) ?></td>
+                    <td>
+                      <?php
+                        $contact = (string) ($lead['contact'] ?? '');
+                        $email = function_exists('quantlab_lead_email') ? quantlab_lead_email($lead) : '';
+                      ?>
+                      <?php if ($email !== ''): ?>
+                        <a href="mailto:<?= quantlab_h($email) ?>?subject=<?= quantlab_h(rawurlencode('AM QuantLab: по вашей заявке')) ?>"><?= quantlab_h($email) ?></a>
+                        <?php if ($contact !== '' && strcasecmp($contact, $email) !== 0): ?>
+                          <br /><span class="field-hint"><?= quantlab_h($contact) ?></span>
+                        <?php endif; ?>
+                      <?php else: ?>
+                        <?= quantlab_h($contact) ?>
+                      <?php endif; ?>
+                    </td>
                     <td>
                       <?= quantlab_h(quantlab_lead_market_label((string) ($lead['market'] ?? ''))) ?>
                       <?php if (!empty($lead['robot_title'])): ?>

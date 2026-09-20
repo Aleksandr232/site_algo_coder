@@ -136,7 +136,7 @@ function quantlab_admin_mail_note(): string
     if (!empty($status['error'])) {
         return '<p class="admin-storage admin-storage-warn">Почта не ушла: ' . quantlab_h((string) $status['error']) . '</p>';
     }
-    return '<p class="admin-storage">Почта: SMTP готов, письма уйдут с новой заявки на ' . quantlab_h($to) . '</p>';
+    return '<p class="admin-storage">Почта: SMTP готов. Заявка уйдёт вам на ' . quantlab_h($to) . ', клиенту — если он оставил email.</p>';
 }
 
 function quantlab_admin_telegram_note(): string

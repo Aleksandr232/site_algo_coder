@@ -542,7 +542,7 @@ function quantlab_render_ready_lead_form(array $row, bool $sent = false): void
           <input type="hidden" name="robot_slug" value="<?= $slug ?>" />
           <p class="eyebrow">Заявка</p>
           <h2>Оставить заявку</h2>
-          <p>Имя и Telegram или email. Письмо придёт нам, свяжемся и подключим робота.</p>
+          <p>Имя и Telegram или email. Если оставите почту — придёт письмо, и мы ответим на неё.</p>
           <label class="hp" aria-hidden="true">
             Сайт
             <input type="text" name="website" tabindex="-1" autocomplete="off" />
@@ -554,6 +554,7 @@ function quantlab_render_ready_lead_form(array $row, bool $sent = false): void
           <label>
             Telegram или email
             <input type="text" name="contact" required placeholder="@username или mail@mail.ru" />
+            <span class="field-hint">Почта нужна, чтобы вы получили письмо и мы могли ответить.</span>
           </label>
           <label>
             Комментарий

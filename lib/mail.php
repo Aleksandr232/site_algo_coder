@@ -96,7 +96,7 @@ function quantlab_mail_qp(string $text): string
     return str_replace("\n", "\r\n", $encoded);
 }
 
-function quantlab_mail_send(string $subject, string $text, string $html = '', ?string $replyTo = null): void
+function quantlab_mail_send(string $subject, string $text, string $html = '', ?string $replyTo = null, ?array $to = null): void
 {
     if (!quantlab_mail_enabled()) {
         throw new RuntimeException('SMTP не настроен: укажите SMTP_USER и SMTP_PASSWORD в .env');
@@ -108,7 +108,14 @@ function quantlab_mail_send(string $subject, string $text, string $html = '', ?s
     $pass = quantlab_env('SMTP_PASSWORD');
     $from = quantlab_env('SMTP_FROM', $user);
     $fromName = quantlab_env('SMTP_FROM_NAME', 'AM QuantLab');
-    $recipients = quantlab_smtp_recipients();
+    $recipients = [];
+    foreach ($to ?? quantlab_smtp_recipients() as $email) {
+        $email = trim((string) $email);
+        if (quantlab_mail_is_email($email)) {
+            $recipients[$email] = $email;
+        }
+    }
+    $recipients = array_values($recipients);
 
     if (!quantlab_mail_is_email($from) || !quantlab_mail_is_email($user) || !$recipients) {
         throw new RuntimeException('Некорректный email в SMTP_FROM / SMTP_TO / SMTP_USER');
@@ -203,10 +210,32 @@ function quantlab_smtp_deliver(
     }
 }
 
+function quantlab_lead_email(array $lead): string
+{
+    $candidates = [
+        (string) ($lead['email'] ?? ''),
+        (string) ($lead['contact'] ?? ''),
+    ];
+    foreach ($candidates as $raw) {
+        $raw = trim($raw);
+        if ($raw === '') {
+            continue;
+        }
+        if (quantlab_mail_is_email($raw)) {
+            return $raw;
+        }
+        if (preg_match('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $raw, $match) && quantlab_mail_is_email($match[0])) {
+            return $match[0];
+        }
+    }
+    return '';
+}
+
 function quantlab_lead_mail(array $lead): void
 {
     $name = (string) ($lead['name'] ?? '');
     $contact = (string) ($lead['contact'] ?? '');
+    $email = quantlab_lead_email($lead);
     $market = function_exists('quantlab_lead_market_label')
         ? quantlab_lead_market_label((string) ($lead['market'] ?? ''))
         : (string) ($lead['market'] ?? '');
@@ -225,6 +254,7 @@ function quantlab_lead_mail(array $lead): void
         . "Дата: {$when}\r\n"
         . "Имя: {$name}\r\n"
         . "Контакт: {$contact}\r\n"
+        . ($email !== '' && $email !== $contact ? "Почта: {$email}\r\n" : '')
         . "Рынок: {$market}\r\n";
     if ($robotTitle !== '') {
         $text .= "Робот: {$robotTitle}\r\n"
@@ -232,7 +262,36 @@ function quantlab_lead_mail(array $lead): void
             . ($robotSlug !== '' ? "Слаг: {$robotSlug}\r\n" : '');
     }
     $text .= "Задача:\r\n{$message}\r\n\r\n"
+        . ($email !== ''
+            ? "Ответьте на это письмо — уйдёт на почту клиента.\r\n\r\n"
+            : "Почты в заявке нет, только контакт выше.\r\n\r\n")
         . "— AM QuantLab, {$site}\r\n";
 
-    quantlab_mail_send($subject, $text);
+    quantlab_mail_send($subject, $text, '', $email !== '' ? $email : null);
+}
+
+function quantlab_lead_ack_mail(array $lead): bool
+{
+    $email = quantlab_lead_email($lead);
+    if ($email === '') {
+        return false;
+    }
+    $name = trim((string) ($lead['name'] ?? ''));
+    $hello = $name !== '' ? ('Здравствуйте, ' . $name . '.') : 'Здравствуйте.';
+    $robotTitle = trim((string) ($lead['robot_title'] ?? ''));
+    $site = function_exists('quantlab_site_url') ? quantlab_site_url() : 'https://amquantlab.ru';
+    $from = quantlab_env('SMTP_FROM', quantlab_env('SMTP_USER'));
+    $subject = $robotTitle !== ''
+        ? ('Заявка получена: ' . $robotTitle)
+        : 'Заявка получена — AM QuantLab';
+    $text = $hello . "\r\n\r\n"
+        . ($robotTitle !== ''
+            ? "Заявка на робота «{$robotTitle}» с amquantlab.ru дошла. Напишем на эту почту и уточним подключение.\r\n\r\n"
+            : "Заявка с amquantlab.ru дошла. Напишем на эту почту и уточним задачу.\r\n\r\n")
+        . "Если письмо пришло не вам — просто не отвечайте.\r\n\r\n"
+        . "— AM QuantLab\r\n"
+        . $site . "\r\n"
+        . $from . "\r\n";
+    quantlab_mail_send($subject, $text, '', $from, [$email]);
+    return true;
 }
