@@ -2876,29 +2876,41 @@ button.parsed-stamp.is-loading {
 }
 
 .lead-reply {
-  min-width: 260px;
+  min-width: 120px;
 }
 
-.lead-reply-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.lead-reply-modal-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
 }
 
-.lead-reply-form input,
-.lead-reply-form textarea {
+.lead-reply-modal-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.lead-reply-modal-form input,
+.lead-reply-modal-form textarea {
   width: 100%;
-  min-width: 220px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(5, 7, 12, 0.45);
   color: var(--text);
   font: inherit;
 }
 
-.lead-reply-form textarea {
+.lead-reply-modal-form textarea {
   resize: vertical;
+  min-height: 180px;
+}
+
+#lead-reply-task {
+  white-space: pre-wrap;
+  max-height: 5.5em;
+  overflow: auto;
+  margin: 0 0 8px;
 }
 
 .admin-login {
