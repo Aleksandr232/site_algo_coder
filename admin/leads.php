@@ -165,7 +165,7 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                   <th>Контакт</th>
                   <th>Рынок / робот</th>
                   <th>Задача</th>
-                  <th>Диалог</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -187,7 +187,6 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                         }
                     }
                     $status = quantlab_lead_reply_status($last, $unread, $hasIn);
-                    $preview = quantlab_lead_thread_preview($thread);
                     $name = trim((string) ($lead['name'] ?? ''));
                     $payload = [
                         'id' => $leadId,
@@ -238,9 +237,6 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                         <span class="badge">Нет почты</span>
                       <?php else: ?>
                         <span class="<?= quantlab_h($status['class']) ?>"><?= quantlab_h($status['label']) ?></span>
-                        <?php if ($preview['text'] !== ''): ?>
-                          <span class="lead-preview"><?= quantlab_h($preview['label'] . ': ' . $preview['text']) ?></span>
-                        <?php endif; ?>
                         <button
                           class="btn btn-sm js-lead-reply"
                           type="button"
@@ -256,28 +252,29 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
 
           <div class="modal" id="lead-reply-modal" hidden>
             <div class="modal-backdrop" data-lead-close></div>
-            <div class="modal-card modal-card-dialog glass" role="dialog" aria-modal="true" aria-labelledby="lead-reply-title">
+            <div class="modal-card modal-card-dialog" role="dialog" aria-modal="true" aria-labelledby="lead-reply-title">
+              <span class="lead-chat-accent" aria-hidden="true"></span>
               <header class="lead-chat-head">
+                <span class="lead-chat-avatar" id="lead-reply-avatar" aria-hidden="true">A</span>
+                <div class="lead-chat-who">
+                  <h2 id="lead-reply-title">Клиент</h2>
+                  <p class="lead-chat-meta" id="lead-reply-meta"></p>
+                </div>
                 <button class="modal-close" type="button" data-lead-close aria-label="Закрыть">×</button>
-                <p class="eyebrow">Диалог</p>
-                <h2 id="lead-reply-title">Переписка</h2>
-                <p class="lead-chat-meta" id="lead-reply-meta"></p>
-                <p class="lead-chat-task" id="lead-reply-task"></p>
               </header>
               <div class="lead-thread" id="lead-thread"></div>
-              <p class="form-note form-note-err lead-chat-status" id="lead-reply-status" <?= $error !== '' ? '' : 'hidden' ?>><?= $error !== '' ? quantlab_h('Статус: не ушло. ' . $error) : '' ?></p>
               <form class="form lead-chat-composer" method="post" id="lead-reply-form">
+                <p class="form-note form-note-err lead-chat-status" id="lead-reply-status" <?= $error !== '' ? '' : 'hidden' ?>><?= $error !== '' ? quantlab_h('Статус: не ушло. ' . $error) : '' ?></p>
                 <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
                 <input type="hidden" name="action" value="reply" />
                 <input type="hidden" name="lead_id" id="lead-reply-id" value="" />
                 <input id="lead-reply-to" type="hidden" />
                 <input id="lead-reply-subject" type="hidden" name="subject" value="" />
-                <label class="lead-chat-input">
-                  <span class="visually-hidden">Ответ</span>
-                  <textarea id="lead-reply-body" name="body" rows="2" required placeholder="Написать ответ…"></textarea>
-                </label>
-                <div class="lead-chat-bar">
-                  <span class="field-hint">Ctrl + Enter — отправить с <?= quantlab_h($fromBox) ?></span>
+                <div class="lead-chat-compose-row">
+                  <label class="lead-chat-input">
+                    <span class="visually-hidden">Ответ</span>
+                    <textarea id="lead-reply-body" name="body" rows="1" required placeholder="Написать ответ…"></textarea>
+                  </label>
                   <button class="btn" type="submit" id="lead-reply-submit">Отправить</button>
                 </div>
               </form>
@@ -298,7 +295,7 @@ $replyJs = <<<JS
   var bodyInput = document.getElementById("lead-reply-body");
   var title = document.getElementById("lead-reply-title");
   var meta = document.getElementById("lead-reply-meta");
-  var task = document.getElementById("lead-reply-task");
+  var avatar = document.getElementById("lead-reply-avatar");
   var threadBox = document.getElementById("lead-thread");
   var status = document.getElementById("lead-reply-status");
   var form = document.getElementById("lead-reply-form");
@@ -389,7 +386,7 @@ $replyJs = <<<JS
   function grow() {
     if (!bodyInput) return;
     bodyInput.style.height = "auto";
-    bodyInput.style.height = Math.min(180, Math.max(64, bodyInput.scrollHeight)) + "px";
+    bodyInput.style.height = Math.min(160, Math.max(48, bodyInput.scrollHeight)) + "px";
   }
   function markSeen(id) {
     if (!id) return;
@@ -417,15 +414,11 @@ $replyJs = <<<JS
         bodyInput.value = hasConversation(data.id) ? "" : (data.body || "");
       }
     }
-    if (title) title.textContent = data.name || "Переписка";
-    if (meta) {
-      var bits = [];
-      if (data.email) bits.push(data.email);
-      meta.textContent = bits.join(" · ");
-    }
-    if (task) {
-      task.textContent = data.task ? data.task : "";
-      task.hidden = !data.task;
+    if (title) title.textContent = data.name || "Клиент";
+    if (meta) meta.textContent = data.email || "";
+    if (avatar) {
+      var letter = (data.name || data.email || "A").trim().charAt(0).toUpperCase();
+      avatar.textContent = letter || "A";
     }
     renderThread(data.id || 0);
     grow();
