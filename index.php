@@ -17,7 +17,6 @@ $readyVenues = quantlab_ready_venues();
 $formSent = (string) ($_GET['sent'] ?? '') === '1';
 $yandex = quantlab_env('YANDEX_VERIFICATION', 'd94405cb4c18d9e3');
 $google = quantlab_env('GOOGLE_SITE_VERIFICATION', 'Z2TzFu1RkbL0doij_GukqPyVW3me4BjC7EH-Lw6bsDo');
-$year = date('Y');
 
 $blogList = [];
 foreach ($posts as $i => $item) {
@@ -761,7 +760,8 @@ foreach ($posts as $i => $item) {
           <a href="#privacy" data-privacy>Политика конфиденциальности</a>
         </p>
         <p class="disclaimer">
-          © <?= quantlab_h($year) ?> AM QuantLab. Материал не является индивидуальной инвестиционной рекомендацией. Доходность в прошлом
+          <?= quantlab_h(quantlab_footer_legal()) ?>
+          Материал не является индивидуальной инвестиционной рекомендацией. Доходность в прошлом
           не гарантирует результат в будущем. Цифры кейса взяты из публичной страницы Comon
           и могут отличаться от чистого результата счёта после комиссий и проскальзывания.
         </p>

@@ -31,6 +31,31 @@ function quantlab_site_email(): string
     return $email !== '' ? $email : 'info@amquantlab.ru';
 }
 
+function quantlab_inn(): string
+{
+    return '165504227018';
+}
+
+function quantlab_founded_year(): int
+{
+    return 2026;
+}
+
+function quantlab_copyright_years(): string
+{
+    $from = quantlab_founded_year();
+    $now = (int) date('Y');
+    if ($now < $from) {
+        $now = $from;
+    }
+    return $now > $from ? $from . '–' . $now : (string) $from;
+}
+
+function quantlab_footer_legal(): string
+{
+    return '© ' . quantlab_copyright_years() . ' AM QuantLab. Год создания: ' . quantlab_founded_year() . '. ИНН ' . quantlab_inn() . '.';
+}
+
 function quantlab_public_path(string $path): string
 {
     $path = '/' . trim($path, '/');
@@ -437,6 +462,7 @@ function quantlab_render_end(): void
           <a href="#privacy" data-privacy>Политика конфиденциальности</a>
         </p>
         <p class="disclaimer">
+          <?= quantlab_h(quantlab_footer_legal()) ?>
           Материал не является индивидуальной инвестиционной рекомендацией. Доходность в прошлом
           не гарантирует результат в будущем.
         </p>
