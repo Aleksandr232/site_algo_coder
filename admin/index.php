@@ -6,17 +6,28 @@ require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . '
 
 quantlab_admin_require();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quantlab_csrf_check();
+    $action = (string) ($_POST['action'] ?? '');
     $slug = (string) ($_POST['slug'] ?? '');
-    if (quantlab_is_slug($slug)) {
+    if ($action === 'delete' && quantlab_is_slug($slug)) {
         quantlab_blog_delete($slug);
+        header('Location: /admin/', true, 302);
+        exit;
+    }
+    if ($action === 'telegram' && quantlab_is_slug($slug) && function_exists('quantlab_telegram_send_article')) {
+        $sent = quantlab_telegram_send_article($slug);
+        header('Location: /admin/?tg=' . (!empty($sent['ok']) ? '1' : 'err'), true, 302);
+        exit;
     }
     header('Location: /admin/', true, 302);
     exit;
 }
 
 $posts = quantlab_blog_all();
+$tgOk = (string) ($_GET['tg'] ?? '') === '1';
+$tgErr = (string) ($_GET['tg'] ?? '') === 'err';
+$tgReady = function_exists('quantlab_telegram_enabled') && quantlab_telegram_enabled();
 quantlab_admin_start('Статьи — админка AM QuantLab');
 ?>
         <?= quantlab_render_crumbs([
@@ -29,6 +40,7 @@ quantlab_admin_start('Статьи — админка AM QuantLab');
             <h1>Статьи</h1>
             <p class="lead">Публикуете — появляется адрес /blog/слаг/, хлебные крошки и строка в sitemap.</p>
             <?= quantlab_admin_storage_note() ?>
+            <?= quantlab_admin_telegram_note() ?>
           </div>
           <a class="btn" href="/admin/edit.php">Новая статья</a>
           <a class="btn btn-ghost" href="/admin/strategies.php">Стратегии</a>
@@ -36,6 +48,15 @@ quantlab_admin_start('Статьи — админка AM QuantLab');
 
         <?php if (isset($_GET['deleted'])): ?>
           <p class="form-note" style="display:block">Пост удалён.</p>
+        <?php endif; ?>
+        <?php if ($tgOk): ?>
+          <p class="form-note form-note-ok" style="display:block">Статья ушла в Telegram.</p>
+        <?php elseif ($tgErr): ?>
+          <?php
+            $tgFail = function_exists('quantlab_telegram_status') ? quantlab_telegram_status() : [];
+            $tgFailText = trim((string) ($tgFail['error'] ?? ''));
+          ?>
+          <p class="form-note form-note-err" style="display:block">В Telegram не ушло<?= $tgFailText !== '' ? ': ' . quantlab_h($tgFailText) : '' ?>.</p>
         <?php endif; ?>
         <?php if (!$posts): ?>
           <div class="glass pad empty-blog">
@@ -72,6 +93,12 @@ quantlab_admin_start('Статьи — админка AM QuantLab');
                       <a href="/admin/edit.php?slug=<?= quantlab_h($item['slug']) ?>">Править</a>
                       <?php if ($item['status'] === 'published'): ?>
                         <a href="<?= quantlab_h(quantlab_public_path('blog/' . $item['slug'])) ?>" target="_blank" rel="noopener">Открыть</a>
+                        <form method="post">
+                          <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
+                          <input type="hidden" name="action" value="telegram" />
+                          <input type="hidden" name="slug" value="<?= quantlab_h($item['slug']) ?>" />
+                          <button type="submit" class="linkish" <?= $tgReady ? '' : 'disabled' ?>>В Telegram</button>
+                        </form>
                       <?php endif; ?>
                       <form method="post" onsubmit="return confirm('Удалить статью?');">
                         <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />

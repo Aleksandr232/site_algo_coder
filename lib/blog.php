@@ -108,7 +108,9 @@ function quantlab_blog_load(string $slug): ?array
         $st = $pdo->prepare('SELECT * FROM posts WHERE slug = ? LIMIT 1');
         $st->execute([$slug]);
         $row = $st->fetch();
-        return $row ? quantlab_post_from_row($row) : null;
+        if ($row) {
+            return quantlab_post_from_row($row);
+        }
     }
     $path = quantlab_blog_post_path($slug);
     if (!is_file($path)) {

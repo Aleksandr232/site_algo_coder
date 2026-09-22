@@ -18,6 +18,15 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quantlab_csrf_check();
     $action = (string) ($_POST['action'] ?? 'save');
+    if ($action === 'telegram') {
+        $slug = (string) ($post['slug'] ?? '');
+        $sent = function_exists('quantlab_telegram_send_article')
+            ? quantlab_telegram_send_article($slug)
+            : ['ok' => false, 'error' => 'Telegram недоступен'];
+        $qs = !empty($sent['ok']) ? 'tg=1' : 'tg=err';
+        header('Location: /admin/edit.php?slug=' . rawurlencode($slug) . '&' . $qs, true, 302);
+        exit;
+    }
     if ($action === 'delete' && !empty($post['slug'])) {
         quantlab_blog_delete($post['slug']);
         header('Location: /admin/?deleted=1', true, 302);
@@ -217,9 +226,13 @@ JS;
           <p class="form-note" style="display:block">Сохранено. Публичный адрес: <a href="<?= quantlab_h(quantlab_public_path('blog/' . $post['slug'])) ?>"><?= quantlab_h(quantlab_public_path('blog/' . $post['slug'])) ?></a></p>
         <?php endif; ?>
         <?php if ($tgOk): ?>
-          <p class="form-note" style="display:block">Отправлено в Telegram-канал: картинка, короткий текст и кнопка «Читать на AM QuantLab».</p>
+          <p class="form-note form-note-ok" style="display:block">Отправлено в Telegram: обложка, короткий текст и кнопка «Читать на AM QuantLab».</p>
         <?php elseif ($tgErr): ?>
-          <p class="form-note" style="display:block">Статья сохранена, но в Telegram не ушла. Проверьте токен бота и что бот — админ канала с правом публиковать.</p>
+          <?php
+            $tgFail = function_exists('quantlab_telegram_status') ? quantlab_telegram_status() : [];
+            $tgFailText = trim((string) ($tgFail['error'] ?? ''));
+          ?>
+          <p class="form-note form-note-err" style="display:block">В Telegram не ушло<?= $tgFailText !== '' ? ': ' . quantlab_h($tgFailText) : '. Проверьте токен бота и что бот — админ канала.' ?></p>
         <?php endif; ?>
         <?php if ($error): ?>
           <p class="form-note" style="display:block"><?= quantlab_h($error) ?></p>
@@ -283,20 +296,31 @@ JS;
           </label>
           <label class="check-row">
             <input type="checkbox" name="telegram_notify" value="1" <?= $tgChecked ? 'checked' : '' ?> <?= $tgReady ? '' : 'disabled' ?> />
-            Отправить в Telegram-канал — обложка, короткий текст и кнопка «Читать на AM QuantLab»
+            Вместе с сохранением отправить в Telegram
           </label>
-          <?php if ($tgSent): ?>
-            <span class="field-hint">Уже уходило в канал. Отметьте галочку, если нужно отправить ещё раз.</span>
-          <?php elseif (!$tgReady): ?>
-            <span class="field-hint">Сначала TELEGRAM_BOT_TOKEN в .env и бот-админ канала.</span>
+          <?php if (!$tgReady): ?>
+            <span class="field-hint">Сначала TELEGRAM_BOT_TOKEN и канал в .env, бот — админ канала.</span>
+          <?php elseif ($tgSent): ?>
+            <span class="field-hint">Уже уходило в канал. Кнопка ниже отправит ещё раз.</span>
           <?php else: ?>
-            <span class="field-hint">Уйдёт вместе с публикацией. Черновик в канал не отправляется.</span>
+            <span class="field-hint">Или нажмите «В Telegram» у опубликованной статьи — не обязательно сохранять заново.</span>
           <?php endif; ?>
           <div class="hero-actions">
             <button class="btn" type="submit">Сохранить</button>
             <a class="btn btn-ghost" href="/admin/">К списку</a>
           </div>
         </form>
+
+        <?php if (!empty($post['slug']) && (($post['status'] ?? '') === 'published')): ?>
+          <form class="admin-telegram" method="post">
+            <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
+            <input type="hidden" name="action" value="telegram" />
+            <button class="btn" type="submit" <?= $tgReady ? '' : 'disabled' ?>>
+              <?= $tgSent ? 'Ещё раз в Telegram' : 'Отправить в Telegram' ?>
+            </button>
+            <span class="field-hint">Уйдёт обложка, короткий текст без цен и кнопка на статью.</span>
+          </form>
+        <?php endif; ?>
 
         <?php if (!empty($post['slug'])): ?>
           <form class="admin-delete" method="post" onsubmit="return confirm('Удалить статью безвозвратно?');">

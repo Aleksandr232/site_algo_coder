@@ -3143,6 +3143,14 @@ button.parsed-stamp.is-loading {
   font-weight: 600;
 }
 
+.admin-telegram {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0 0;
+}
+
 .admin-actions {
   display: flex;
   flex-wrap: wrap;

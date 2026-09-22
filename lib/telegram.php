@@ -372,6 +372,25 @@ function quantlab_telegram_curl(string $url, array $fields, bool $verifySsl): ?s
     return (string) $raw;
 }
 
+function quantlab_telegram_send_article(string $slug): array
+{
+    $slug = trim($slug);
+    if ($slug === '' || !function_exists('quantlab_blog_load')) {
+        return ['ok' => false, 'error' => 'Статья не найдена'];
+    }
+    $post = quantlab_blog_load($slug);
+    if (!$post) {
+        return ['ok' => false, 'error' => 'Статья не найдена'];
+    }
+    if (($post['status'] ?? '') !== 'published') {
+        return ['ok' => false, 'error' => 'Сначала опубликуйте статью'];
+    }
+    if (!quantlab_telegram_enabled()) {
+        return ['ok' => false, 'error' => 'Задайте TELEGRAM_BOT_TOKEN и канал в .env'];
+    }
+    return quantlab_telegram_share_post($post);
+}
+
 function quantlab_telegram_share_post(array $post): array
 {
     if (!quantlab_telegram_enabled()) {
