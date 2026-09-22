@@ -10,6 +10,19 @@ ErrorDocument 404 /404.php
   Deny from all
 </FilesMatch>
 
+<IfModule mod_mime.c>
+  AddType image/svg+xml .svg
+  AddType image/x-icon .ico
+  AddType image/vnd.microsoft.icon .ico
+  AddType image/png .png
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(favicon|apple-touch-icon)">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
 

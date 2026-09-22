@@ -152,26 +152,18 @@ function quantlab_icon_href(): string
 function quantlab_icon_links(): void
 {
     $svg = quantlab_h(quantlab_abs_url('/favicon.svg'));
-    $ico = quantlab_h(quantlab_abs_url('/favicon.ico'));
+    $png = quantlab_h(quantlab_abs_url('/favicon.png'));
     $png120 = quantlab_h(quantlab_abs_url('/favicon-120.png'));
-    $png48 = quantlab_h(quantlab_abs_url('/favicon-48.png'));
-    $png32 = quantlab_h(quantlab_abs_url('/favicon-32.png'));
-    $png16 = quantlab_h(quantlab_abs_url('/favicon-16.png'));
-    $png96 = quantlab_h(quantlab_abs_url('/favicon-96.png'));
-    $png512 = quantlab_h(quantlab_abs_url('/favicon-512.png'));
+    $ico = quantlab_h(quantlab_abs_url('/favicon.ico'));
     $apple = quantlab_h(quantlab_abs_url('/apple-touch-icon.png'));
     $manifest = quantlab_h(quantlab_abs_url('/manifest.json'));
     ?>
-    <link rel="icon" href="<?= $svg ?>" type="image/svg+xml" />
-    <link rel="icon" href="<?= $ico ?>" type="image/x-icon" />
+    <link rel="icon" href="<?= $svg ?>" type="image/svg+xml" sizes="any" />
+    <link rel="icon" href="<?= $png ?>" type="image/png" sizes="120x120" />
     <link rel="icon" href="<?= $png120 ?>" type="image/png" sizes="120x120" />
-    <link rel="icon" href="<?= $png48 ?>" type="image/png" sizes="48x48" />
-    <link rel="icon" href="<?= $png32 ?>" type="image/png" sizes="32x32" />
-    <link rel="icon" href="<?= $png16 ?>" type="image/png" sizes="16x16" />
-    <link rel="icon" href="<?= $png96 ?>" type="image/png" sizes="96x96" />
-    <link rel="icon" href="<?= $png512 ?>" type="image/png" sizes="512x512" />
     <link rel="shortcut icon" href="<?= $ico ?>" type="image/x-icon" />
     <link rel="apple-touch-icon" href="<?= $apple ?>" sizes="180x180" />
+    <meta name="theme-color" content="#05070c" />
     <link rel="manifest" href="<?= $manifest ?>" />
     <?php
 }
@@ -340,7 +332,7 @@ function quantlab_render_start(array $meta): void
     $type = (string) ($meta['og_type'] ?? 'website');
     $keywords = trim((string) ($meta['keywords'] ?? ''));
     $image = trim((string) ($meta['image'] ?? ''));
-    $imageAbs = $image !== '' ? quantlab_abs_url($image) : '';
+    $imageAbs = $image !== '' ? quantlab_abs_url($image) : quantlab_abs_url('/favicon-512.png');
     $published = trim((string) ($meta['published_at'] ?? ''));
     $modified = trim((string) ($meta['modified_at'] ?? ''));
     $active = (string) ($meta['active'] ?? '');
@@ -362,7 +354,7 @@ function quantlab_render_start(array $meta): void
     <?php endif; ?>
     <meta name="robots" content="<?= quantlab_h($robots) ?>" />
     <meta name="googlebot" content="<?= quantlab_h($robots) ?>" />
-    <meta name="yandex" content="<?= quantlab_h($robots) ?>" />
+    <meta name="yandex" content="index, follow, max-image-preview:large" />
     <?php if ($yandex !== ''): ?>
     <meta name="yandex-verification" content="<?= quantlab_h($yandex) ?>" />
     <?php endif; ?>
@@ -379,16 +371,16 @@ function quantlab_render_start(array $meta): void
     <meta property="og:title" content="<?= quantlab_h($title) ?>" />
     <meta property="og:description" content="<?= quantlab_h($description) ?>" />
     <meta property="og:url" content="<?= quantlab_h($canonical) ?>" />
-    <?php if ($imageAbs !== ''): ?>
     <meta property="og:image" content="<?= quantlab_h($imageAbs) ?>" />
+    <?php if ($image === ''): ?>
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <?php endif; ?>
     <meta property="og:image:alt" content="<?= quantlab_h($title) ?>" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="<?= quantlab_h($title) ?>" />
     <meta name="twitter:description" content="<?= quantlab_h($description) ?>" />
     <meta name="twitter:image" content="<?= quantlab_h($imageAbs) ?>" />
-    <?php else: ?>
-    <meta name="twitter:card" content="summary" />
-    <?php endif; ?>
     <?php if ($published !== ''): ?>
     <meta property="article:published_time" content="<?= quantlab_h($published) ?>" />
     <?php endif; ?>

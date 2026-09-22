@@ -780,7 +780,7 @@ function quantlab_sitemap_xml(): string
 {
     $today = gmdate('Y-m-d');
     $urls = [
-        ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0'],
+        ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0', 'image' => quantlab_abs_url('/favicon-120.png'), 'image_title' => 'AM QuantLab'],
         ['loc' => quantlab_abs_url('/blog/'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.9'],
         ['loc' => quantlab_abs_url('/robots/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.9'],
         ['loc' => quantlab_abs_url('rss.xml'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.4'],
@@ -877,6 +877,7 @@ function quantlab_robots_txt(): string
         . "Allow: /uploads/\n"
         . "Allow: /favicon.ico\n"
         . "Allow: /favicon.svg\n"
+        . "Allow: /favicon.png\n"
         . "Allow: /favicon-16.png\n"
         . "Allow: /favicon-32.png\n"
         . "Allow: /favicon-48.png\n"
@@ -886,6 +887,7 @@ function quantlab_robots_txt(): string
         . "Allow: /apple-touch-icon.png\n"
         . "Allow: /manifest.json\n"
         . "Allow: /llms.txt\n"
+        . "Allow: /" . quantlab_indexnow_key() . ".txt\n"
         . "Disallow: /admin/\n"
         . "Disallow: /cron/\n"
         . "Disallow: /lib/\n"
@@ -905,12 +907,17 @@ function quantlab_robots_txt(): string
     foreach ($googleAgents as $agent) {
         $txt .= 'User-agent: ' . $agent . "\n" . $deny . "\n";
     }
-    $txt .= "User-agent: Yandex\n"
-        . $deny
-        . "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&fbclid\n"
-        . ($host !== '' ? 'Host: ' . $host . "\n" : '')
-        . "\n"
-        . 'Sitemap: ' . quantlab_abs_url('sitemap.xml') . "\n";
+    foreach (['Yandex', 'YandexBot', 'YandexFavicon', 'YandexImages', 'YandexMobileBot'] as $agent) {
+        $txt .= 'User-agent: ' . $agent . "\n" . $deny;
+        if ($agent === 'Yandex' || $agent === 'YandexBot') {
+            $txt .= "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&fbclid\n";
+        }
+        if ($host !== '' && ($agent === 'Yandex' || $agent === 'YandexBot')) {
+            $txt .= 'Host: ' . $host . "\n";
+        }
+        $txt .= "\n";
+    }
+    $txt .= 'Sitemap: ' . quantlab_abs_url('sitemap.xml') . "\n";
     return $txt;
 }
 
@@ -920,8 +927,55 @@ function quantlab_write_seo_files(): void
     file_put_contents($root . DIRECTORY_SEPARATOR . 'sitemap.xml', quantlab_sitemap_xml(), LOCK_EX);
     file_put_contents($root . DIRECTORY_SEPARATOR . 'robots.txt', quantlab_robots_txt(), LOCK_EX);
     file_put_contents($root . DIRECTORY_SEPARATOR . 'rss.xml', quantlab_rss_xml(), LOCK_EX);
+    $indexnowKey = quantlab_indexnow_key();
+    file_put_contents($root . DIRECTORY_SEPARATOR . $indexnowKey . '.txt', $indexnowKey, LOCK_EX);
     if (function_exists('quantlab_llms_txt')) {
         file_put_contents($root . DIRECTORY_SEPARATOR . 'llms.txt', quantlab_llms_txt(), LOCK_EX);
+    }
+}
+
+function quantlab_indexnow_key(): string
+{
+    return 'a8c3e91f4b7d02e6c5a14f8d3b90e27c';
+}
+
+function quantlab_ping_indexnow(array $urls = []): void
+{
+    if (!function_exists('curl_init')) {
+        return;
+    }
+    $host = parse_url(quantlab_site_url(), PHP_URL_HOST) ?: '';
+    if ($host === '') {
+        return;
+    }
+    $key = quantlab_indexnow_key();
+    $list = $urls !== [] ? $urls : [
+        quantlab_abs_url('/'),
+        quantlab_abs_url('/blog/'),
+        quantlab_abs_url('/robots/'),
+        quantlab_abs_url('sitemap.xml'),
+    ];
+    $payload = json_encode([
+        'host' => $host,
+        'key' => $key,
+        'keyLocation' => quantlab_abs_url('/' . $key . '.txt'),
+        'urlList' => array_values($list),
+    ], JSON_UNESCAPED_SLASHES);
+    foreach (['https://yandex.com/indexnow', 'https://api.indexnow.org/indexnow'] as $endpoint) {
+        try {
+            $ch = curl_init($endpoint);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json; charset=utf-8'],
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 4,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+            curl_exec($ch);
+            curl_close($ch);
+        } catch (Throwable $e) {
+        }
     }
 }
 
@@ -946,6 +1000,7 @@ function quantlab_ping_search_engines(): void
         } catch (Throwable $e) {
         }
     }
+    quantlab_ping_indexnow();
 }
 
 function quantlab_render_public_article(string $slug): void

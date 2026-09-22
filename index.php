@@ -37,7 +37,7 @@ foreach ($posts as $i => $item) {
     <meta name="description" content="<?= quantlab_h($description) ?>" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="yandex" content="index, follow" />
+    <meta name="yandex" content="index, follow, max-image-preview:large" />
     <?php if ($yandex !== ''): ?>
     <meta name="yandex-verification" content="<?= quantlab_h($yandex) ?>" />
     <?php endif; ?>
@@ -56,8 +56,10 @@ foreach ($posts as $i => $item) {
     <meta property="og:description" content="<?= quantlab_h($description) ?>" />
     <meta property="og:url" content="<?= quantlab_h($canonical) ?>" />
     <meta property="og:image" content="<?= quantlab_h(quantlab_abs_url('/favicon-512.png')) ?>" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
     <meta property="og:image:alt" content="AM QuantLab" />
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="<?= quantlab_h(quantlab_abs_url('/favicon-512.png')) ?>" />
     <?= quantlab_json_ld([
         '@context' => 'https://schema.org',
