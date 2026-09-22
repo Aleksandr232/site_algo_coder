@@ -284,6 +284,74 @@ function quantlab_lead_thread_unread(int $id): int
     return $n;
 }
 
+function quantlab_lead_inbound_count(array $thread): int
+{
+    $n = 0;
+    foreach ($thread as $row) {
+        if (($row['dir'] ?? '') === 'in' && ($row['kind'] ?? '') === 'reply') {
+            $n++;
+        }
+    }
+    return $n;
+}
+
+function quantlab_ru_count(int $n, string $one, string $few, string $many): string
+{
+    $n = abs($n);
+    $mod10 = $n % 10;
+    $mod100 = $n % 100;
+    if ($mod10 === 1 && $mod100 !== 11) {
+        return $n . ' ' . $one;
+    }
+    if ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) {
+        return $n . ' ' . $few;
+    }
+    return $n . ' ' . $many;
+}
+
+function quantlab_lead_delete(int $id): bool
+{
+    if ($id <= 0) {
+        return false;
+    }
+    $found = false;
+    $pdo = quantlab_db();
+    if ($pdo) {
+        $st = $pdo->prepare('DELETE FROM leads WHERE id = ?');
+        $st->execute([$id]);
+        $found = $st->rowCount() > 0;
+    }
+    $path = quantlab_leads_file();
+    if (is_file($path)) {
+        $rows = json_decode((string) file_get_contents($path), true);
+        $rows = is_array($rows) ? $rows : [];
+        $keep = [];
+        foreach ($rows as $row) {
+            if ((int) ($row['id'] ?? 0) === $id) {
+                $found = true;
+                continue;
+            }
+            $keep[] = $row;
+        }
+        file_put_contents($path, json_encode($keep, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
+    }
+    $messages = quantlab_lead_messages_all();
+    if (isset($messages[(string) $id])) {
+        unset($messages[(string) $id]);
+        quantlab_lead_messages_write($messages);
+    }
+    $replies = quantlab_lead_replies_map();
+    if (isset($replies[(string) $id])) {
+        unset($replies[(string) $id]);
+        file_put_contents(
+            quantlab_lead_replies_path(),
+            json_encode($replies, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+            LOCK_EX
+        );
+    }
+    return $found;
+}
+
 function quantlab_text_clip(string $text, int $len = 110): string
 {
     $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);

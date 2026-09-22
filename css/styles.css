@@ -2931,11 +2931,29 @@ button.parsed-stamp.is-loading {
 }
 
 .lead-reply {
-  min-width: 132px;
+  min-width: 148px;
+}
+
+.lead-reply .badge + .badge {
+  margin-top: 6px;
+}
+
+.lead-count {
+  display: inline-flex;
+  margin-bottom: 6px;
 }
 
 .lead-reply .btn {
+  display: block;
   margin-top: 8px;
+}
+
+.lead-delete {
+  margin: 8px 0 0;
+}
+
+.lead-delete .linkish {
+  color: var(--neg);
 }
 
 .modal-card-dialog {

@@ -32,6 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /admin/leads.php', true, 302);
         exit;
     }
+    if ($action === 'delete') {
+        $id = (int) ($_POST['lead_id'] ?? 0);
+        if ($id > 0 && function_exists('quantlab_lead_delete') && quantlab_lead_delete($id)) {
+            header('Location: /admin/leads.php?deleted=1', true, 302);
+            exit;
+        }
+        $error = 'Заявку не удалось удалить';
+    }
     if ($action === 'sync') {
         if (function_exists('quantlab_inbox_sync')) {
             try {
@@ -95,6 +103,7 @@ $leads = quantlab_leads_all();
 $sentOk = (string) ($_GET['sent'] ?? '') === '1';
 $sentTo = trim((string) ($_GET['to'] ?? ''));
 $synced = (string) ($_GET['sync'] ?? '') === '1';
+$deletedOk = (string) ($_GET['deleted'] ?? '') === '1';
 $openId = (int) ($_GET['open'] ?? 0);
 $fromBox = function_exists('quantlab_env') ? quantlab_env('SMTP_FROM', 'info@amquantlab.ru') : 'info@amquantlab.ru';
 $threads = [];
@@ -136,6 +145,9 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
           </div>
         </div>
 
+        <?php if ($deletedOk): ?>
+          <p class="form-note form-note-ok" style="display:block">Заявка удалена.</p>
+        <?php endif; ?>
         <?php if ($sentOk): ?>
           <p class="form-note form-note-ok" style="display:block">Статус: отправлено<?= $sentTo !== '' ? ' на ' . quantlab_h($sentTo) : '' ?> с <?= quantlab_h($fromBox) ?>.</p>
         <?php endif; ?>
@@ -179,13 +191,8 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                     $last = $leadId > 0 ? quantlab_lead_last_reply($leadId) : [];
                     $thread = $leadId > 0 ? quantlab_lead_thread($leadId, $lead) : [];
                     $unread = $leadId > 0 ? quantlab_lead_thread_unread($leadId) : 0;
-                    $hasIn = false;
-                    foreach ($thread as $msg) {
-                        if (($msg['dir'] ?? '') === 'in' && ($msg['kind'] ?? '') === 'reply') {
-                            $hasIn = true;
-                            break;
-                        }
-                    }
+                    $inbound = quantlab_lead_inbound_count($thread);
+                    $hasIn = $inbound > 0;
                     $status = quantlab_lead_reply_status($last, $unread, $hasIn);
                     $name = trim((string) ($lead['name'] ?? ''));
                     $payload = [
@@ -233,6 +240,9 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                     </td>
                     <td class="lead-msg"><?= quantlab_h(quantlab_text_clip((string) ($lead['message'] ?? ''), 140)) ?></td>
                     <td class="lead-reply">
+                      <span class="lead-count <?= $unread > 0 ? 'badge badge-in' : 'badge' ?>" title="Сколько писем клиент прислал нам">
+                        <?= quantlab_h(quantlab_ru_count($inbound, 'сообщение', 'сообщения', 'сообщений')) ?>
+                      </span>
                       <?php if ($email === ''): ?>
                         <span class="badge">Нет почты</span>
                       <?php else: ?>
@@ -243,6 +253,12 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                           data-lead="<?= quantlab_h((string) json_encode($payload, JSON_UNESCAPED_UNICODE)) ?>"
                         ><?= $unread > 0 || $hasIn ? 'Открыть' : 'Написать' ?></button>
                       <?php endif; ?>
+                      <form method="post" class="lead-delete" onsubmit="return confirm('Удалить заявку безвозвратно?');">
+                        <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
+                        <input type="hidden" name="action" value="delete" />
+                        <input type="hidden" name="lead_id" value="<?= (int) $leadId ?>" />
+                        <button type="submit" class="linkish">Удалить</button>
+                      </form>
                     </td>
                   </tr>
                 <?php endforeach; ?>
