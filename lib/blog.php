@@ -783,6 +783,8 @@ function quantlab_sitemap_xml(): string
         ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0', 'image' => quantlab_abs_url('/favicon-120.png'), 'image_title' => 'AM QuantLab'],
         ['loc' => quantlab_abs_url('/blog/'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.9'],
         ['loc' => quantlab_abs_url('/robots/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.9'],
+        ['loc' => quantlab_abs_url('/offer/'), 'lastmod' => $today, 'changefreq' => 'yearly', 'priority' => '0.4'],
+        ['loc' => quantlab_abs_url('/privacy/'), 'lastmod' => $today, 'changefreq' => 'yearly', 'priority' => '0.3'],
         ['loc' => quantlab_abs_url('rss.xml'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.4'],
         ['loc' => quantlab_abs_url('llms.txt'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.3'],
     ];
@@ -874,6 +876,8 @@ function quantlab_robots_txt(): string
     $deny = "Allow: /\n"
         . "Allow: /blog/\n"
         . "Allow: /robots/\n"
+        . "Allow: /offer/\n"
+        . "Allow: /privacy/\n"
         . "Allow: /uploads/\n"
         . "Allow: /favicon.ico\n"
         . "Allow: /favicon.svg\n"

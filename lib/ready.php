@@ -562,8 +562,10 @@ function quantlab_render_ready_lead_form(array $row, bool $sent = false): void
           </label>
           <button class="btn" type="submit">Оставить заявку</button>
           <p class="privacy-agree">
-            Отправляя заявку, вы соглашаетесь с
-            <a href="#privacy" data-privacy>политикой конфиденциальности</a>.
+            Отправляя заявку, вы принимаете
+            <a href="/offer/" data-offer>публичную оферту</a>
+            и соглашаетесь с
+            <a href="/privacy/" data-privacy>политикой конфиденциальности</a>.
           </p>
           <p class="form-note js-ready-note" <?= $sent ? '' : 'hidden' ?>><?= $sent ? 'Скоро мы с вами свяжемся' : '' ?></p>
         </form>

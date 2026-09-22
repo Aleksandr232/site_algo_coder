@@ -26,6 +26,7 @@ function quantlab_organization_schema(): array
         ],
         'image' => quantlab_abs_url('/favicon-512.png'),
         'email' => quantlab_site_email(),
+        'taxID' => quantlab_inn(),
         'description' => 'Разработка торговых роботов и финтех-сервисов под официальные API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.',
         'inLanguage' => 'ru-RU',
         'areaServed' => ['RU', 'KZ', 'BY'],
@@ -234,6 +235,8 @@ function quantlab_llms_txt(): string
         '- [Готовые роботы](' . $site . '/robots/): каталог с ценой и заявкой',
         '- [Автор](' . $site . '/#author): Александр, опыт, почему доверять задачу',
         '- [Контакт](' . $site . '/#contact): заявка, почта, Telegram',
+        '- [Оферта](' . $site . '/offer/): публичная оферта для онлайн-оплаты',
+        '- [Конфиденциальность](' . $site . '/privacy/): политика обработки персональных данных',
         '- [FAQ](' . $site . '/#faq): кто мы, доверие, площадки, цена, робот или трейдер',
     ];
     foreach (quantlab_blog_published() as $item) {

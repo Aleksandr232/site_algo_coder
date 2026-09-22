@@ -734,8 +734,10 @@ foreach ($posts as $i => $item) {
             </label>
             <button class="btn" type="submit">Отправить заявку</button>
             <p class="privacy-agree">
-              Отправляя заявку, вы соглашаетесь с
-              <a href="#privacy" data-privacy>политикой конфиденциальности</a>.
+              Отправляя заявку, вы принимаете
+              <a href="/offer/" data-offer>публичную оферту</a>
+              и соглашаетесь с
+              <a href="/privacy/" data-privacy>политикой конфиденциальности</a>.
             </p>
             <p class="form-note" id="form-note" <?= $formSent ? '' : 'hidden' ?>>Скоро мы с вами свяжемся</p>
           </form>
@@ -759,8 +761,9 @@ foreach ($posts as $i => $item) {
           <a href="#case">Кейсы</a>
           <a href="#author">Автор</a>
           <a href="#contact">Контакт</a>
+          <a href="/offer/" data-offer>Оферта</a>
+          <a href="/privacy/" data-privacy>Конфиденциальность</a>
           <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
-          <a href="#privacy" data-privacy>Политика конфиденциальности</a>
         </p>
         <p class="disclaimer">
           <?= quantlab_h(quantlab_footer_legal()) ?>
@@ -770,6 +773,7 @@ foreach ($posts as $i => $item) {
         </p>
       </div>
     </footer>
+    <?php quantlab_render_legal_modals(); ?>
 
     <script src="/js/data.js"></script>
     <script src="/js/nav.js"></script>

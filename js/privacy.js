@@ -1,74 +1,65 @@
 (function () {
-  if (document.getElementById("privacy-modal")) return;
+  var offer = document.getElementById("offer-modal");
+  var privacy = document.getElementById("privacy-modal");
+  if (!offer && !privacy) return;
 
-  const html =
-    '<div class="modal" id="privacy-modal" hidden>' +
-    '<div class="modal-backdrop" data-privacy-close></div>' +
-    '<div class="modal-card glass pad" role="dialog" aria-modal="true" aria-labelledby="privacy-title">' +
-    '<button class="modal-close" type="button" data-privacy-close aria-label="Закрыть">×</button>' +
-    '<p class="eyebrow">Документ</p>' +
-    '<h2 id="privacy-title">Политика конфиденциальности</h2>' +
-    '<p class="modal-date">AM QuantLab · редакция от 07.09.2026</p>' +
-    '<div class="prose modal-prose">' +
-    "<p>Настоящая политика описывает, как AM QuantLab обрабатывает персональные данные посетителей сайта и заявок на разработку торговых алгоритмов, роботов и финтех-сервисов.</p>" +
-    "<h3>1. Кто обрабатывает данные</h3>" +
-    "<p>Оператор — AM QuantLab. По вопросам обработки данных пишите на <a href=\"mailto:info@amquantlab.ru\">info@amquantlab.ru</a> или в Telegram: <a href=\"https://t.me/where_is_Lebowskis_money\" target=\"_blank\" rel=\"noopener\">@where_is_Lebowskis_money</a>.</p>" +
-    "<h3>2. Какие данные собираем</h3>" +
-    "<p>Если вы оставляете заявку, мы можем получить имя, Telegram или email, выбранный рынок и текст задачи. При переписке в Telegram обрабатываются данные, которые вы сами отправляете.</p>" +
-    "<h3>3. Зачем обрабатываем</h3>" +
-    "<p>Чтобы ответить на обращение, оценить задачу, согласовать стоимость и сроки, заключить договор и сопровождать разработку. Рекламные рассылки без согласия не отправляем.</p>" +
-    "<h3>4. Правовая основа</h3>" +
-    "<p>Обработка идёт на основании вашего согласия (отправка формы или сообщение в Telegram) и для исполнения договора, если вы заказываете работу.</p>" +
-    "<h3>5. Кому передаём</h3>" +
-    "<p>Данные не продаём. Они могут быть доступны сервисам, без которых нельзя принять заявку: хостинг сайта и Telegram. API бирж и брокеров (Финам, Тинькофф Инвестиции, Bybit, OKX, Binance) используем только если вы сами даёте ключи и доступы для проекта.</p>" +
-    "<h3>6. Срок хранения</h3>" +
-    "<p>Заявки храним, пока ведётся переписка и исполнение заказа, затем — в сроки, нужные для претензий и бухгалтерии, либо до вашего отзыва согласия, если закон не требует хранить дольше.</p>" +
-    "<h3>7. Ваши права</h3>" +
-    "<p>Вы можете запросить сведения о ваших данных, уточнить их, отозвать согласие или попросить удалить обращение. Для этого напишите в Telegram.</p>" +
-    "<h3>8. Файлы cookie и метрики</h3>" +
-    "<p>Сайт использует технические cookie и Яндекс Метрику: посещения, карта кликов и вебвизор, чтобы понимать, какие страницы смотрят и откуда приходят заявки. Рекламные пиксели сторонних сетей не подключаем.</p>" +
-    "<h3>9. Безопасность</h3>" +
-    "<p>Доступы к заявкам ограничены. Не присылайте в форме пароли, seed-фразы и секретные ключи API.</p>" +
-    "<p>Используя сайт и отправляя заявку, вы подтверждаете, что ознакомились с этой политикой.</p>" +
-    "</div>" +
-    '<button class="btn" type="button" data-privacy-close>Понятно</button>' +
-    "</div></div>";
-
-  document.body.insertAdjacentHTML("beforeend", html);
-
-  const modal = document.getElementById("privacy-modal");
-
-  const open = function () {
-    modal.hidden = false;
-    document.body.classList.add("modal-open");
+  var pathOf = function (page) {
+    var path = (location.pathname || "/").replace(/\/+$/, "") + "/";
+    return path === "/" + page + "/";
   };
 
-  const close = function () {
-    modal.hidden = true;
+  var closeAll = function (clearHash) {
+    if (offer) offer.hidden = true;
+    if (privacy) privacy.hidden = true;
     document.body.classList.remove("modal-open");
-    if (location.hash === "#privacy") {
+    if (clearHash && (location.hash === "#offer" || location.hash === "#privacy")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
   };
 
+  var open = function (kind) {
+    closeAll(false);
+    var node = kind === "offer" ? offer : privacy;
+    if (!node) return;
+    node.hidden = false;
+    document.body.classList.add("modal-open");
+    var card = node.querySelector(".modal-card");
+    if (card) card.scrollTop = 0;
+  };
+
   document.addEventListener("click", function (event) {
-    const openBtn = event.target.closest("[data-privacy]");
-    if (openBtn) {
+    if (event.target.closest("[data-legal-close]")) {
       event.preventDefault();
-      open();
+      closeAll(true);
       return;
     }
-    if (event.target.closest("[data-privacy-close]")) {
-      close();
+    var offerBtn = event.target.closest("[data-offer]");
+    if (offerBtn) {
+      if (pathOf("offer")) return;
+      event.preventDefault();
+      open("offer");
+      return;
+    }
+    var privacyBtn = event.target.closest("[data-privacy]");
+    if (privacyBtn) {
+      if (pathOf("privacy")) return;
+      event.preventDefault();
+      open("privacy");
     }
   });
 
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && !modal.hidden) close();
+    if (event.key !== "Escape") return;
+    if ((offer && !offer.hidden) || (privacy && !privacy.hidden)) {
+      closeAll(true);
+    }
   });
 
-  if (location.hash === "#privacy") open();
+  if (location.hash === "#offer" && !pathOf("offer")) open("offer");
+  if (location.hash === "#privacy" && !pathOf("privacy")) open("privacy");
   window.addEventListener("hashchange", function () {
-    if (location.hash === "#privacy") open();
+    if (location.hash === "#offer") open("offer");
+    else if (location.hash === "#privacy") open("privacy");
+    else closeAll(false);
   });
 })();

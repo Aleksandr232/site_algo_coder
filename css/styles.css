@@ -3272,6 +3272,43 @@ button.parsed-stamp.is-loading {
   border-color: rgba(255, 107, 134, 0.35);
 }
 
+.legal-card {
+  max-width: 760px;
+  margin: 4px 0 28px;
+}
+
+.legal-dl {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 10px 20px;
+  margin: 12px 0 0;
+}
+
+.legal-dl dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.legal-dl dd {
+  margin: 0;
+}
+
+.legal-dl a {
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .legal-dl {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .legal-dl dt + dd {
+    margin-bottom: 10px;
+  }
+}
+
 .privacy-agree {
   margin: 0;
   color: var(--muted);
@@ -3314,6 +3351,15 @@ body.modal-open {
   max-height: min(82vh, 840px);
   overflow: auto;
   padding: 28px 28px 24px;
+}
+
+.modal-card-legal {
+  width: min(760px, 100%);
+  max-height: min(88vh, 920px);
+}
+
+.modal-card-legal .legal-card {
+  margin: 0 0 20px;
 }
 
 .modal-card.modal-card-dialog {

@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -28,6 +30,8 @@ User-agent: Googlebot
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -54,6 +58,8 @@ User-agent: Googlebot-Image
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -80,6 +86,8 @@ User-agent: Google-Extended
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -106,6 +114,8 @@ User-agent: GoogleOther
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -132,6 +142,8 @@ User-agent: Google-CloudVertexBot
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -158,6 +170,8 @@ User-agent: Storebot-Google
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -184,6 +198,8 @@ User-agent: Yandex
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -212,6 +228,8 @@ User-agent: YandexBot
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -240,6 +258,8 @@ User-agent: YandexFavicon
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -266,6 +286,8 @@ User-agent: YandexImages
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
@@ -292,6 +314,8 @@ User-agent: YandexMobileBot
 Allow: /
 Allow: /blog/
 Allow: /robots/
+Allow: /offer/
+Allow: /privacy/
 Allow: /uploads/
 Allow: /favicon.ico
 Allow: /favicon.svg
