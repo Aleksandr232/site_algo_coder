@@ -42,6 +42,45 @@ function quantlab_mail_own_addresses(): array
     return $set;
 }
 
+function quantlab_cron_token(): string
+{
+    $fromEnv = trim(quantlab_env('CRON_TOKEN'));
+    if ($fromEnv !== '') {
+        return $fromEnv;
+    }
+    $path = quantlab_data_dir() . DIRECTORY_SEPARATOR . 'cron-token.txt';
+    if (is_file($path)) {
+        $saved = trim((string) file_get_contents($path));
+        if ($saved !== '') {
+            return $saved;
+        }
+    }
+    $token = bin2hex(random_bytes(16));
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+    }
+    file_put_contents($path, $token, LOCK_EX);
+    return $token;
+}
+
+function quantlab_cron_inbox_url(): string
+{
+    $site = function_exists('quantlab_site_url') ? rtrim(quantlab_site_url(), '/') : 'https://amquantlab.ru';
+    return $site . '/cron/inbox.php?token=' . rawurlencode(quantlab_cron_token());
+}
+
+function quantlab_cron_token_ok(string $given): bool
+{
+    $token = quantlab_cron_token();
+    return $token !== '' && $given !== '' && hash_equals($token, $given);
+}
+
+function quantlab_inbox_lock_path(): string
+{
+    return quantlab_data_dir() . DIRECTORY_SEPARATOR . 'inbox.lock';
+}
+
 function quantlab_inbox_state_path(): string
 {
     return quantlab_data_dir() . DIRECTORY_SEPARATOR . 'inbox-state.json';
@@ -321,15 +360,33 @@ function quantlab_inbox_match_lead(array $mail): ?array
     return quantlab_lead_find_by_email($from);
 }
 
-function quantlab_inbox_sync(bool $force = false): array
+function quantlab_inbox_sync(bool $force = false, int $notifyLimit = 1): array
 {
     if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
-        return quantlab_inbox_state(['ok' => false, 'error' => 'SMTP/IMAP не настроен', 'at' => date('c'), 'imported' => 0]);
+        return quantlab_inbox_state(['ok' => false, 'error' => 'SMTP/IMAP не настроен', 'at' => date('c'), 'imported' => 0, 'notified' => 0]);
     }
+    $notifyLimit = max(0, min(5, $notifyLimit));
     $state = quantlab_inbox_state();
     $at = strtotime((string) ($state['at'] ?? ''));
     if (!$force && $at && (time() - $at) < 20) {
         return $state;
+    }
+
+    $lockPath = quantlab_inbox_lock_path();
+    $lockDir = dirname($lockPath);
+    if (!is_dir($lockDir)) {
+        mkdir($lockDir, 0775, true);
+    }
+    $lock = @fopen($lockPath, 'c+');
+    if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
+        if ($lock) {
+            fclose($lock);
+        }
+        $busy = $state;
+        $busy['ok'] = true;
+        $busy['error'] = '';
+        $busy['busy'] = true;
+        return $busy;
     }
 
     $host = quantlab_imap_host();
@@ -338,6 +395,12 @@ function quantlab_inbox_sync(bool $force = false): array
     $pass = quantlab_env('SMTP_PASSWORD');
     $own = quantlab_mail_own_addresses();
     $imported = 0;
+    $notified = 0;
+
+    $save = static function (array $partial) use (&$state): array {
+        $state = array_merge($state, $partial, ['at' => date('c')]);
+        return quantlab_inbox_state($state);
+    };
 
     $remote = 'ssl://' . $host . ':' . $port;
     $ctx = stream_context_create([
@@ -348,19 +411,18 @@ function quantlab_inbox_sync(bool $force = false): array
             'SNI_enabled' => true,
         ],
     ]);
-    $fp = @stream_socket_client($remote, $errno, $errstr, 6, STREAM_CLIENT_CONNECT, $ctx);
+    $fp = @stream_socket_client($remote, $errno, $errstr, 8, STREAM_CLIENT_CONNECT, $ctx);
     if (!$fp) {
-        $state = [
+        flock($lock, LOCK_UN);
+        fclose($lock);
+        return $save([
             'ok' => false,
             'error' => 'Нет связи с IMAP ' . $host . ':' . $port . ' — ' . $errstr,
-            'at' => date('c'),
-            'uidvalidity' => (int) ($state['uidvalidity'] ?? 0),
-            'last_uid' => (int) ($state['last_uid'] ?? 0),
             'imported' => 0,
-        ];
-        return quantlab_inbox_state($state);
+            'notified' => 0,
+        ]);
     }
-    stream_set_timeout($fp, 8);
+    stream_set_timeout($fp, 12);
 
     try {
         $n = 0;
@@ -387,30 +449,41 @@ function quantlab_inbox_sync(bool $force = false): array
                 }
             }
         }
+        sort($uids, SORT_NUMERIC);
         $uids = array_slice($uids, 0, 40);
-        $maxUid = $lastUid;
+
         foreach ($uids as $uid) {
-            $maxUid = max($maxUid, $uid);
             $fetch = quantlab_imap_cmd($fp, $n, 'UID FETCH ' . $uid . ' BODY.PEEK[]');
             $rfc = quantlab_imap_extract_rfc822($fetch);
             if ($rfc === '') {
+                $lastUid = $uid;
+                $save(['ok' => true, 'error' => '', 'uidvalidity' => $uidvalidity, 'last_uid' => $lastUid, 'imported' => $imported, 'notified' => $notified]);
                 continue;
             }
             $mail = quantlab_mail_parse_rfc822($rfc);
             $from = (string) ($mail['from'] ?? '');
-            if ($from === '' || isset($own[$from])) {
+            $fromKey = strtolower($from);
+            if ($from === '' || isset($own[$fromKey])) {
+                $lastUid = $uid;
+                $save(['ok' => true, 'error' => '', 'uidvalidity' => $uidvalidity, 'last_uid' => $lastUid, 'imported' => $imported, 'notified' => $notified]);
                 continue;
             }
             $lead = quantlab_inbox_match_lead($mail);
-            if (!$lead) {
+            if (!$lead || !function_exists('quantlab_lead_thread_add')) {
+                $lastUid = $uid;
+                $save(['ok' => true, 'error' => '', 'uidvalidity' => $uidvalidity, 'last_uid' => $lastUid, 'imported' => $imported, 'notified' => $notified]);
                 continue;
             }
+            $leadId = (int) ($lead['id'] ?? 0);
             $body = quantlab_mail_visible_text((string) ($mail['text'] ?? ''));
             if ($body === '') {
                 $body = '(пустое письмо)';
             }
-            if (function_exists('quantlab_lead_thread_add')) {
-                $added = quantlab_lead_thread_add((int) ($lead['id'] ?? 0), [
+            $existing = function_exists('quantlab_lead_thread_by_imap')
+                ? quantlab_lead_thread_by_imap($leadId, $uid)
+                : null;
+            if (!$existing) {
+                $added = quantlab_lead_thread_add($leadId, [
                     'dir' => 'in',
                     'kind' => 'reply',
                     'from' => $from,
@@ -424,37 +497,77 @@ function quantlab_inbox_sync(bool $force = false): array
                     'in_reply_to' => (string) ($mail['in_reply_to'] ?? ''),
                     'read' => false,
                     'imap_uid' => $uid,
+                    'notified' => false,
                 ]);
                 if ($added) {
                     $imported++;
                 }
+                $existing = function_exists('quantlab_lead_thread_by_imap')
+                    ? quantlab_lead_thread_by_imap($leadId, $uid)
+                    : ['notified' => !$added];
             }
+            $lastUid = $uid;
+            $save(['ok' => true, 'error' => '', 'uidvalidity' => $uidvalidity, 'last_uid' => $lastUid, 'imported' => $imported, 'notified' => $notified]);
         }
+
         try {
             quantlab_imap_cmd($fp, $n, 'LOGOUT');
         } catch (Throwable $e) {
-            // ящик уже мог закрыть соединение
         }
-        $state = [
+
+        if ($notifyLimit > 0 && function_exists('quantlab_lead_pending_inbound') && function_exists('quantlab_lead_inbound_notify')) {
+            foreach (quantlab_lead_pending_inbound() as $item) {
+                if ($notified >= $notifyLimit) {
+                    break;
+                }
+                $lead = $item['lead'];
+                $msg = $item['msg'];
+                if (!empty($msg['read']) || !empty($msg['notified'])) {
+                    continue;
+                }
+                $sent = quantlab_lead_inbound_notify($lead, [
+                    'from' => (string) ($msg['from'] ?? ''),
+                    'subject' => (string) ($msg['subject'] ?? ''),
+                    'body' => (string) ($msg['body'] ?? ''),
+                    'at' => (string) ($msg['at'] ?? ''),
+                ]);
+                if (!$sent) {
+                    return $save([
+                        'ok' => false,
+                        'error' => 'Клиент написал, уведомление не ушло. Следующий запуск повторит первое непрочитанное.',
+                        'uidvalidity' => $uidvalidity,
+                        'last_uid' => $lastUid,
+                        'imported' => $imported,
+                        'notified' => $notified,
+                    ]);
+                }
+                $uid = (int) ($msg['imap_uid'] ?? 0);
+                $leadId = (int) ($lead['id'] ?? 0);
+                if ($uid > 0 && function_exists('quantlab_lead_thread_mark_notified')) {
+                    quantlab_lead_thread_mark_notified($leadId, $uid);
+                }
+                $notified++;
+            }
+        }
+
+        return $save([
             'ok' => true,
             'error' => '',
-            'at' => date('c'),
             'uidvalidity' => $uidvalidity,
-            'last_uid' => $maxUid,
+            'last_uid' => $lastUid,
             'imported' => $imported,
-        ];
-        return quantlab_inbox_state($state);
+            'notified' => $notified,
+        ]);
     } catch (Throwable $e) {
-        $state = [
+        return $save([
             'ok' => false,
             'error' => $e->getMessage(),
-            'at' => date('c'),
-            'uidvalidity' => (int) ($state['uidvalidity'] ?? 0),
-            'last_uid' => (int) ($state['last_uid'] ?? 0),
-            'imported' => 0,
-        ];
-        return quantlab_inbox_state($state);
+            'imported' => $imported,
+            'notified' => $notified,
+        ]);
     } finally {
         fclose($fp);
+        flock($lock, LOCK_UN);
+        fclose($lock);
     }
 }

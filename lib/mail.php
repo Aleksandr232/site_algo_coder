@@ -477,6 +477,57 @@ function quantlab_lead_mail(array $lead): void
     ]);
 }
 
+function quantlab_lead_inbound_mail(array $lead, array $msg): void
+{
+    $name = trim((string) ($lead['name'] ?? ''));
+    $from = trim((string) ($msg['from'] ?? ''));
+    $email = function_exists('quantlab_lead_email') ? quantlab_lead_email($lead) : $from;
+    $replyTo = $from !== '' && quantlab_mail_is_email($from)
+        ? $from
+        : ($email !== '' && quantlab_mail_is_email($email) ? $email : null);
+    $body = trim((string) ($msg['body'] ?? ''));
+    if ($body === '') {
+        $body = '(пустое письмо)';
+    }
+    $preview = function_exists('mb_substr') ? mb_substr($body, 0, 1200) : substr($body, 0, 1200);
+    $when = date('d.m.Y H:i');
+    $at = strtotime((string) ($msg['at'] ?? ''));
+    if ($at) {
+        $when = date('d.m.Y H:i', $at);
+    }
+    $who = $name !== '' ? $name : ($from !== '' ? $from : 'клиент');
+    $site = function_exists('quantlab_site_url') ? quantlab_site_url() : 'https://amquantlab.ru';
+    $subject = 'Клиент написал: ' . $who;
+    $text = "Здравствуйте.\r\n\r\n"
+        . "Клиент ответил на письмо AM QuantLab.\r\n\r\n"
+        . "Дата: {$when}\r\n"
+        . "Имя: {$who}\r\n"
+        . ($from !== '' ? "От кого: {$from}\r\n" : '')
+        . "Тема: " . trim((string) ($msg['subject'] ?? '')) . "\r\n\r\n"
+        . "Сообщение:\r\n{$preview}\r\n\r\n"
+        . "Откройте заявки или ответьте на это письмо — уйдёт клиенту.\r\n"
+        . $site . "/admin/leads.php\r\n";
+    $html = quantlab_mail_layout([
+        'eyebrow' => 'КЛИЕНТ НАПИСАЛ',
+        'title' => $who . ' ответил на письмо',
+        'preheader' => 'Клиент написал в диалог AM QuantLab',
+        'intro' => 'Клиент ответил на письмо. Текст ниже, целиком он в заявках.',
+        'rows' => [
+            'Дата' => $when,
+            'Имя' => $who,
+            'От кого' => $from,
+            'Тема' => trim((string) ($msg['subject'] ?? '')),
+            'Сообщение' => $preview,
+        ],
+        'note' => 'Ответьте на это письмо — уйдёт на почту клиента. Или откройте диалог в заявках.',
+        'cta_href' => $site . '/admin/leads.php',
+        'cta_label' => 'Открыть диалог',
+    ]);
+    quantlab_mail_send($subject, $text, $html, $replyTo, null, [
+        'lead_id' => (int) ($lead['id'] ?? 0),
+    ]);
+}
+
 function quantlab_lead_ack_mail(array $lead): bool
 {
     $email = quantlab_lead_email($lead);

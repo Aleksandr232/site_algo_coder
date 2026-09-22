@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'sync') {
         if (function_exists('quantlab_inbox_sync')) {
             try {
-                quantlab_inbox_sync(true);
+                quantlab_inbox_sync(true, 0);
             } catch (Throwable $e) {
                 $error = $e->getMessage();
             }
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $inbox = ['ok' => null, 'imported' => 0, 'error' => ''];
 if (function_exists('quantlab_inbox_sync') && quantlab_mail_enabled() && $error === '') {
     try {
-        $inbox = quantlab_inbox_sync(false);
+        $inbox = quantlab_inbox_sync(false, 0);
     } catch (Throwable $e) {
         $inbox = ['ok' => false, 'error' => $e->getMessage(), 'imported' => 0];
     }
@@ -132,6 +132,9 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
             <p class="eyebrow">Админка</p>
             <h1>Заявки с формы</h1>
             <p class="lead">Клиенты с главной страницы. <?= count($leads) ?> шт. Ответ уходит с <?= quantlab_h($fromBox) ?>. Если клиент напишет на эту почту — письмо попадёт в диалог.</p>
+            <?php if (function_exists('quantlab_cron_inbox_url')): ?>
+            <p class="admin-storage">Cron раз в час, GET: <code><?= quantlab_h(quantlab_cron_inbox_url()) ?></code></p>
+            <?php endif; ?>
             <?= quantlab_admin_storage_note() ?>
             <?= quantlab_admin_mail_note() ?>
           </div>
@@ -407,7 +410,7 @@ $replyJs = <<<JS
   function markSeen(id) {
     if (!id) return;
     var rows = threadRows(id);
-    rows.forEach(function (msg) { msg.read = true; });
+    rows.forEach(function (msg) { msg.read = true; msg.notified = true; });
     var fd = new FormData();
     fd.append("csrf", csrf);
     fd.append("action", "seen");

@@ -251,9 +251,42 @@ function quantlab_lead_thread_add(int $id, array $msg): bool
         'in_reply_to' => (string) ($msg['in_reply_to'] ?? ''),
         'read' => !empty($msg['read']) || (($msg['dir'] ?? '') === 'out'),
         'imap_uid' => (int) ($msg['imap_uid'] ?? 0),
+        'notified' => !empty($msg['notified']) || (($msg['dir'] ?? '') === 'out'),
     ];
     quantlab_lead_messages_write($all);
     return true;
+}
+
+function quantlab_lead_thread_by_imap(int $id, int $uid): ?array
+{
+    if ($id <= 0 || $uid <= 0) {
+        return null;
+    }
+    foreach (quantlab_lead_thread($id) as $row) {
+        if ((int) ($row['imap_uid'] ?? 0) === $uid) {
+            return $row;
+        }
+    }
+    return null;
+}
+
+function quantlab_lead_thread_mark_notified(int $id, int $uid): void
+{
+    if ($id <= 0 || $uid <= 0) {
+        return;
+    }
+    $all = quantlab_lead_messages_all();
+    $key = (string) $id;
+    if (empty($all[$key]) || !is_array($all[$key])) {
+        return;
+    }
+    foreach ($all[$key] as $i => $row) {
+        if ((int) ($row['imap_uid'] ?? 0) === $uid) {
+            $all[$key][$i]['notified'] = true;
+            quantlab_lead_messages_write($all);
+            return;
+        }
+    }
 }
 
 function quantlab_lead_thread_mark_read(int $id): void
@@ -268,9 +301,42 @@ function quantlab_lead_thread_mark_read(int $id): void
     }
     foreach ($all[$key] as &$row) {
         $row['read'] = true;
+        $row['notified'] = true;
     }
     unset($row);
     quantlab_lead_messages_write($all);
+}
+
+function quantlab_lead_pending_inbound(): array
+{
+    $out = [];
+    foreach (quantlab_leads_all() as $lead) {
+        $id = (int) ($lead['id'] ?? 0);
+        if ($id <= 0) {
+            continue;
+        }
+        foreach (quantlab_lead_thread($id, $lead) as $row) {
+            if (($row['dir'] ?? '') !== 'in' || ($row['kind'] ?? '') !== 'reply') {
+                continue;
+            }
+            if (!empty($row['read']) || !empty($row['notified'])) {
+                continue;
+            }
+            $out[] = [
+                'lead' => $lead,
+                'msg' => $row,
+            ];
+        }
+    }
+    usort($out, static function ($a, $b) {
+        $ta = strtotime((string) ($a['msg']['at'] ?? '')) ?: 0;
+        $tb = strtotime((string) ($b['msg']['at'] ?? '')) ?: 0;
+        if ($ta !== $tb) {
+            return $ta <=> $tb;
+        }
+        return ((int) ($a['msg']['imap_uid'] ?? 0)) <=> ((int) ($b['msg']['imap_uid'] ?? 0));
+    });
+    return $out;
 }
 
 function quantlab_lead_thread_unread(int $id): int
@@ -403,6 +469,25 @@ function quantlab_lead_thread_last_ref(int $id): string
         }
     }
     return '';
+}
+
+function quantlab_lead_inbound_notify(array $lead, array $msg): bool
+{
+    if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
+        return false;
+    }
+    if (!function_exists('quantlab_lead_inbound_mail')) {
+        return false;
+    }
+    try {
+        quantlab_lead_inbound_mail($lead, $msg);
+        return true;
+    } catch (Throwable $e) {
+        if (function_exists('quantlab_mail_status')) {
+            quantlab_mail_status(false, 'Клиент написал, но уведомление не ушло: ' . $e->getMessage());
+        }
+        return false;
+    }
 }
 
 function quantlab_lead_notify(array $lead): void
