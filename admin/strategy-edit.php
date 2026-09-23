@@ -31,20 +31,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $saved = isset($_GET['saved']);
+if ($row && quantlab_strategy_uses_yield_api((string) ($row['venue'] ?? ''))) {
+    $row = quantlab_strategy_ensure_yield_token($row);
+}
 $venues = quantlab_strategy_venues();
+$yieldToken = (string) ($row['yield_token'] ?? '');
+$yieldSlug = (string) ($row['slug'] ?? '');
+$yieldPost = $yieldToken !== '' && $yieldSlug !== '' ? quantlab_yield_post_url($yieldSlug, $yieldToken) : '';
+$yieldGet = $yieldSlug !== '' ? quantlab_yield_get_url($yieldSlug) : '';
 quantlab_admin_start(($row ? 'Стратегия' : 'Новая стратегия') . ' — админка AM QuantLab');
 $venueJs = <<<'JS'
 (function () {
   var venue = document.getElementById("venue");
   var comon = document.getElementById("comon-fields");
   var bybit = document.getElementById("bybit-fields");
+  var forex = document.getElementById("forex-fields");
   if (!venue) return;
   function sync() {
     if (comon) comon.hidden = venue.value !== "comon";
     if (bybit) bybit.hidden = venue.value !== "bybit";
+    if (forex) forex.hidden = venue.value !== "forex";
   }
   venue.addEventListener("change", sync);
   sync();
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = document.getElementById(btn.getAttribute("data-copy"));
+      if (!el) return;
+      var text = el.value || el.textContent || "";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Скопировано";
+          setTimeout(function () { btn.textContent = "Копировать"; }, 1400);
+        });
+        return;
+      }
+      if (el.select) el.select();
+      document.execCommand("copy");
+    });
+  });
 })();
 JS;
 ?>
@@ -63,7 +88,7 @@ JS;
           <a class="btn btn-ghost" href="/admin/strategies.php">К списку</a>
         </div>
         <?php if ($saved): ?>
-          <p class="form-note" style="display:block">Сохранено. На сайте появится, если включено «Показывать на главной».</p>
+          <p class="form-note" style="display:block">Сохранено. На сайте появится, если включено «Показывать на главной».<?php if (($row['venue'] ?? '') === 'forex'): ?> Ниже — URL и ключ именно этого робота.<?php endif; ?></p>
         <?php endif; ?>
         <?php if ($error): ?>
           <p class="form-note" style="display:block"><?= quantlab_h($error) ?></p>
@@ -78,7 +103,7 @@ JS;
                 <option value="<?= quantlab_h($key) ?>" <?= (($row['venue'] ?? 'comon') === $key) ? 'selected' : '' ?>><?= quantlab_h($label) ?></option>
               <?php endforeach; ?>
             </select>
-            <span class="field-hint">У Bybit можно завести отдельно спот и фьючерс. Цифры с API-ключей в .env.</span>
+            <span class="field-hint">Comon и Bybit тянут цифры сами. Forex — робот шлёт доходность на свой URL и ключ.</span>
           </label>
           <label>
             Название на слайде
@@ -105,8 +130,41 @@ JS;
           </div>
           <label>
             Инструмент
-            <input type="text" name="instrument" value="<?= quantlab_h($row['instrument'] ?? '') ?>" placeholder="CNYRUB или BTCUSDT" />
+            <input type="text" name="instrument" value="<?= quantlab_h($row['instrument'] ?? '') ?>" placeholder="CNYRUB, BTCUSDT или EURUSD" />
           </label>
+          <div id="forex-fields" class="admin-api-box">
+            <p class="eyebrow">API этого робота</p>
+            <?php if ($yieldPost === ''): ?>
+              <p>Сохраните стратегию — появится отдельный ключ. Им робот пишет только в этот слайд, а не в общий поток.</p>
+            <?php else: ?>
+              <p>Вставьте URL и ключ в робота. Токен привязан к <code><?= quantlab_h($yieldSlug) ?></code>: чужой робот с другим ключом сюда не попадёт.</p>
+              <label>
+                POST — куда слать доходность
+                <input id="yield-post-url" type="text" readonly value="<?= quantlab_h($yieldPost) ?>" />
+                <span class="field-hint"><button class="linkish" type="button" data-copy="yield-post-url">Копировать</button> · ритм раз в день или каждые N минут по Москве, кнопка «Отправить» — сразу.</span>
+              </label>
+              <label>
+                Ключ этого робота
+                <input id="yield-token" type="text" readonly value="<?= quantlab_h($yieldToken) ?>" />
+                <span class="field-hint"><button class="linkish" type="button" data-copy="yield-token">Копировать</button> · можно query <code>token=</code>, заголовок <code>X-Yield-Token</code> или <code>Authorization: Bearer</code>.</span>
+              </label>
+              <label>
+                GET — график на сайте, без ключа
+                <input id="yield-get-url" type="text" readonly value="<?= quantlab_h($yieldGet) ?>" />
+                <span class="field-hint"><button class="linkish" type="button" data-copy="yield-get-url">Копировать</button></span>
+              </label>
+              <p class="field-hint">Тело JSON. Числа без кавычек. Подстановки робота: <code>{{date}}</code>, <code>{{time}}</code>, <code>{{returnPercent}}</code>, <code>{{equity}}</code>, <code>{{balance}}</code>, <code>{{realizedPnl}}</code>, <code>{{running}}</code>, <code>{{points}}</code>.</p>
+              <pre class="admin-api-sample">{
+  "returnPercent": {{returnPercent}},
+  "equity": {{equity}},
+  "balance": {{balance}},
+  "realizedPnl": {{realizedPnl}},
+  "running": {{running}},
+  "points": {{points}}
+}</pre>
+              <p class="field-hint">Или готовые точки: <code>{"date":"2026-09-23","returnPercent":12.4,"equity":11240,"points":[{"date":"2026-09-01","equity":10000,"returnPercent":0}]}</code></p>
+            <?php endif; ?>
+          </div>
           <div id="bybit-fields">
             <label>
               Рынок Bybit

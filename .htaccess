@@ -34,6 +34,7 @@ ErrorDocument 404 /404.php
   RewriteRule ^api/comon/([0-9]+)/?$ api/comon.php?id=$1 [L,QSA]
   RewriteRule ^api/bybit/case/?$ api/bybit.php [L,QSA]
   RewriteRule ^api/tinkoff/case/?$ api/tinkoff.php [L,QSA]
+  RewriteRule ^api/yield/?$ api/yield.php [L,QSA]
 
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
   RewriteRule ^robots\.txt$ robots.php [L]

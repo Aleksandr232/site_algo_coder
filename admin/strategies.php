@@ -38,7 +38,7 @@ quantlab_admin_start('Стратегии — админка AM QuantLab');
           <div>
             <p class="eyebrow">Админка</p>
             <h1>Стратегии</h1>
-            <p class="lead">Слайдер на главной. Пока площадки Comon и Bybit. Скрытая не показывается посетителю.</p>
+            <p class="lead">Слайдер на главной. Comon и Bybit подтягивают сами, Forex — по ключу робота. Скрытая не показывается посетителю.</p>
             <?= quantlab_admin_storage_note() ?>
           </div>
           <a class="btn" href="/admin/strategy-edit.php">Новая стратегия</a>
@@ -46,7 +46,7 @@ quantlab_admin_start('Стратегии — админка AM QuantLab');
 
         <?php if (!$items): ?>
           <div class="glass pad empty-blog">
-            <p>Стратегий нет. Добавьте Comon по ID или кейс Bybit.</p>
+            <p>Стратегий нет. Добавьте Comon по ID, кейс Bybit или Forex с ключом робота.</p>
           </div>
         <?php else: ?>
           <div class="admin-table glass">
@@ -69,6 +69,8 @@ quantlab_admin_start('Стратегии — админка AM QuantLab');
                         <br /><span class="field-hint">Comon ID <?= quantlab_h($item['comon_id']) ?></span>
                       <?php elseif ($item['venue'] === 'bybit'): ?>
                         <br /><span class="field-hint"><?= quantlab_h((quantlab_strategy_bybit_markets()[quantlab_strategy_bybit_market($item['bybit_market'] ?? '')] ?? 'Фьючерс') . ' ' . ($item['instrument'] ?: 'BTCUSDT') . ' · с ' . quantlab_strategy_since_date($item)) ?></span>
+                      <?php elseif ($item['venue'] === 'forex'): ?>
+                        <br /><span class="field-hint">Forex <?= quantlab_h($item['instrument'] ?: 'EURUSD') ?><?= ($item['yield_token'] ?? '') !== '' ? ' · ключ робота готов' : '' ?></span>
                       <?php endif; ?>
                     </td>
                     <td><?= quantlab_h($venues[$item['venue']] ?? $item['venue']) ?></td>

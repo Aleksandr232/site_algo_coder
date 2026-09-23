@@ -14,7 +14,49 @@ function quantlab_strategy_venues(): array
     return [
         'comon' => 'Comon',
         'bybit' => 'Bybit',
+        'forex' => 'Forex',
     ];
+}
+
+function quantlab_strategy_uses_yield_api(string $venue): bool
+{
+    return $venue === 'forex';
+}
+
+function quantlab_strategy_new_yield_token(): string
+{
+    do {
+        $token = bin2hex(random_bytes(16));
+    } while (quantlab_strategy_by_yield_token($token));
+    return $token;
+}
+
+function quantlab_strategy_by_yield_token(string $token): ?array
+{
+    $token = trim($token);
+    if ($token === '' || strlen($token) < 16) {
+        return null;
+    }
+    $pdo = function_exists('quantlab_db') ? quantlab_db() : null;
+    if ($pdo) {
+        try {
+            $st = $pdo->prepare('SELECT * FROM strategies WHERE yield_token = ? LIMIT 1');
+            $st->execute([$token]);
+            $row = $st->fetch();
+            if ($row && hash_equals((string) ($row['yield_token'] ?? ''), $token)) {
+                return quantlab_strategy_normalize($row);
+            }
+        } catch (Throwable $e) {
+            // колонки ещё нет — смотрим файл
+        }
+    }
+    foreach (quantlab_strategies_read_file() as $row) {
+        $saved = (string) ($row['yield_token'] ?? '');
+        if ($saved !== '' && hash_equals($saved, $token)) {
+            return $row;
+        }
+    }
+    return null;
 }
 
 function quantlab_strategy_defaults(): array
@@ -95,6 +137,7 @@ function quantlab_strategy_normalize(array $row): array
         'start_balance' => trim((string) ($row['start_balance'] ?? '')),
         'source_url' => (string) ($row['source_url'] ?? ''),
         'is_test' => !empty($row['is_test']) ? 1 : 0,
+        'yield_token' => preg_replace('/[^a-f0-9]/', '', strtolower(trim((string) ($row['yield_token'] ?? '')))) ?? '',
         'created_at' => $row['created_at'] ?? date('c'),
         'updated_at' => $row['updated_at'] ?? date('c'),
     ];
@@ -223,14 +266,15 @@ function quantlab_strategies_seed_if_empty(): void
 function quantlab_strategy_insert_row(PDO $pdo, array $row): void
 {
     $st = $pdo->prepare(
-        'INSERT INTO strategies (slug, venue, status, sort_order, dot, eyebrow, title, lead, notes, entry, stop, target, comon_id, instrument, bybit_market, since_date, start_balance, source_url, is_test, created_at, updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        'INSERT INTO strategies (slug, venue, status, sort_order, dot, eyebrow, title, lead, notes, entry, stop, target, comon_id, instrument, bybit_market, since_date, start_balance, source_url, is_test, yield_token, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON DUPLICATE KEY UPDATE
             venue=VALUES(venue), status=VALUES(status), sort_order=VALUES(sort_order), dot=VALUES(dot),
             eyebrow=VALUES(eyebrow), title=VALUES(title), lead=VALUES(lead), notes=VALUES(notes),
             entry=VALUES(entry), stop=VALUES(stop), target=VALUES(target), comon_id=VALUES(comon_id),
             instrument=VALUES(instrument), bybit_market=VALUES(bybit_market), since_date=VALUES(since_date),
             start_balance=VALUES(start_balance), source_url=VALUES(source_url), is_test=VALUES(is_test),
+            yield_token=VALUES(yield_token),
             updated_at=VALUES(updated_at)'
     );
     $st->execute([
@@ -253,9 +297,48 @@ function quantlab_strategy_insert_row(PDO $pdo, array $row): void
         $row['start_balance'],
         $row['source_url'],
         $row['is_test'],
+        $row['yield_token'] !== '' ? $row['yield_token'] : null,
         quantlab_dt_sql($row['created_at']) ?: date('Y-m-d H:i:s'),
         quantlab_dt_sql($row['updated_at']) ?: date('Y-m-d H:i:s'),
     ]);
+}
+
+function quantlab_strategy_write_row(array $row): void
+{
+    $row = quantlab_strategy_normalize($row);
+    $pdo = function_exists('quantlab_db') ? quantlab_db() : null;
+    if ($pdo) {
+        quantlab_strategy_insert_row($pdo, $row);
+        return;
+    }
+    $items = [];
+    $found = false;
+    foreach (quantlab_strategies_read_file() as $item) {
+        if ($item['slug'] === $row['slug']) {
+            $items[] = $row;
+            $found = true;
+        } else {
+            $items[] = $item;
+        }
+    }
+    if (!$found) {
+        $items[] = $row;
+    }
+    quantlab_strategies_write_file(quantlab_strategies_sort($items));
+}
+
+function quantlab_strategy_ensure_yield_token(array $row): array
+{
+    if (!quantlab_strategy_uses_yield_api((string) ($row['venue'] ?? ''))) {
+        return $row;
+    }
+    if (trim((string) ($row['yield_token'] ?? '')) !== '') {
+        return $row;
+    }
+    $row['yield_token'] = quantlab_strategy_new_yield_token();
+    $row['updated_at'] = date('c');
+    quantlab_strategy_write_row($row);
+    return quantlab_strategy_normalize($row);
 }
 
 function quantlab_strategies_all(): array
@@ -312,7 +395,7 @@ function quantlab_strategy_save(array $input, ?string $currentSlug = null): arra
     }
     $venue = (string) ($input['venue'] ?? 'comon');
     if (!isset(quantlab_strategy_venues()[$venue])) {
-        throw new InvalidArgumentException('Площадка только Comon или Bybit');
+        throw new InvalidArgumentException('Площадка: Comon, Bybit или Forex');
     }
     $comonId = preg_replace('/\D+/', '', (string) ($input['comon_id'] ?? ''));
     if ($venue === 'comon' && $comonId === '') {
@@ -322,10 +405,19 @@ function quantlab_strategy_save(array $input, ?string $currentSlug = null): arra
     if ($venue === 'bybit' && $instrument === '') {
         throw new InvalidArgumentException('Для Bybit укажите инструмент, например BTCUSDT');
     }
+    if ($venue === 'forex' && $instrument === '') {
+        throw new InvalidArgumentException('Для Forex укажите инструмент, например EURUSD');
+    }
 
     $slugSource = trim((string) ($input['slug'] ?? ''));
     if ($slugSource === '') {
-        $slugSource = $venue === 'comon' ? ('comon-' . $comonId) : $title;
+        if ($venue === 'comon') {
+            $slugSource = 'comon-' . $comonId;
+        } elseif ($venue === 'forex') {
+            $slugSource = 'forex-' . $instrument;
+        } else {
+            $slugSource = $title;
+        }
     }
     $slug = quantlab_strategy_unique_slug($slugSource, $currentSlug);
     if (!quantlab_is_slug($slug)) {
@@ -354,9 +446,13 @@ function quantlab_strategy_save(array $input, ?string $currentSlug = null): arra
         'start_balance' => trim((string) ($input['start_balance'] ?? '')),
         'source_url' => trim((string) ($input['source_url'] ?? '')),
         'is_test' => !empty($input['is_test']) ? 1 : 0,
+        'yield_token' => $existing['yield_token'] ?? '',
         'created_at' => $existing['created_at'] ?? $now,
         'updated_at' => $now,
     ]);
+    if (quantlab_strategy_uses_yield_api($venue) && ($row['yield_token'] ?? '') === '') {
+        $row['yield_token'] = quantlab_strategy_new_yield_token();
+    }
 
     $pdo = function_exists('quantlab_db') ? quantlab_db() : null;
     if ($pdo) {
@@ -467,6 +563,10 @@ function quantlab_render_case_slide(array $row, bool $hero = false): void
     $host = rtrim((string) $host, '/');
     if ($venue === 'bybit') {
         quantlab_render_bybit_slide($row, $notes, $url, $host);
+        return;
+    }
+    if ($venue === 'forex') {
+        quantlab_render_forex_slide($row, $notes, $url, $host, $hero);
         return;
     }
     quantlab_render_comon_slide($row, $notes, $url, $host, $hero);
@@ -614,6 +714,79 @@ function quantlab_render_bybit_slide(array $row, array $notes, string $url, stri
                 <div><dt>Средняя</dt><dd class="js-avg">—</dd></div>
                 <div><dt>Нереализ. PnL</dt><dd class="js-upl">—</dd></div>
                 <div><dt>Доступно</dt><dd class="js-free">—</dd></div>
+              </dl>
+            </article>
+          </div>
+              </article>
+    <?php
+}
+
+function quantlab_render_forex_slide(array $row, array $notes, string $url, string $host, bool $hero = false): void
+{
+    $id = quantlab_h($row['slug']);
+    $instrument = $row['instrument'] !== '' ? $row['instrument'] : 'EURUSD';
+    ?>
+              <article class="case-slide" id="slide-<?= $id ?>" data-venue="forex" data-slug="<?= $id ?>" data-instrument="<?= quantlab_h($instrument) ?>"<?= $hero ? ' data-hero="1"' : '' ?>>
+          <div class="section-head case-head">
+            <div>
+              <p class="eyebrow"><?= quantlab_h($row['eyebrow'] ?: 'Кейс · Forex') ?></p>
+              <h2 class="js-title"><?= quantlab_h($row['title']) ?></h2>
+              <p class="case-meta">
+                <?= !empty($row['is_test']) ? 'Тестовый контур' : 'Боевой контур' ?>
+                · Forex
+                <?= quantlab_h($instrument) ?>
+                <?php if ($url !== ''): ?>
+                  · <a href="<?= quantlab_h($url) ?>" target="_blank" rel="noopener"><?= quantlab_h($host) ?></a>
+                <?php endif; ?>
+              </p>
+            </div>
+            <button class="parsed-stamp js-stamp" type="button" title="Обновить с робота">Обновить с робота</button>
+          </div>
+          <div class="metrics js-metrics"></div>
+          <div class="chart-wrap glass">
+            <div class="chart-toolbar">
+              <div>
+                <h3>Кривая доходности</h3>
+                <p>Точки, которые присылает этот робот, %</p>
+              </div>
+              <div class="pills js-pills" role="tablist" aria-label="Период графика Forex">
+                <button type="button" class="pill is-active" data-range="all">Всё время</button>
+                <button type="button" class="pill" data-range="90">90 дней</button>
+                <button type="button" class="pill" data-range="30">30 дней</button>
+              </div>
+            </div>
+            <div class="chart-stage">
+              <canvas class="js-chart"></canvas>
+              <div class="chart-tip js-tip" hidden></div>
+            </div>
+          </div>
+          <div class="case-grid">
+            <article class="glass pad">
+              <h3>Логика робота</h3>
+              <?php if ($row['lead'] !== ''): ?><p><?= quantlab_h($row['lead']) ?></p><?php endif; ?>
+              <?php if ($row['entry'] !== '' || $row['stop'] !== '' || $row['target'] !== ''): ?>
+              <div class="rule-row">
+                <div><span>Вход</span><strong><?= quantlab_h($row['entry'] ?: '—') ?></strong><em>от депозита</em></div>
+                <div><span>Стоп</span><strong class="neg"><?= quantlab_h($row['stop'] ?: '—') ?></strong><em>от депозита</em></div>
+                <div><span>Цель</span><strong class="pos"><?= quantlab_h($row['target'] ?: '—') ?></strong><em>от депозита</em></div>
+              </div>
+              <?php endif; ?>
+              <?php if ($notes): ?>
+              <ul class="fine-list">
+                <?php foreach ($notes as $line): ?><li><?= quantlab_h($line) ?></li><?php endforeach; ?>
+              </ul>
+              <?php endif; ?>
+            </article>
+            <article class="glass pad">
+              <h3>Счёт и доступ</h3>
+              <div class="bars js-bars"></div>
+              <dl class="spec">
+                <div><dt>Площадка</dt><dd>Forex</dd></div>
+                <div><dt>Инструмент</dt><dd><?= quantlab_h($instrument) ?></dd></div>
+                <div><dt>Equity</dt><dd class="js-equity">—</dd></div>
+                <div><dt>Balance</dt><dd class="js-balance">—</dd></div>
+                <div><dt>Робот</dt><dd class="js-running">—</dd></div>
+                <div><dt>Обновлено</dt><dd class="js-updated">—</dd></div>
               </dl>
             </article>
           </div>

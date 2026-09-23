@@ -3128,6 +3128,29 @@ button.parsed-stamp.is-loading {
   font-size: 13px;
 }
 
+.admin-api-box {
+  margin: 8px 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(232, 237, 245, 0.03);
+}
+
+.admin-api-box input[readonly] {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.admin-api-sample {
+  margin: 10px 0 8px;
+  padding: 12px 14px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
 .check-row {
   display: flex !important;
   align-items: center;

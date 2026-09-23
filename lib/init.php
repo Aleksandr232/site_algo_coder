@@ -14,6 +14,7 @@ require_once __DIR__ . DIRECTORY_SEPARATOR . 'mail.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'imap.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'telegram.php';
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'leads.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'yield.php';
 
 $quantlabPdo = quantlab_db();
 if ($quantlabPdo) {

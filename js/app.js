@@ -3,6 +3,7 @@
   const stores = {};
   const charts = [];
   const loadingBybit = {};
+  const loadingForex = {};
   let loadingTinkoff = false;
   const loadingComon = {};
 
@@ -166,6 +167,67 @@
     const bars = q(".js-bars");
     if (bars) {
       bars.innerHTML = (strategy.structure || [])
+        .map((item) => {
+          const width = Math.min(100, Math.abs(item.value));
+          const color = item.value >= 0 ? "var(--accent)" : "var(--neg)";
+          return `<div>
+            <div class="bar-label"><span>${item.name}</span><strong>${fmtPct(item.value)}</strong></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${width}%;background:${color}"></div></div>
+          </div>`;
+        })
+        .join("");
+    }
+    if (slide.dataset.hero === "1") fillHero(strategy, data.equity);
+  }
+
+  function moneyPlain(n) {
+    return Number(n).toLocaleString("ru-RU", { maximumFractionDigits: 2 });
+  }
+
+  function fillForexSlide(slide) {
+    const data = storeFor(slide);
+    const strategy = data.strategy || {};
+    const q = (sel) => slide.querySelector(sel);
+    const instrument = slide.dataset.instrument || strategy.instrument || "";
+    const equity = q(".js-equity");
+    if (equity) equity.textContent = strategy.equity != null ? moneyPlain(strategy.equity) : "—";
+    const balance = q(".js-balance");
+    if (balance) balance.textContent = strategy.balance != null ? moneyPlain(strategy.balance) : "—";
+    const running = q(".js-running");
+    if (running) running.textContent = strategy.running ? "работает" : "пауза";
+    const updated = q(".js-updated");
+    if (updated) updated.textContent = data.fetchedAt ? fmtTime(data.fetchedAt) : "—";
+
+    const when = data.fetchedAt ? fmtTime(data.fetchedAt) : "";
+    if (data.source === "live") setStamp(q(".js-stamp"), "live", "От робота · " + when);
+    else setStamp(q(".js-stamp"), "cache", "Нет точек · " + when);
+
+    const metrics = [
+      ["За всё время", fmtPct(strategy.profitLifetime || 0), (strategy.profitLifetime || 0) >= 0 ? "pos" : "neg"],
+      ["30 дней", fmtPct(strategy.profit30Days || 0), (strategy.profit30Days || 0) >= 0 ? "pos" : "neg"],
+      ["7 дней", fmtPct(strategy.profit7Days || 0), (strategy.profit7Days || 0) >= 0 ? "pos" : "neg"],
+      ["Equity", strategy.equity != null ? moneyPlain(strategy.equity) : "—", ""],
+      ["Balance", strategy.balance != null ? moneyPlain(strategy.balance) : "—", ""],
+      ["Инструмент", instrument || "—", ""],
+    ];
+    const box = q(".js-metrics");
+    if (box) {
+      box.innerHTML = metrics
+        .map(
+          ([label, value, tone]) =>
+            `<article class="glass metric"><span>${label}</span><b class="${tone}">${value}</b></article>`
+        )
+        .join("");
+    }
+    const bars = q(".js-bars");
+    if (bars) {
+      const life = Number(strategy.profitLifetime || 0);
+      const m30 = Number(strategy.profit30Days || 0);
+      const rows = [
+        { name: "Накопленный результат", value: life },
+        { name: "30 дней", value: m30 },
+      ];
+      bars.innerHTML = rows
         .map((item) => {
           const width = Math.min(100, Math.abs(item.value));
           const color = item.value >= 0 ? "var(--accent)" : "var(--neg)";
@@ -440,7 +502,8 @@
         tip.style.left = event.clientX - rect.left + "px";
         tip.style.top = event.clientY - rect.top + "px";
         let extra = "";
-        if (point.balance != null) extra = "<br>" + (tipMoney === "usd" ? moneyUsd(point.balance) : money(point.balance));
+        if (point.equity != null && tipMoney === "num") extra = "<br>" + moneyPlain(point.equity);
+        else if (point.balance != null) extra = "<br>" + (tipMoney === "usd" ? moneyUsd(point.balance) : money(point.balance));
         tip.innerHTML = `<strong>${fmtDate(point.date)}</strong><br>${fmtPct(point.value, 2)}${extra}`;
       });
       chart.addEventListener("mouseleave", () => {
@@ -514,6 +577,40 @@
       if (!silent) setStamp(stamp, "cache", "Bybit недоступен");
     } finally {
       loadingBybit[slug] = false;
+    }
+  }
+
+  async function loadForex(slide, silent) {
+    const slug = slide && slide.dataset ? slide.dataset.slug : "";
+    if (!slug || loadingForex[slug]) return;
+    loadingForex[slug] = true;
+    const data = storeFor(slide);
+    const stamp = slide.querySelector(".js-stamp");
+    if (stamp && (!silent || !data.equity.length)) setStamp(stamp, "loading", "Обновить с робота");
+    try {
+      const res = await fetchJson("/api/yield/?slug=" + encodeURIComponent(slug) + "&format=json&t=" + Date.now());
+      const payload = res.json;
+      if (!payload || !payload.ok) throw new Error("bad yield payload");
+      data.strategy = payload.strategy || {
+        title: "",
+        instrument: slide.dataset.instrument || "",
+        profitLifetime: payload.returnPercent || 0,
+        profit30Days: 0,
+        profit7Days: 0,
+        equity: payload.equity,
+        balance: payload.balance,
+        running: payload.running,
+      };
+      data.equity = Array.isArray(payload.series) ? payload.series : [];
+      data.source = data.equity.length ? "live" : "cache";
+      data.fetchedAt = new Date();
+      fillForexSlide(slide);
+      charts.forEach((c) => c.refresh && c.refresh());
+    } catch (error) {
+      console.warn("Forex yield load failed", slug, error);
+      if (!silent) setStamp(stamp, "cache", "Робот ещё не присылал");
+    } finally {
+      loadingForex[slug] = false;
     }
   }
 
@@ -714,6 +811,12 @@
       if (stamp) stamp.addEventListener("click", () => loadBybit(slide));
       loadBybit(slide);
     });
+    $$('.case-slide[data-venue="forex"]').forEach((slide) => {
+      charts.push(mountSlideChart(slide, () => storeFor(slide).equity, "num"));
+      const stamp = slide.querySelector(".js-stamp");
+      if (stamp) stamp.addEventListener("click", () => loadForex(slide));
+      loadForex(slide);
+    });
   }
 
   mountSlider();
@@ -730,12 +833,14 @@
   window.setInterval(() => {
     $$('.case-slide[data-venue="comon"]').forEach((slide) => loadComon(slide, true));
     $$('.case-slide[data-venue="bybit"]').forEach((slide) => loadBybit(slide, true));
+    $$('.case-slide[data-venue="forex"]').forEach((slide) => loadForex(slide, true));
     if (tinkoffVisible()) loadTinkoff(true);
   }, REFRESH_MS);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       $$('.case-slide[data-venue="comon"]').forEach((slide) => loadComon(slide, true));
       $$('.case-slide[data-venue="bybit"]').forEach((slide) => loadBybit(slide, true));
+      $$('.case-slide[data-venue="forex"]').forEach((slide) => loadForex(slide, true));
       if (tinkoffVisible()) loadTinkoff(true);
     }
   });

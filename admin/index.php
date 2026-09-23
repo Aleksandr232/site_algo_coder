@@ -44,6 +44,7 @@ quantlab_admin_start('Статьи — админка AM QuantLab');
           </div>
           <a class="btn" href="/admin/edit.php">Новая статья</a>
           <a class="btn btn-ghost" href="/admin/strategies.php">Стратегии</a>
+          <a class="btn btn-ghost" href="/admin/yield.php">Доходность</a>
         </div>
 
         <?php if (isset($_GET['deleted'])): ?>

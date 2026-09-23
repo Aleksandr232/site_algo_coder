@@ -122,7 +122,7 @@ function quantlab_db_status(): array
             'ok' => true,
             'error' => '',
             'tables' => $tables,
-            'ready' => !array_diff(['posts', 'post_redirects', 'leads'], $tables),
+            'ready' => !array_diff(['posts', 'post_redirects', 'leads', 'yield_feeds', 'yield_points'], $tables),
         ];
     }
     return [
@@ -230,8 +230,53 @@ function quantlab_db_migrate(PDO $pdo): void
         quantlab_db_ensure_column($pdo, 'strategies', 'bybit_market', 'bybit_market VARCHAR(16) NULL');
         quantlab_db_ensure_column($pdo, 'strategies', 'since_date', 'since_date DATE NULL');
         quantlab_db_ensure_column($pdo, 'strategies', 'start_balance', 'start_balance VARCHAR(32) NULL');
+        quantlab_db_ensure_column($pdo, 'strategies', 'yield_token', 'yield_token VARCHAR(64) NULL');
     } catch (Throwable $e) {
         // старая таблица leads без прав на ALTER — заявки на роботов уйдут в JSON-поля сообщения
+    }
+    try {
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS yield_feeds (
+            slug VARCHAR(64) NOT NULL PRIMARY KEY,
+            day DATE NULL,
+            sent_at DATETIME NULL,
+            return_percent DECIMAL(12,4) NOT NULL DEFAULT 0,
+            equity DECIMAL(18,6) NOT NULL DEFAULT 0,
+            balance DECIMAL(18,6) NOT NULL DEFAULT 0,
+            realized_pnl DECIMAL(18,6) NOT NULL DEFAULT 0,
+            running TINYINT(1) NOT NULL DEFAULT 1,
+            updated_at DATETIME NOT NULL,
+            KEY updated_at (updated_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS yield_points (
+            slug VARCHAR(64) NOT NULL,
+            day DATE NOT NULL,
+            equity DECIMAL(18,6) NOT NULL DEFAULT 0,
+            balance DECIMAL(18,6) NOT NULL DEFAULT 0,
+            return_percent DECIMAL(12,4) NOT NULL DEFAULT 0,
+            PRIMARY KEY (slug, day),
+            KEY day (day)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS yield_snapshots (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            slug VARCHAR(64) NOT NULL,
+            day DATE NULL,
+            sent_at DATETIME NOT NULL,
+            return_percent DECIMAL(12,4) NOT NULL DEFAULT 0,
+            equity DECIMAL(18,6) NOT NULL DEFAULT 0,
+            balance DECIMAL(18,6) NOT NULL DEFAULT 0,
+            realized_pnl DECIMAL(18,6) NOT NULL DEFAULT 0,
+            running TINYINT(1) NOT NULL DEFAULT 1,
+            payload MEDIUMTEXT NULL,
+            KEY slug_sent (slug, sent_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+    );
+    } catch (Throwable $e) {
+        // нет прав на CREATE — точки доходности уйдут в data/yield/*.json
     }
 }
 
