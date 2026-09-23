@@ -76,16 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'keywords' => $keywords,
             'seo_description' => $seo,
             'status' => !empty($_POST['published']) ? 'published' : 'draft',
-            'telegram_notify' => !empty($_POST['telegram_notify']),
         ], $post['slug'] ?? null);
-        $qs = 'saved=1';
-        $tg = $saved['_telegram'] ?? null;
-        if (is_array($tg) && !empty($tg['ok'])) {
-            $qs .= '&tg=1';
-        } elseif (is_array($tg) && (($tg['error'] ?? '') !== 'disabled') && (($tg['error'] ?? '') !== '')) {
-            $qs .= '&tg=err';
-        }
-        header('Location: /admin/edit.php?slug=' . rawurlencode($saved['slug']) . '&' . $qs, true, 302);
+        header('Location: /admin/edit.php?slug=' . rawurlencode($saved['slug']) . '&saved=1', true, 302);
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -99,7 +91,7 @@ $tgOk = (string) ($_GET['tg'] ?? '') === '1';
 $tgErr = (string) ($_GET['tg'] ?? '') === 'err';
 $tgReady = function_exists('quantlab_telegram_enabled') && quantlab_telegram_enabled();
 $tgSent = !empty($post['slug']) && function_exists('quantlab_telegram_post_sent') && quantlab_telegram_post_sent((string) $post['slug']);
-$tgChecked = $tgReady && !$tgSent;
+$publishChecked = !$post || (($post['status'] ?? '') === 'published');
 quantlab_admin_start(($post ? 'Редактирование' : 'Новая статья') . ' — админка AM QuantLab');
 $slugJs = <<<'JS'
 (function () {
@@ -291,20 +283,10 @@ JS;
             <textarea id="seo_description" name="seo_description" rows="2" placeholder="150–160 символов. Это сниппет в Яндексе и Google."><?= quantlab_h($post['seo_description'] ?? '') ?></textarea>
           </label>
           <label class="check-row">
-            <input type="checkbox" name="published" value="1" <?= (($post['status'] ?? '') === 'published') ? 'checked' : '' ?> />
-            Опубликовать — в sitemap, RSS и пинг Яндексу/Google
+            <input type="checkbox" name="published" value="1" <?= $publishChecked ? 'checked' : '' ?> />
+            Опубликовать на сайте — сразу откроется /blog/слаг/, попадёт в sitemap и RSS
           </label>
-          <label class="check-row">
-            <input type="checkbox" name="telegram_notify" value="1" <?= $tgChecked ? 'checked' : '' ?> <?= $tgReady ? '' : 'disabled' ?> />
-            Вместе с сохранением отправить в Telegram
-          </label>
-          <?php if (!$tgReady): ?>
-            <span class="field-hint">Сначала TELEGRAM_BOT_TOKEN и канал в .env, бот — админ канала.</span>
-          <?php elseif ($tgSent): ?>
-            <span class="field-hint">Уже уходило в канал. Кнопка ниже отправит ещё раз.</span>
-          <?php else: ?>
-            <span class="field-hint">Или нажмите «В Telegram» у опубликованной статьи — не обязательно сохранять заново.</span>
-          <?php endif; ?>
+          <span class="field-hint">В канал само не уходит. После публикации это отдельная кнопка «Отправить в канал».</span>
           <div class="hero-actions">
             <button class="btn" type="submit">Сохранить</button>
             <a class="btn btn-ghost" href="/admin/">К списку</a>
@@ -316,9 +298,9 @@ JS;
             <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
             <input type="hidden" name="action" value="telegram" />
             <button class="btn" type="submit" <?= $tgReady ? '' : 'disabled' ?>>
-              <?= $tgSent ? 'Ещё раз в Telegram' : 'Отправить в Telegram' ?>
+              <?= $tgSent ? 'Ещё раз в канал' : 'Отправить в канал' ?>
             </button>
-            <span class="field-hint">Уйдёт обложка, короткий текст без цен и кнопка на статью.</span>
+            <span class="field-hint"><?= $tgReady ? 'Уйдёт обложка, короткий текст без цен и кнопка на статью.' : 'Сначала TELEGRAM_BOT_TOKEN и канал в .env, бот — админ канала.' ?></span>
           </form>
         <?php endif; ?>
 

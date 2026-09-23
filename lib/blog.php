@@ -459,9 +459,6 @@ function quantlab_blog_save(array $input, ?string $currentSlug = null): array
     quantlab_write_seo_files();
     if ($status === 'published') {
         quantlab_ping_search_engines();
-        if (!empty($input['telegram_notify']) && function_exists('quantlab_telegram_share_post')) {
-            $post['_telegram'] = quantlab_telegram_share_post($post);
-        }
     }
     return $post;
 }

@@ -98,7 +98,7 @@ quantlab_admin_start('Статьи — админка AM QuantLab');
                           <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
                           <input type="hidden" name="action" value="telegram" />
                           <input type="hidden" name="slug" value="<?= quantlab_h($item['slug']) ?>" />
-                          <button type="submit" class="linkish" <?= $tgReady ? '' : 'disabled' ?>>В Telegram</button>
+                          <button type="submit" class="linkish" <?= $tgReady ? '' : 'disabled' ?>>Отправить в канал</button>
                         </form>
                       <?php endif; ?>
                       <form method="post" onsubmit="return confirm('Удалить статью?');">

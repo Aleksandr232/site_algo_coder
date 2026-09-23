@@ -154,12 +154,12 @@ function quantlab_admin_telegram_note(): string
     $status = function_exists('quantlab_telegram_status') ? quantlab_telegram_status() : [];
     $channel = function_exists('quantlab_telegram_channel') ? quantlab_telegram_channel() : '';
     if (!empty($status['ok'])) {
-        return '<p class="admin-storage">Telegram: посты уходят в ' . quantlab_h($channel) . '</p>';
+        return '<p class="admin-storage">Telegram: канал ' . quantlab_h($channel) . '. В канал уходит только по кнопке «Отправить в канал».</p>';
     }
     if (!empty($status['error'])) {
         return '<p class="admin-storage admin-storage-warn">Telegram не ушёл: ' . quantlab_h((string) $status['error']) . '</p>';
     }
-    return '<p class="admin-storage">Telegram: бот готов, опубликованные статьи уйдут в ' . quantlab_h($channel) . '</p>';
+    return '<p class="admin-storage">Telegram: бот готов. В ' . quantlab_h($channel) . ' статья уйдёт только по кнопке «Отправить в канал».</p>';
 }
 
 function quantlab_admin_end(string $extraJs = ''): void
