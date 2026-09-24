@@ -238,28 +238,58 @@ function quantlab_mail_layout(array $opts): string
 </html>';
 }
 
-function quantlab_mail_payload(array $headers, string $text, string $html): string
+function quantlab_mail_payload(array $headers, string $text, string $html, array $attachments = []): string
 {
     $html = trim($html);
+    $alt = quantlab_mail_boundary('alt');
     if ($html === '') {
-        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
-        $headers[] = 'Content-Transfer-Encoding: quoted-printable';
-        return implode("\r\n", $headers) . "\r\n\r\n" . quantlab_mail_qp($text) . "\r\n";
+        $altBody = "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+            . quantlab_mail_qp($text) . "\r\n";
+        $altHeader = 'Content-Type: text/plain; charset=UTF-8';
+    } else {
+        $altBody = '--' . $alt . "\r\n"
+            . "Content-Type: text/plain; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+            . quantlab_mail_qp($text) . "\r\n"
+            . '--' . $alt . "\r\n"
+            . "Content-Type: text/html; charset=UTF-8\r\n"
+            . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+            . quantlab_mail_qp($html) . "\r\n"
+            . '--' . $alt . "--\r\n";
+        $altHeader = 'Content-Type: multipart/alternative; boundary="' . $alt . '"';
     }
 
-    $alt = quantlab_mail_boundary('alt');
-    $altBody = '--' . $alt . "\r\n"
-        . "Content-Type: text/plain; charset=UTF-8\r\n"
-        . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
-        . quantlab_mail_qp($text) . "\r\n"
-        . '--' . $alt . "\r\n"
-        . "Content-Type: text/html; charset=UTF-8\r\n"
-        . "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
-        . quantlab_mail_qp($html) . "\r\n"
-        . '--' . $alt . "--\r\n";
+    if ($attachments === []) {
+        if ($html === '') {
+            $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+            $headers[] = 'Content-Transfer-Encoding: quoted-printable';
+            return implode("\r\n", $headers) . "\r\n\r\n" . quantlab_mail_qp($text) . "\r\n";
+        }
+        $headers[] = $altHeader;
+        return implode("\r\n", $headers) . "\r\n\r\n" . $altBody;
+    }
 
-    $headers[] = 'Content-Type: multipart/alternative; boundary="' . $alt . '"';
-    return implode("\r\n", $headers) . "\r\n\r\n" . $altBody;
+    $mixed = quantlab_mail_boundary('mix');
+    $body = '--' . $mixed . "\r\n" . ($html === '' ? $altBody : ($altHeader . "\r\n\r\n" . $altBody));
+    foreach ($attachments as $file) {
+        $path = (string) ($file['path'] ?? '');
+        $raw = is_file($path) ? (string) file_get_contents($path) : '';
+        if ($raw === '') {
+            continue;
+        }
+        $name = (string) ($file['name'] ?? 'file');
+        $mime = (string) ($file['mime'] ?? 'application/octet-stream');
+        $ascii = preg_replace('/[^A-Za-z0-9._-]+/', '_', $name) ?: 'file';
+        $body .= '--' . $mixed . "\r\n"
+            . 'Content-Type: ' . $mime . '; name="' . $ascii . "\"\r\n"
+            . "Content-Transfer-Encoding: base64\r\n"
+            . 'Content-Disposition: attachment; filename="' . $ascii . "\"; filename*=UTF-8''" . rawurlencode($name) . "\r\n\r\n"
+            . chunk_split(base64_encode($raw), 76, "\r\n");
+    }
+    $body .= '--' . $mixed . "--\r\n";
+    $headers[] = 'Content-Type: multipart/mixed; boundary="' . $mixed . '"';
+    return implode("\r\n", $headers) . "\r\n\r\n" . $body;
 }
 
 function quantlab_mail_send(string $subject, string $text, string $html = '', ?string $replyTo = null, ?array $to = null, array $meta = []): string
@@ -316,7 +346,7 @@ function quantlab_mail_send(string $subject, string $text, string $html = '', ?s
         $headers[] = 'References: ' . $ref;
     }
 
-    $payload = quantlab_mail_payload($headers, $text, $html);
+    $payload = quantlab_mail_payload($headers, $text, $html, is_array($meta['attachments'] ?? null) ? $meta['attachments'] : []);
     $ports = [$port];
     if ($port === 465) {
         $ports[] = 587;
@@ -579,15 +609,16 @@ function quantlab_lead_ack_mail(array $lead): bool
     return true;
 }
 
-function quantlab_lead_reply_mail(array $lead, string $body, string $subject = ''): array
+function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '', array $files = []): array
 {
     $email = quantlab_lead_email($lead);
     if ($email === '') {
         throw new InvalidArgumentException('В заявке нет почты — ответить письмом нельзя');
     }
     $body = trim($body);
-    if ($body === '') {
-        throw new InvalidArgumentException('Напишите текст ответа');
+    $files = quantlab_lead_files_public($files);
+    if ($body === '' && $files === []) {
+        throw new InvalidArgumentException('Напишите текст или прикрепите файл');
     }
     $from = quantlab_env('SMTP_FROM', quantlab_env('SMTP_USER', 'info@amquantlab.ru'));
     $site = function_exists('quantlab_site_url') ? quantlab_site_url() : 'https://amquantlab.ru';
@@ -598,8 +629,15 @@ function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '
             ? ('AM QuantLab: по заявке «' . $robotTitle . '»')
             : 'AM QuantLab: по вашей заявке';
     }
-    $text = $body;
-    if (!str_contains($body, 'AM QuantLab')) {
+    $text = $body !== '' ? $body : 'Во вложении файлы.';
+    if ($files !== []) {
+        $names = [];
+        foreach ($files as $file) {
+            $names[] = (string) ($file['name'] ?? 'файл');
+        }
+        $text .= "\r\n\r\nВложение: " . implode(', ', $names);
+    }
+    if (!str_contains($text, 'AM QuantLab')) {
         $text .= "\r\n\r\n— AM QuantLab\r\n" . $from . "\r\n" . $site . "\r\n";
     }
     $htmlTitle = trim((string) ($lead['robot_title'] ?? ''));
@@ -608,7 +646,7 @@ function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '
         'title' => $htmlTitle !== '' ? ('По заявке «' . $htmlTitle . '»') : 'Ответ по вашей заявке',
         'preheader' => 'Ответ AM QuantLab по вашей заявке',
         'intro' => $name !== '' ? ('Здравствуйте, ' . $name . '.') : 'Здравствуйте.',
-        'body' => $body,
+        'body' => $body !== '' ? $body : 'Во вложении файлы.',
         'cta_href' => $site,
         'cta_label' => 'Открыть AM QuantLab',
     ]);
@@ -618,6 +656,7 @@ function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '
         $mid = quantlab_mail_send($subject, $text, $html, $from, [$email], [
             'lead_id' => $id,
             'in_reply_to' => $ref,
+            'attachments' => quantlab_lead_files_mail_parts($id, $files),
         ]);
     } catch (Throwable $e) {
         if (function_exists('quantlab_lead_mark_replied')) {
@@ -633,6 +672,7 @@ function quantlab_lead_reply_mail(array $lead, string $body, string $subject = '
             'to' => $email,
             'subject' => $subject,
             'body' => $body,
+            'files' => $files,
             'message_id' => $mid,
             'in_reply_to' => $ref,
             'read' => true,

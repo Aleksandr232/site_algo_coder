@@ -246,6 +246,7 @@ function quantlab_lead_thread_add(int $id, array $msg): bool
         'to' => (string) ($msg['to'] ?? ''),
         'subject' => (string) ($msg['subject'] ?? ''),
         'body' => (string) ($msg['body'] ?? ''),
+        'files' => quantlab_lead_files_public($msg['files'] ?? []),
         'at' => (string) ($msg['at'] ?? date('c')),
         'message_id' => $mid,
         'in_reply_to' => (string) ($msg['in_reply_to'] ?? ''),
@@ -406,6 +407,7 @@ function quantlab_lead_delete(int $id): bool
         unset($messages[(string) $id]);
         quantlab_lead_messages_write($messages);
     }
+    quantlab_lead_files_delete_lead($id);
     $replies = quantlab_lead_replies_map();
     if (isset($replies[(string) $id])) {
         unset($replies[(string) $id]);
@@ -695,4 +697,232 @@ function quantlab_lead_reply_status(array $last, int $unread = 0, bool $hasIn = 
         'class' => 'badge badge-warn',
         'hint' => $error !== '' ? $error : $at,
     ];
+}
+
+function quantlab_lead_file_exts(): array
+{
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'txt', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'csv'];
+}
+
+function quantlab_lead_file_ext(string $name): string
+{
+    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    return preg_replace('/[^a-z0-9]/', '', $ext) ?? '';
+}
+
+function quantlab_lead_file_mime(string $ext): string
+{
+    return match ($ext) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+        'txt' => 'text/plain',
+        'zip' => 'application/zip',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'csv' => 'text/csv',
+        default => 'application/octet-stream',
+    };
+}
+
+function quantlab_lead_file_safe_name(string $name): string
+{
+    $name = str_replace(["\0", '/', '\\'], '', $name);
+    $name = trim($name);
+    if ($name === '' || $name === '.' || $name === '..') {
+        $name = 'file';
+    }
+    if (function_exists('mb_substr')) {
+        $name = mb_substr($name, 0, 120, 'UTF-8');
+    } elseif (strlen($name) > 120) {
+        $name = substr($name, 0, 120);
+    }
+    return $name;
+}
+
+function quantlab_lead_files_dir(int $leadId): string
+{
+    $dir = quantlab_data_dir() . DIRECTORY_SEPARATOR . 'lead-files' . DIRECTORY_SEPARATOR . $leadId;
+    if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+    }
+    return $dir;
+}
+
+function quantlab_lead_file_path(int $leadId, string $fid): string
+{
+    if (!preg_match('/^[a-f0-9]{16}$/', $fid)) {
+        return '';
+    }
+    return quantlab_lead_files_dir($leadId) . DIRECTORY_SEPARATOR . $fid;
+}
+
+function quantlab_lead_files_public(mixed $files): array
+{
+    if (!is_array($files)) {
+        return [];
+    }
+    $out = [];
+    foreach ($files as $file) {
+        if (!is_array($file)) {
+            continue;
+        }
+        $id = (string) ($file['id'] ?? '');
+        if (!preg_match('/^[a-f0-9]{16}$/', $id)) {
+            continue;
+        }
+        $name = quantlab_lead_file_safe_name((string) ($file['name'] ?? 'file'));
+        $ext = quantlab_lead_file_ext($name);
+        $out[] = [
+            'id' => $id,
+            'name' => $name,
+            'mime' => quantlab_lead_file_mime($ext),
+            'size' => max(0, (int) ($file['size'] ?? 0)),
+        ];
+        if (count($out) >= 5) {
+            break;
+        }
+    }
+    return $out;
+}
+
+function quantlab_lead_file_store(int $leadId, string $name, string $bytes): array
+{
+    $safe = quantlab_lead_file_safe_name($name);
+    $ext = quantlab_lead_file_ext($safe);
+    if (!in_array($ext, quantlab_lead_file_exts(), true)) {
+        throw new InvalidArgumentException('Такой файл прикрепить нельзя: ' . $safe);
+    }
+    if ($bytes === '' || strlen($bytes) > 8 * 1024 * 1024) {
+        throw new InvalidArgumentException('Файл должен быть не пустым и не больше 8 МБ');
+    }
+    $id = bin2hex(random_bytes(8));
+    $path = quantlab_lead_file_path($leadId, $id);
+    if ($path === '' || file_put_contents($path, $bytes) === false) {
+        throw new RuntimeException('Не удалось сохранить файл');
+    }
+    return [
+        'id' => $id,
+        'name' => $safe,
+        'mime' => quantlab_lead_file_mime($ext),
+        'size' => strlen($bytes),
+    ];
+}
+
+function quantlab_lead_files_take_upload(int $leadId): array
+{
+    if ($leadId <= 0 || empty($_FILES['files']) || !is_array($_FILES['files']['name'] ?? null)) {
+        return [];
+    }
+    $names = $_FILES['files']['name'];
+    $tmp = $_FILES['files']['tmp_name'];
+    $errs = $_FILES['files']['error'];
+    $out = [];
+    $count = 0;
+    foreach ($names as $i => $name) {
+        $err = (int) ($errs[$i] ?? UPLOAD_ERR_NO_FILE);
+        if ($err === UPLOAD_ERR_NO_FILE || (string) $name === '') {
+            continue;
+        }
+        $count++;
+        if ($count > 5) {
+            quantlab_lead_files_discard($leadId, $out);
+            throw new InvalidArgumentException('Не больше 5 файлов за одно сообщение');
+        }
+        if ($err !== UPLOAD_ERR_OK) {
+            quantlab_lead_files_discard($leadId, $out);
+            throw new InvalidArgumentException('Файл не загрузился. Проверьте размер, лимит 8 МБ.');
+        }
+        $path = (string) ($tmp[$i] ?? '');
+        $bytes = is_file($path) ? (string) file_get_contents($path) : '';
+        try {
+            $out[] = quantlab_lead_file_store($leadId, (string) $name, $bytes);
+        } catch (Throwable $e) {
+            quantlab_lead_files_discard($leadId, $out);
+            throw $e;
+        }
+    }
+    return $out;
+}
+
+function quantlab_lead_files_discard(int $leadId, array $files): void
+{
+    foreach (quantlab_lead_files_public($files) as $file) {
+        $path = quantlab_lead_file_path($leadId, (string) $file['id']);
+        if ($path !== '' && is_file($path)) {
+            unlink($path);
+        }
+    }
+}
+
+function quantlab_lead_files_delete_lead(int $leadId): void
+{
+    if ($leadId <= 0) {
+        return;
+    }
+    $dir = quantlab_data_dir() . DIRECTORY_SEPARATOR . 'lead-files' . DIRECTORY_SEPARATOR . $leadId;
+    if (!is_dir($dir)) {
+        return;
+    }
+    foreach (glob($dir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+        if (is_file($file)) {
+            unlink($file);
+        }
+    }
+    @rmdir($dir);
+}
+
+function quantlab_lead_files_mail_parts(int $leadId, array $files): array
+{
+    $out = [];
+    foreach (quantlab_lead_files_public($files) as $file) {
+        $path = quantlab_lead_file_path($leadId, (string) $file['id']);
+        if ($path === '' || !is_file($path)) {
+            continue;
+        }
+        $out[] = [
+            'name' => (string) $file['name'],
+            'mime' => (string) $file['mime'],
+            'path' => $path,
+        ];
+    }
+    return $out;
+}
+
+function quantlab_lead_file_find(int $leadId, string $fid): ?array
+{
+    if ($leadId <= 0 || !preg_match('/^[a-f0-9]{16}$/', $fid)) {
+        return null;
+    }
+    foreach (quantlab_lead_thread($leadId) as $row) {
+        foreach (quantlab_lead_files_public($row['files'] ?? []) as $file) {
+            if ($file['id'] === $fid && is_file(quantlab_lead_file_path($leadId, $fid))) {
+                return $file;
+            }
+        }
+    }
+    return null;
+}
+
+function quantlab_lead_file_output(int $leadId, string $fid): void
+{
+    $file = quantlab_lead_file_find($leadId, $fid);
+    $path = $file ? quantlab_lead_file_path($leadId, $fid) : '';
+    if (!$file || $path === '' || !is_file($path)) {
+        http_response_code(404);
+        echo 'Файл не найден';
+        return;
+    }
+    $mime = (string) $file['mime'];
+    $inline = str_starts_with($mime, 'image/');
+    header('Content-Type: ' . $mime);
+    header('X-Content-Type-Options: nosniff');
+    header('Content-Length: ' . (string) filesize($path));
+    $ascii = preg_replace('/[^A-Za-z0-9._-]+/', '_', (string) $file['name']) ?: 'file';
+    header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . '; filename="' . $ascii . '"');
+    readfile($path);
 }

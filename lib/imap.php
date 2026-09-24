@@ -340,6 +340,69 @@ function quantlab_mail_visible_text(string $text): string
     return $cut;
 }
 
+function quantlab_mail_part_filename(array $headers): string
+{
+    $disp = (string) ($headers['content-disposition'] ?? '');
+    $type = (string) ($headers['content-type'] ?? '');
+    foreach ([$disp, $type] as $raw) {
+        if (preg_match("/filename\\*=(?:UTF-8|utf-8)''([^;\\s]+)/i", $raw, $match)) {
+            return rawurldecode($match[1]);
+        }
+        if (preg_match('/filename="([^"]+)"/i', $raw, $match) || preg_match('/filename=([^;\\s]+)/i', $raw, $match)) {
+            return quantlab_mail_decode_header(trim($match[1], "\"'"));
+        }
+        if (preg_match('/\\bname="([^"]+)"/i', $raw, $match) || preg_match('/\\bname=([^;\\s]+)/i', $raw, $match)) {
+            return quantlab_mail_decode_header(trim($match[1], "\"'"));
+        }
+    }
+    return '';
+}
+
+function quantlab_mail_collect_parts(string $contentType, string $body, string $encoding, array &$out, int $depth = 0): void
+{
+    if ($depth > 8 || count($out) >= 5) {
+        return;
+    }
+    $ct = strtolower($contentType);
+    if (!str_contains($ct, 'multipart/') || !preg_match('/boundary=("?)([^";\r\n]+)\1/i', $contentType, $match)) {
+        return;
+    }
+    $decoded = quantlab_mail_decode_transfer($body, $encoding);
+    $parts = preg_split('/--' . preg_quote($match[2], '/') . '(?:--)?/', $decoded) ?: [];
+    foreach ($parts as $part) {
+        $part = trim($part);
+        if ($part === '' || $part === '--') {
+            continue;
+        }
+        $parsed = quantlab_mail_parse_rfc822($part);
+        $childType = (string) ($parsed['content_type'] ?? 'text/plain');
+        $childEnc = (string) ($parsed['headers']['content-transfer-encoding'] ?? '');
+        if (str_starts_with(strtolower($childType), 'multipart/')) {
+            quantlab_mail_collect_parts($childType, (string) $parsed['raw_body'], $childEnc, $out, $depth + 1);
+            continue;
+        }
+        $filename = quantlab_mail_part_filename($parsed['headers'] ?? []);
+        $disp = strtolower((string) ($parsed['headers']['content-disposition'] ?? ''));
+        if ($filename === '' && !str_contains($disp, 'attachment')) {
+            continue;
+        }
+        if ($filename === '') {
+            $filename = 'file';
+        }
+        $bytes = quantlab_mail_decode_transfer((string) $parsed['raw_body'], $childEnc);
+        if ($bytes === '' || strlen($bytes) > 8 * 1024 * 1024) {
+            continue;
+        }
+        $out[] = [
+            'name' => $filename,
+            'bytes' => $bytes,
+        ];
+        if (count($out) >= 5) {
+            return;
+        }
+    }
+}
+
 function quantlab_inbox_match_lead(array $mail): ?array
 {
     $blob = trim(
@@ -476,12 +539,34 @@ function quantlab_inbox_sync(bool $force = false, int $notifyLimit = 1): array
             }
             $leadId = (int) ($lead['id'] ?? 0);
             $body = quantlab_mail_visible_text((string) ($mail['text'] ?? ''));
-            if ($body === '') {
-                $body = '(пустое письмо)';
-            }
             $existing = function_exists('quantlab_lead_thread_by_imap')
                 ? quantlab_lead_thread_by_imap($leadId, $uid)
                 : null;
+            $files = [];
+            if (!$existing) {
+                $collected = [];
+                quantlab_mail_collect_parts(
+                    (string) ($mail['content_type'] ?? ''),
+                    (string) ($mail['raw_body'] ?? ''),
+                    (string) ($mail['headers']['content-transfer-encoding'] ?? ''),
+                    $collected
+                );
+                if (function_exists('quantlab_lead_file_store')) {
+                    foreach ($collected as $part) {
+                        $ext = quantlab_lead_file_ext((string) ($part['name'] ?? ''));
+                        if (!in_array($ext, quantlab_lead_file_exts(), true)) {
+                            continue;
+                        }
+                        try {
+                            $files[] = quantlab_lead_file_store($leadId, (string) $part['name'], (string) $part['bytes']);
+                        } catch (Throwable $e) {
+                        }
+                    }
+                }
+            }
+            if ($body === '') {
+                $body = $files !== [] ? 'Во вложении файлы.' : '(пустое письмо)';
+            }
             if (!$existing) {
                 $added = quantlab_lead_thread_add($leadId, [
                     'dir' => 'in',
@@ -490,6 +575,7 @@ function quantlab_inbox_sync(bool $force = false, int $notifyLimit = 1): array
                     'to' => (string) ($mail['to'] ?? ''),
                     'subject' => (string) ($mail['subject'] ?? ''),
                     'body' => function_exists('mb_substr') ? mb_substr($body, 0, 20000) : substr($body, 0, 20000),
+                    'files' => $files,
                     'at' => !empty($mail['date']) && strtotime((string) $mail['date'])
                         ? date('c', strtotime((string) $mail['date']))
                         : date('c'),
@@ -501,6 +587,8 @@ function quantlab_inbox_sync(bool $force = false, int $notifyLimit = 1): array
                 ]);
                 if ($added) {
                     $imported++;
+                } elseif ($files !== [] && function_exists('quantlab_lead_files_discard')) {
+                    quantlab_lead_files_discard($leadId, $files);
                 }
                 $existing = function_exists('quantlab_lead_thread_by_imap')
                     ? quantlab_lead_thread_by_imap($leadId, $uid)

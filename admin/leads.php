@@ -6,6 +6,11 @@ require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . '
 
 quantlab_admin_require();
 
+if (isset($_GET['file'], $_GET['fid']) && function_exists('quantlab_lead_file_output')) {
+    quantlab_lead_file_output((int) $_GET['file'], (string) $_GET['fid']);
+    exit;
+}
+
 $error = '';
 $openLead = [
     'id' => 0,
@@ -72,15 +77,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 quantlab_lead_mark_replied($id, (string) $openLead['email'], $openLead['subject'], false, $error);
             }
         } else {
+            $uploads = [];
             try {
+                $uploads = function_exists('quantlab_lead_files_take_upload')
+                    ? quantlab_lead_files_take_upload($id)
+                    : [];
                 $sent = quantlab_lead_reply_mail(
                     $lead,
                     $openLead['body'],
-                    $openLead['subject']
+                    $openLead['subject'],
+                    $uploads
                 );
                 header('Location: /admin/leads.php?sent=1&to=' . rawurlencode((string) $sent['to']) . '&open=' . $id, true, 302);
                 exit;
             } catch (Throwable $e) {
+                if ($uploads !== [] && function_exists('quantlab_lead_files_discard')) {
+                    quantlab_lead_files_discard($id, $uploads);
+                }
                 $error = $e->getMessage();
                 if (function_exists('quantlab_lead_mark_replied')) {
                     quantlab_lead_mark_replied($id, (string) $openLead['email'], $openLead['subject'], false, $error);
@@ -282,18 +295,26 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                 <button class="modal-close" type="button" data-lead-close aria-label="Закрыть">×</button>
               </header>
               <div class="lead-thread" id="lead-thread"></div>
-              <form class="form lead-chat-composer" method="post" id="lead-reply-form">
+              <form class="form lead-chat-composer" method="post" id="lead-reply-form" enctype="multipart/form-data">
                 <p class="form-note form-note-err lead-chat-status" id="lead-reply-status" <?= $error !== '' ? '' : 'hidden' ?>><?= $error !== '' ? quantlab_h('Статус: не ушло. ' . $error) : '' ?></p>
                 <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
                 <input type="hidden" name="action" value="reply" />
                 <input type="hidden" name="lead_id" id="lead-reply-id" value="" />
                 <input id="lead-reply-to" type="hidden" />
                 <input id="lead-reply-subject" type="hidden" name="subject" value="" />
+                <div class="lead-attach-list" id="lead-attach-list"></div>
                 <div class="lead-chat-compose-row">
-                  <label class="lead-chat-input">
-                    <span class="visually-hidden">Ответ</span>
-                    <textarea id="lead-reply-body" name="body" rows="1" required placeholder="Написать ответ…"></textarea>
-                  </label>
+                  <div class="lead-chat-box">
+                    <label class="lead-attach-btn">
+                      <span class="visually-hidden">Прикрепить файл</span>
+                      <input id="lead-files" type="file" name="files[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx,.csv" />
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8.2 12.4V7.2a3.8 3.8 0 0 1 7.6 0v9.2a2.4 2.4 0 0 1-4.8 0V8.4"/></svg>
+                    </label>
+                    <label class="lead-chat-input">
+                      <span class="visually-hidden">Ответ</span>
+                      <textarea id="lead-reply-body" name="body" rows="1" placeholder="Написать ответ…"></textarea>
+                    </label>
+                  </div>
                   <button class="btn" type="submit" id="lead-reply-submit">Отправить</button>
                 </div>
               </form>
@@ -319,6 +340,9 @@ $replyJs = <<<JS
   var status = document.getElementById("lead-reply-status");
   var form = document.getElementById("lead-reply-form");
   var submit = document.getElementById("lead-reply-submit");
+  var fileInput = document.getElementById("lead-files");
+  var attachList = document.getElementById("lead-attach-list");
+  var picked = new DataTransfer();
   var threads = {$threadsJson} || {};
   var csrf = {$csrfJs};
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
@@ -397,10 +421,65 @@ $replyJs = <<<JS
       text.className = "lead-bubble-text";
       text.textContent = msg.body || "";
       wrap.appendChild(who);
-      wrap.appendChild(text);
+      if (msg.body) wrap.appendChild(text);
+      appendFiles(wrap, id, msg.files);
       threadBox.appendChild(wrap);
     });
     threadBox.scrollTop = threadBox.scrollHeight;
+  }
+  function fileHref(leadId, file) {
+    return "/admin/leads.php?file=" + encodeURIComponent(leadId) + "&fid=" + encodeURIComponent(file.id || "");
+  }
+  function appendFiles(wrap, leadId, files) {
+    if (!files || !files.length) return;
+    var box = document.createElement("div");
+    box.className = "lead-files";
+    files.forEach(function (file) {
+      var href = fileHref(leadId, file);
+      var mime = String(file.mime || "");
+      if (mime.indexOf("image/") === 0) {
+        var img = document.createElement("img");
+        img.className = "lead-file-img";
+        img.src = href;
+        img.alt = file.name || "картинка";
+        box.appendChild(img);
+      }
+      var link = document.createElement("a");
+      link.className = "lead-file-link";
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = file.name || "файл";
+      box.appendChild(link);
+    });
+    wrap.appendChild(box);
+  }
+  function renderPicks() {
+    if (!attachList || !fileInput) return;
+    syncingFiles = true;
+    fileInput.files = picked.files;
+    syncingFiles = false;
+    attachList.innerHTML = "";
+    Array.from(picked.files).forEach(function (file, index) {
+      var chip = document.createElement("span");
+      chip.className = "lead-attach-chip";
+      chip.textContent = file.name;
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "lead-attach-remove";
+      remove.setAttribute("aria-label", "Убрать файл");
+      remove.textContent = "×";
+      remove.addEventListener("click", function () {
+        var next = new DataTransfer();
+        Array.from(picked.files).forEach(function (item, i) {
+          if (i !== index) next.items.add(item);
+        });
+        picked = next;
+        renderPicks();
+      });
+      chip.appendChild(remove);
+      attachList.appendChild(chip);
+    });
   }
   function grow() {
     if (!bodyInput) return;
@@ -496,8 +575,32 @@ $replyJs = <<<JS
       }
     });
   }
+  var syncingFiles = false;
+  if (fileInput) {
+    fileInput.addEventListener("change", function () {
+      if (syncingFiles) return;
+      Array.from(fileInput.files || []).forEach(function (file) {
+        if (picked.files.length >= 5) return;
+        picked.items.add(file);
+      });
+      syncingFiles = true;
+      renderPicks();
+      syncingFiles = false;
+    });
+  }
   if (form && submit) {
-    form.addEventListener("submit", function () {
+    form.addEventListener("submit", function (event) {
+      var hasText = bodyInput && bodyInput.value.trim() !== "";
+      var hasFiles = fileInput && fileInput.files && fileInput.files.length > 0;
+      if (!hasText && !hasFiles) {
+        event.preventDefault();
+        if (status) {
+          status.hidden = false;
+          status.className = "form-note form-note-err lead-chat-status";
+          status.textContent = "Напишите текст или прикрепите файл";
+        }
+        return;
+      }
       submit.disabled = true;
       submit.textContent = "Отправляем…";
       if (status) {

@@ -3095,6 +3095,88 @@ button.parsed-stamp.is-loading {
   gap: 10px;
 }
 
+.lead-chat-box {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lead-attach-btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(232, 237, 245, 0.04);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.lead-attach-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.lead-attach-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.lead-attach-list:empty {
+  display: none;
+}
+
+.lead-attach-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+  background: rgba(61, 255, 164, 0.1);
+  font-size: 12px;
+}
+
+.lead-attach-remove {
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.lead-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.lead-file-img {
+  display: block;
+  max-width: min(240px, 100%);
+  max-height: 180px;
+  border-radius: 10px;
+}
+
+.lead-file-link {
+  color: var(--accent);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .lead-chat-input {
   display: block;
   flex: 1;
