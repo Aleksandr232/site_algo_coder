@@ -3118,11 +3118,15 @@ button.parsed-stamp.is-loading {
   cursor: pointer;
 }
 
-.lead-attach-btn input {
+.lead-files-input {
   position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .lead-attach-list {

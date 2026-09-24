@@ -305,11 +305,11 @@ quantlab_admin_start('Заявки — админка AM QuantLab');
                 <div class="lead-attach-list" id="lead-attach-list"></div>
                 <div class="lead-chat-compose-row">
                   <div class="lead-chat-box">
-                    <label class="lead-attach-btn">
-                      <span class="visually-hidden">Прикрепить файл</span>
-                      <input id="lead-files" type="file" name="files[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx,.csv" />
+                    <button class="lead-attach-btn" id="lead-attach-open" type="button" title="Можно выбрать сразу несколько файлов">
+                      <span class="visually-hidden">Прикрепить файлы</span>
                       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8.2 12.4V7.2a3.8 3.8 0 0 1 7.6 0v9.2a2.4 2.4 0 0 1-4.8 0V8.4"/></svg>
-                    </label>
+                    </button>
+                    <input id="lead-files" class="lead-files-input" type="file" name="files[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt,.zip,.doc,.docx,.xls,.xlsx,.csv" />
                     <label class="lead-chat-input">
                       <span class="visually-hidden">Ответ</span>
                       <textarea id="lead-reply-body" name="body" rows="1" placeholder="Написать ответ…"></textarea>
@@ -341,8 +341,9 @@ $replyJs = <<<JS
   var form = document.getElementById("lead-reply-form");
   var submit = document.getElementById("lead-reply-submit");
   var fileInput = document.getElementById("lead-files");
+  var attachOpen = document.getElementById("lead-attach-open");
   var attachList = document.getElementById("lead-attach-list");
-  var picked = new DataTransfer();
+  var pickedList = [];
   var threads = {$threadsJson} || {};
   var csrf = {$csrfJs};
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
@@ -454,13 +455,20 @@ $replyJs = <<<JS
     });
     wrap.appendChild(box);
   }
+  function sameFile(a, b) {
+    return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified;
+  }
+  function cloneFile(file) {
+    try {
+      return new File([file], file.name, { type: file.type, lastModified: file.lastModified });
+    } catch (e) {
+      return file;
+    }
+  }
   function renderPicks() {
-    if (!attachList || !fileInput) return;
-    syncingFiles = true;
-    fileInput.files = picked.files;
-    syncingFiles = false;
+    if (!attachList) return;
     attachList.innerHTML = "";
-    Array.from(picked.files).forEach(function (file, index) {
+    pickedList.forEach(function (file, index) {
       var chip = document.createElement("span");
       chip.className = "lead-attach-chip";
       chip.textContent = file.name;
@@ -470,16 +478,20 @@ $replyJs = <<<JS
       remove.setAttribute("aria-label", "Убрать файл");
       remove.textContent = "×";
       remove.addEventListener("click", function () {
-        var next = new DataTransfer();
-        Array.from(picked.files).forEach(function (item, i) {
-          if (i !== index) next.items.add(item);
-        });
-        picked = next;
+        pickedList.splice(index, 1);
         renderPicks();
       });
       chip.appendChild(remove);
       attachList.appendChild(chip);
     });
+  }
+  function applyPickedFiles() {
+    if (!fileInput) return;
+    var dt = new DataTransfer();
+    pickedList.forEach(function (file) {
+      dt.items.add(file);
+    });
+    fileInput.files = dt.files;
   }
   function grow() {
     if (!bodyInput) return;
@@ -575,23 +587,29 @@ $replyJs = <<<JS
       }
     });
   }
-  var syncingFiles = false;
+  if (fileInput) fileInput.multiple = true;
+  if (attachOpen && fileInput) {
+    attachOpen.addEventListener("click", function () {
+      fileInput.click();
+    });
+  }
   if (fileInput) {
     fileInput.addEventListener("change", function () {
-      if (syncingFiles) return;
       Array.from(fileInput.files || []).forEach(function (file) {
-        if (picked.files.length >= 5) return;
-        picked.items.add(file);
+        if (pickedList.length >= 5) return;
+        var copy = cloneFile(file);
+        var exists = pickedList.some(function (item) { return sameFile(item, copy); });
+        if (!exists) pickedList.push(copy);
       });
-      syncingFiles = true;
+      fileInput.value = "";
       renderPicks();
-      syncingFiles = false;
     });
   }
   if (form && submit) {
     form.addEventListener("submit", function (event) {
+      applyPickedFiles();
       var hasText = bodyInput && bodyInput.value.trim() !== "";
-      var hasFiles = fileInput && fileInput.files && fileInput.files.length > 0;
+      var hasFiles = pickedList.length > 0;
       if (!hasText && !hasFiles) {
         event.preventDefault();
         if (status) {
