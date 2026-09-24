@@ -603,6 +603,7 @@ $replyJs = <<<JS
       });
       fileInput.value = "";
       renderPicks();
+      if (bodyInput) bodyInput.focus();
     });
   }
   if (form && submit) {

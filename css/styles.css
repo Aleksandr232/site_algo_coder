@@ -3118,7 +3118,7 @@ button.parsed-stamp.is-loading {
   cursor: pointer;
 }
 
-.lead-files-input {
+.form input.lead-files-input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -3127,6 +3127,9 @@ button.parsed-stamp.is-loading {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+  opacity: 0;
+  pointer-events: none;
+  appearance: none;
 }
 
 .lead-attach-list {
