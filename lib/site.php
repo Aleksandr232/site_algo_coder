@@ -689,7 +689,6 @@ function quantlab_render_end(): void
           <a href="/#contact">Контакт</a>
           <a href="/offer/" data-offer>Оферта</a>
           <a href="/privacy/" data-privacy>Конфиденциальность</a>
-          <a href="<?= quantlab_h(quantlab_abs_url('rss.xml')) ?>" rel="alternate" type="application/rss+xml">RSS-фид</a>
           <a href="mailto:<?= quantlab_h(quantlab_site_email()) ?>"><?= quantlab_h(quantlab_site_email()) ?></a>
         </p>
         <p class="disclaimer">
