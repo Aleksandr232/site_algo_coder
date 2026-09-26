@@ -374,6 +374,7 @@ function quantlab_render_crumbs(array $items): string
             'position' => $i + 1,
             'name' => $name,
             'item' => $url,
+            'url' => $url,
         ];
     }
     $html .= '</ol></nav>';
