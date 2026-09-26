@@ -73,7 +73,7 @@ quantlab_render_start([
         ]) ?>
         <p class="eyebrow">Блог</p>
         <h1>Статьи про роботов и финтех</h1>
-        <p class="lead">Разбираем площадки, API и то, как собираем алгоритмы. Каждая статья — отдельный адрес со слагом.</p>
+        <p class="lead">Разбираем площадки, API и то, как собираем алгоритмы. Каждая статья — отдельный адрес со слагом. <a href="<?= quantlab_h(quantlab_abs_url('rss.xml')) ?>" rel="alternate" type="application/rss+xml">RSS-фид для Яндекса</a>.</p>
 
         <?php if (!$all): ?>
           <div class="glass pad empty-blog">

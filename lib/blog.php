@@ -835,33 +835,61 @@ function quantlab_sitemap_xml(): string
     return $xml;
 }
 
+function quantlab_rss_full_text(array $post): string
+{
+    $html = quantlab_markdown((string) ($post['body'] ?? ''));
+    $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = str_replace("\xC2\xA0", ' ', $text);
+    $parts = preg_split('/\n(?=Куда написать\b)/u', $text, 2);
+    $text = is_array($parts) ? (string) $parts[0] : $text;
+    $lines = [];
+    foreach (preg_split("/\n/", $text) ?: [] as $line) {
+        if (preg_match('/t\.me|mailto:|info@|telegram|телеграм/iu', $line)) {
+            continue;
+        }
+        $lines[] = rtrim($line);
+    }
+    $text = trim(preg_replace("/\n{3,}/", "\n\n", implode("\n", $lines)) ?? '');
+    return $text;
+}
+
 function quantlab_rss_xml(): string
 {
+    $moscow = new DateTimeZone('Europe/Moscow');
     $items = '';
     foreach (quantlab_blog_published() as $row) {
         $post = quantlab_blog_load($row['slug']);
         if (!$post) {
             continue;
         }
+        $full = quantlab_rss_full_text($post);
+        if ($full === '') {
+            continue;
+        }
         $link = quantlab_abs_url('blog/' . $post['slug']);
-        $date = strtotime((string) ($post['published_at'] ?? $post['updated_at'] ?? 'now')) ?: time();
+        $stamp = strtotime((string) ($post['published_at'] ?? $post['updated_at'] ?? 'now')) ?: time();
+        $published = (new DateTimeImmutable('@' . $stamp))->setTimezone($moscow);
         $desc = quantlab_h(quantlab_post_seo_description($post));
         $items .= "    <item>\n"
-            . '      <title>' . quantlab_h($post['title']) . "</title>\n"
+            . '      <title>' . quantlab_h((string) $post['title']) . "</title>\n"
             . '      <link>' . quantlab_h($link) . "</link>\n"
             . '      <guid isPermaLink="true">' . quantlab_h($link) . "</guid>\n"
-            . '      <pubDate>' . gmdate(DATE_RSS, $date) . "</pubDate>\n"
+            . '      <pubDate>' . $published->format(DATE_RSS) . "</pubDate>\n"
+            . "      <category>Блог</category>\n"
+            . "      <yandex:genre>article</yandex:genre>\n"
             . '      <description>' . $desc . "</description>\n"
+            . '      <yandex:full-text>' . quantlab_h($full) . "</yandex:full-text>\n"
             . "    </item>\n";
     }
+    $self = quantlab_abs_url('rss.xml');
     return '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
-        . '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n"
+        . '<rss version="2.0" xmlns:yandex="http://news.yandex.ru" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n"
         . "  <channel>\n"
         . '    <title>Блог AM QuantLab</title>' . "\n"
         . '    <link>' . quantlab_h(quantlab_abs_url('/blog/')) . "</link>\n"
         . "    <description>Статьи AM QuantLab о торговых роботах, API и финтехе</description>\n"
         . "    <language>ru</language>\n"
-        . '    <atom:link href="' . quantlab_h(quantlab_abs_url('rss.xml')) . '" rel="self" type="application/rss+xml" />' . "\n"
+        . '    <atom:link href="' . quantlab_h($self) . '" rel="self" type="application/rss+xml" />' . "\n"
         . $items
         . "  </channel>\n"
         . "</rss>\n";
@@ -888,6 +916,7 @@ function quantlab_robots_txt(): string
         . "Allow: /apple-touch-icon.png\n"
         . "Allow: /manifest.json\n"
         . "Allow: /llms.txt\n"
+        . "Allow: /rss.xml\n"
         . "Allow: /" . quantlab_indexnow_key() . ".txt\n"
         . "Disallow: /admin/\n"
         . "Disallow: /cron/\n"

@@ -2438,6 +2438,10 @@ button.parsed-stamp.is-loading {
   margin-top: 22px;
 }
 
+.home-blog-more .btn + .btn {
+  margin-left: 10px;
+}
+
 .ready-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
