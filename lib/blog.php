@@ -782,8 +782,6 @@ function quantlab_sitemap_xml(): string
         ['loc' => quantlab_abs_url('/robots/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.9'],
         ['loc' => quantlab_abs_url('/offer/'), 'lastmod' => $today, 'changefreq' => 'yearly', 'priority' => '0.4'],
         ['loc' => quantlab_abs_url('/privacy/'), 'lastmod' => $today, 'changefreq' => 'yearly', 'priority' => '0.3'],
-        ['loc' => quantlab_abs_url('rss.xml'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.4'],
-        ['loc' => quantlab_abs_url('llms.txt'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.3'],
     ];
     foreach (quantlab_blog_published() as $item) {
         $post = quantlab_blog_load($item['slug']);
