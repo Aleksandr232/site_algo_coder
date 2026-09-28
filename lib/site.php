@@ -531,7 +531,7 @@ function quantlab_render_header_nav(array $opts = []): void
     };
     ?>
         <nav class="nav" id="nav">
-          <?php $item('/robots/', 'Роботы', $active === 'robots'); ?>
+          <?php $item('/robots/', 'Продукты', $active === 'robots'); ?>
           <?php $item($p . '#case', 'Кейсы'); ?>
           <?php $item($blog, 'Блог', $active === 'blog'); ?>
           <div class="nav-more">
@@ -540,7 +540,7 @@ function quantlab_render_header_nav(array $opts = []): void
               <?php $item($p . '#markets', 'Рынки'); ?>
               <?php $item($p . '#venues', 'Площадки'); ?>
               <?php $item($p . '#stack', 'Стек'); ?>
-              <?php $item($p . '#algos', 'Продукты'); ?>
+              <?php $item($p . '#algos', 'Алгоритмы'); ?>
               <?php $item($p . '#dashboards', 'Дашборды'); ?>
               <?php $item($p . '#process', 'Процесс'); ?>
               <?php $item($p . '#author', 'Автор'); ?>
@@ -682,7 +682,7 @@ function quantlab_render_end(): void
         <p class="footer-links">
           <a href="/">Главная</a>
           <a href="/blog/">Блог</a>
-          <a href="/robots/">Роботы</a>
+          <a href="/robots/">Продукты</a>
           <a href="/#case">Кейсы</a>
           <a href="/#author">Автор</a>
           <a href="/#faq">FAQ</a>

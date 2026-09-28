@@ -26,8 +26,27 @@ function quantlab_ready_venues(): array
         'bybit' => 'Bybit',
         'okx' => 'OKX',
         'binance' => 'Binance',
+        'mql' => 'MQL4 / MQL5',
         'multi' => 'Несколько площадок',
     ];
+}
+
+function quantlab_ready_categories(): array
+{
+    return [
+        'robot' => 'Роботы',
+        'mql' => 'Утилиты MQL4/MQL5',
+    ];
+}
+
+function quantlab_ready_is_mql(array $row): bool
+{
+    return ($row['category'] ?? '') === 'mql' || ($row['venue'] ?? '') === 'mql';
+}
+
+function quantlab_ready_has_widget(array $row): bool
+{
+    return quantlab_ready_is_mql($row) && trim((string) ($row['buy_html'] ?? '')) !== '';
 }
 
 function quantlab_ready_normalize(array $row): array
@@ -36,7 +55,17 @@ function quantlab_ready_normalize(array $row): array
     if (!isset(quantlab_ready_venues()[$venue])) {
         $venue = 'finam';
     }
+    $category = (string) ($row['category'] ?? 'robot');
+    if (!isset(quantlab_ready_categories()[$category])) {
+        $category = 'robot';
+    }
     $status = (($row['status'] ?? '') === 'hidden') ? 'hidden' : 'visible';
+    $images = quantlab_ready_images_list($row['images'] ?? []);
+    $cover = trim((string) ($row['image'] ?? ''));
+    if ($cover !== '' && preg_match('#^/uploads/ready/[a-zA-Z0-9._-]+$#', $cover) && !in_array($cover, $images, true)) {
+        array_unshift($images, $cover);
+    }
+    $buyHtml = str_replace("\0", '', trim((string) ($row['buy_html'] ?? '')));
     return [
         'slug' => (string) ($row['slug'] ?? ''),
         'status' => $status,
@@ -45,7 +74,10 @@ function quantlab_ready_normalize(array $row): array
         'description' => (string) ($row['description'] ?? ''),
         'price' => (string) ($row['price'] ?? ''),
         'venue' => $venue,
-        'image' => (string) ($row['image'] ?? ''),
+        'category' => $category,
+        'image' => $images[0] ?? '',
+        'images' => $images,
+        'buy_html' => $buyHtml,
         'keywords' => (string) ($row['keywords'] ?? ''),
         'seo_title' => (string) ($row['seo_title'] ?? ''),
         'seo_description' => (string) ($row['seo_description'] ?? ''),
@@ -87,13 +119,18 @@ function quantlab_ready_write_file(array $items): void
 
 function quantlab_ready_insert_row(PDO $pdo, array $row): void
 {
+    $images = $row['images'] ?? [];
+    $imagesJson = $images
+        ? json_encode(array_values($images), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        : null;
     $st = $pdo->prepare(
-        'INSERT INTO ready_robots (slug, status, sort_order, title, description, price, venue, image, keywords, seo_title, seo_description, created_at, updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        'INSERT INTO ready_robots (slug, status, sort_order, title, description, price, venue, image, images, category, buy_html, keywords, seo_title, seo_description, created_at, updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
          ON DUPLICATE KEY UPDATE
             status=VALUES(status), sort_order=VALUES(sort_order), title=VALUES(title),
             description=VALUES(description), price=VALUES(price), venue=VALUES(venue),
-            image=VALUES(image), keywords=VALUES(keywords), seo_title=VALUES(seo_title),
+            image=VALUES(image), images=VALUES(images), category=VALUES(category),
+            buy_html=VALUES(buy_html), keywords=VALUES(keywords), seo_title=VALUES(seo_title),
             seo_description=VALUES(seo_description), updated_at=VALUES(updated_at)'
     );
     $st->execute([
@@ -105,6 +142,9 @@ function quantlab_ready_insert_row(PDO $pdo, array $row): void
         $row['price'],
         $row['venue'],
         $row['image'] !== '' ? $row['image'] : null,
+        $imagesJson,
+        $row['category'] ?? 'robot',
+        ($row['buy_html'] ?? '') !== '' ? $row['buy_html'] : null,
         $row['keywords'] !== '' ? $row['keywords'] : null,
         $row['seo_title'] !== '' ? $row['seo_title'] : null,
         $row['seo_description'] !== '' ? $row['seo_description'] : null,
@@ -182,17 +222,50 @@ function quantlab_ready_delete_image(?string $path): void
     }
 }
 
-function quantlab_ready_handle_image(?string $current, array $file, bool $remove): ?string
+function quantlab_ready_images_list($value): array
 {
-    if ($remove && $current) {
-        quantlab_ready_delete_image($current);
-        $current = null;
+    if (is_string($value)) {
+        $decoded = json_decode($value, true);
+        $value = is_array($decoded) ? $decoded : [];
     }
+    if (!is_array($value)) {
+        return [];
+    }
+    $out = [];
+    foreach ($value as $path) {
+        $path = trim((string) $path);
+        if (preg_match('#^/uploads/ready/[a-zA-Z0-9._-]+$#', $path) && !in_array($path, $out, true)) {
+            $out[] = $path;
+        }
+    }
+    return $out;
+}
+
+function quantlab_ready_split_uploads(array $files): array
+{
+    if (!isset($files['name'])) {
+        return [];
+    }
+    if (!is_array($files['name'])) {
+        return [$files];
+    }
+    $out = [];
+    foreach ($files['name'] as $i => $name) {
+        $out[] = [
+            'name' => $name,
+            'type' => $files['type'][$i] ?? '',
+            'tmp_name' => $files['tmp_name'][$i] ?? '',
+            'error' => $files['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'size' => $files['size'][$i] ?? 0,
+        ];
+    }
+    return $out;
+}
+
+function quantlab_ready_store_image(array $file): string
+{
     $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
-    if ($error === UPLOAD_ERR_NO_FILE || empty($file['tmp_name'])) {
-        return $current;
-    }
-    if ($error !== UPLOAD_ERR_OK) {
+    if ($error !== UPLOAD_ERR_OK || empty($file['tmp_name'])) {
         throw new InvalidArgumentException('Не удалось загрузить картинку');
     }
     if (($file['size'] ?? 0) > 5 * 1024 * 1024) {
@@ -223,17 +296,42 @@ function quantlab_ready_handle_image(?string $current, array $file, bool $remove
     if (!move_uploaded_file($file['tmp_name'], $dest)) {
         throw new InvalidArgumentException('Не удалось сохранить картинку');
     }
-    if ($current) {
-        quantlab_ready_delete_image($current);
-    }
     return '/uploads/ready/' . $name;
+}
+
+function quantlab_ready_collect_images(?array $row, array $files, array $remove): array
+{
+    $current = quantlab_ready_images_list(is_array($row) ? ($row['images'] ?? []) : []);
+    if ($current === [] && is_array($row) && !empty($row['image'])) {
+        $current = quantlab_ready_images_list([(string) $row['image']]);
+    }
+    $drop = array_map('strval', $remove);
+    $kept = [];
+    foreach ($current as $path) {
+        if (in_array($path, $drop, true)) {
+            quantlab_ready_delete_image($path);
+            continue;
+        }
+        $kept[] = $path;
+    }
+    foreach (quantlab_ready_split_uploads($files) as $file) {
+        $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($error === UPLOAD_ERR_NO_FILE || empty($file['tmp_name'])) {
+            continue;
+        }
+        if (count($kept) >= 8) {
+            throw new InvalidArgumentException('Не больше 8 фотографий');
+        }
+        $kept[] = quantlab_ready_store_image($file);
+    }
+    return $kept;
 }
 
 function quantlab_ready_save(array $input, ?string $currentSlug = null): array
 {
     $title = trim((string) ($input['title'] ?? ''));
     if ($title === '') {
-        throw new InvalidArgumentException('Укажите название робота');
+        throw new InvalidArgumentException('Укажите название');
     }
     $description = trim((string) ($input['description'] ?? ''));
     if ($description === '') {
@@ -247,7 +345,16 @@ function quantlab_ready_save(array $input, ?string $currentSlug = null): array
     if (!isset(quantlab_ready_venues()[$venue])) {
         throw new InvalidArgumentException('Выберите площадку');
     }
-    $image = trim((string) ($input['image'] ?? ''));
+    $category = (string) ($input['category'] ?? 'robot');
+    if (!isset(quantlab_ready_categories()[$category])) {
+        throw new InvalidArgumentException('Выберите раздел');
+    }
+    $images = quantlab_ready_images_list($input['images'] ?? []);
+    $image = $images[0] ?? '';
+    $buyHtml = str_replace("\0", '', trim((string) ($input['buy_html'] ?? '')));
+    if (strlen($buyHtml) > 20000) {
+        throw new InvalidArgumentException('HTML виджета длиннее 20 000 символов');
+    }
     $keywords = function_exists('quantlab_blog_normalize_keywords')
         ? quantlab_blog_normalize_keywords((string) ($input['keywords'] ?? ''))
         : trim((string) ($input['keywords'] ?? ''));
@@ -273,7 +380,10 @@ function quantlab_ready_save(array $input, ?string $currentSlug = null): array
         'description' => $description,
         'price' => $price,
         'venue' => $venue,
+        'category' => $category,
         'image' => $image,
+        'images' => $images,
+        'buy_html' => $buyHtml,
         'keywords' => $keywords,
         'seo_title' => $seoTitle,
         'seo_description' => $seoDescription,
@@ -334,8 +444,14 @@ function quantlab_ready_save(array $input, ?string $currentSlug = null): array
 function quantlab_ready_delete(string $slug): void
 {
     $row = quantlab_ready_load($slug);
-    if ($row && !empty($row['image'])) {
-        quantlab_ready_delete_image($row['image']);
+    if ($row) {
+        $paths = quantlab_ready_images_list($row['images'] ?? []);
+        if (!empty($row['image'])) {
+            $paths[] = (string) $row['image'];
+        }
+        foreach (array_unique($paths) as $path) {
+            quantlab_ready_delete_image($path);
+        }
     }
     quantlab_ready_remove_public_dir($slug);
     $pdo = function_exists('quantlab_db') ? quantlab_db() : null;
@@ -471,7 +587,10 @@ function quantlab_ready_seo_title(array $row): string
     if ($custom !== '') {
         return $custom;
     }
-    $title = trim((string) ($row['title'] ?? 'Торговый робот'));
+    $title = trim((string) ($row['title'] ?? 'Продукт'));
+    if (($row['category'] ?? '') === 'mql') {
+        return $title . ' — утилита MQL4/MQL5 | AM QuantLab';
+    }
     return $title . ' — готовый торговый робот | AM QuantLab';
 }
 
@@ -533,6 +652,82 @@ function quantlab_ready_url(string $slug): string
     return quantlab_public_path('robots/' . $slug);
 }
 
+function quantlab_render_ready_card(array $row, array $venues): void
+{
+    $url = quantlab_ready_url((string) $row['slug']);
+    $widget = quantlab_ready_has_widget($row);
+    $categories = quantlab_ready_categories();
+    $category = (string) ($row['category'] ?? 'robot');
+    $eyebrow = $category === 'mql'
+        ? ($categories['mql'] ?? 'Утилиты MQL4/MQL5')
+        : ($venues[$row['venue']] ?? (string) $row['venue']);
+    $image = trim((string) ($row['image'] ?? ''));
+    $href = quantlab_h($url) . ($widget ? '#buy' : '#order');
+    $cta = $widget ? 'Купить' : 'Оставить заявку';
+    ?>
+              <article class="glass pad ready-card">
+                <?php if ($image !== ''): ?>
+                  <a class="ready-card-cover" href="<?= quantlab_h($url) ?>">
+                    <img src="<?= quantlab_h($image) ?>" alt="<?= quantlab_h((string) $row['title']) ?>" />
+                  </a>
+                <?php else: ?>
+                  <a class="ready-card-cover ready-card-cover-empty" href="<?= quantlab_h($url) ?>" aria-hidden="true"></a>
+                <?php endif; ?>
+                <p class="eyebrow"><?= quantlab_h($eyebrow) ?></p>
+                <h3><a href="<?= quantlab_h($url) ?>"><?= quantlab_h((string) $row['title']) ?></a></h3>
+                <p><?= quantlab_h(quantlab_ready_seo_description($row)) ?></p>
+                <div class="ready-card-foot">
+                  <strong class="ready-price"><?= quantlab_h(quantlab_ready_price_label((string) $row['price'])) ?></strong>
+                  <a class="btn" href="<?= $href ?>"><?= quantlab_h($cta) ?></a>
+                </div>
+              </article>
+    <?php
+}
+
+function quantlab_render_ready_catalog(array $items, bool $jumps = false, string $heading = 'h2'): void
+{
+    $venues = quantlab_ready_venues();
+    $labels = quantlab_ready_categories();
+    $groups = ['robot' => [], 'mql' => []];
+    foreach ($items as $item) {
+        $key = (($item['category'] ?? '') === 'mql') ? 'mql' : 'robot';
+        $groups[$key][] = $item;
+    }
+    $tag = $heading === 'h3' ? 'h3' : 'h2';
+    if ($jumps) {
+        echo '<p class="product-jumps">';
+        foreach ($groups as $key => $rows) {
+            if (!$rows) {
+                continue;
+            }
+            echo '<a class="btn btn-ghost btn-sm" href="#product-' . quantlab_h($key) . '">' . quantlab_h($labels[$key]) . '</a>';
+        }
+        echo '</p>';
+    }
+    foreach ($groups as $key => $rows) {
+        if (!$rows) {
+            continue;
+        }
+        echo '<' . $tag . ' class="product-group-title" id="product-' . quantlab_h($key) . '">' . quantlab_h($labels[$key]) . '</' . $tag . '>';
+        echo '<div class="ready-grid">';
+        foreach ($rows as $row) {
+            quantlab_render_ready_card($row, $venues);
+        }
+        echo '</div>';
+    }
+}
+
+function quantlab_render_ready_buy(array $row): void
+{
+    ?>
+        <aside class="glass pad product-buy" id="buy">
+          <p class="eyebrow">Покупка</p>
+          <h2>Купить</h2>
+          <div class="product-buy-widget"><?= (string) $row['buy_html'] ?></div>
+        </aside>
+    <?php
+}
+
 function quantlab_render_ready_lead_form(array $row, bool $sent = false): void
 {
     $slug = quantlab_h($row['slug']);
@@ -587,14 +782,24 @@ function quantlab_render_ready_page(string $slug): void
     $description = quantlab_ready_seo_description($row);
     $url = quantlab_ready_url($slug);
     $keywords = trim((string) ($row['keywords'] ?? ''));
-    $image = trim((string) ($row['image'] ?? ''));
+    $images = quantlab_ready_images_list($row['images'] ?? []);
+    $image = $images[0] ?? trim((string) ($row['image'] ?? ''));
     $venues = quantlab_ready_venues();
+    $categories = quantlab_ready_categories();
     $venueLabel = $venues[$row['venue']] ?? $row['venue'];
+    $category = (string) ($row['category'] ?? 'robot');
+    $categoryLabel = $categories[$category] ?? 'Роботы';
+    $widget = quantlab_ready_has_widget($row);
     $sent = (string) ($_GET['sent'] ?? '') === '1';
     $priceNum = quantlab_ready_price_number((string) $row['price']);
     $related = array_values(array_filter(quantlab_ready_visible(), static function ($item) use ($slug) {
         return $item['slug'] !== $slug;
     }));
+    usort($related, static function ($a, $b) use ($category) {
+        $aSame = (($a['category'] ?? 'robot') === $category) ? 0 : 1;
+        $bSame = (($b['category'] ?? 'robot') === $category) ? 0 : 1;
+        return $aSame <=> $bSame;
+    });
     $related = array_slice($related, 0, 3);
 
     $product = [
@@ -603,7 +808,7 @@ function quantlab_render_ready_page(string $slug): void
         'description' => $description,
         'inLanguage' => 'ru-RU',
         'applicationCategory' => 'FinanceApplication',
-        'operatingSystem' => 'API',
+        'operatingSystem' => quantlab_ready_is_mql($row) ? 'MetaTrader' : 'API',
         'url' => $canonical,
         'brand' => ['@id' => quantlab_org_id()],
         'offers' => [
@@ -614,8 +819,15 @@ function quantlab_render_ready_page(string $slug): void
             'price' => $priceNum ?: '0',
         ],
     ];
-    if ($image !== '') {
-        $product['image'] = [quantlab_abs_url($image)];
+    $schemaImages = [];
+    foreach ($images as $path) {
+        $schemaImages[] = quantlab_abs_url($path);
+    }
+    if (!$schemaImages && $image !== '') {
+        $schemaImages[] = quantlab_abs_url($image);
+    }
+    if ($schemaImages) {
+        $product['image'] = $schemaImages;
     }
     if ($keywords !== '') {
         $product['keywords'] = $keywords;
@@ -644,18 +856,27 @@ function quantlab_render_ready_page(string $slug): void
       <article class="container ready-page">
         <?= quantlab_render_crumbs([
             ['name' => 'Главная', 'path' => '/'],
-            ['name' => 'Роботы', 'path' => '/robots/'],
+            ['name' => 'Продукты', 'path' => '/robots/'],
             ['name' => $row['title'], 'path' => $url],
         ]) ?>
-        <p class="eyebrow">Готовый робот · <?= quantlab_h($venueLabel) ?></p>
+        <p class="eyebrow"><?= quantlab_h($categoryLabel) ?> · <?= quantlab_h($venueLabel) ?></p>
         <h1><?= quantlab_h($row['title']) ?></h1>
         <?php if (($row['status'] ?? '') !== 'visible'): ?>
           <p class="article-meta"><span class="badge badge-warn">Скрыт</span></p>
         <?php endif; ?>
         <p class="ready-price ready-page-price"><?= quantlab_h(quantlab_ready_price_label((string) $row['price'])) ?></p>
-        <?php if ($image !== ''): ?>
-          <figure class="article-cover ready-page-cover">
-            <img src="<?= quantlab_h($image) ?>" alt="<?= quantlab_h($row['title']) ?>" loading="eager" />
+        <?php if ($images): ?>
+          <figure class="ready-gallery">
+            <img class="ready-gallery-main" id="ready-gallery-main" src="<?= quantlab_h($images[0]) ?>" alt="<?= quantlab_h($row['title']) ?>" />
+            <?php if (count($images) > 1): ?>
+              <div class="ready-gallery-thumbs">
+                <?php foreach ($images as $i => $path): ?>
+                  <button class="ready-gallery-thumb<?= $i === 0 ? ' is-active' : '' ?>" type="button" data-src="<?= quantlab_h($path) ?>">
+                    <img src="<?= quantlab_h($path) ?>" alt="<?= quantlab_h($row['title'] . ' — фото ' . ($i + 1)) ?>" />
+                  </button>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
           </figure>
         <?php endif; ?>
         <div class="ready-page-grid">
@@ -665,7 +886,7 @@ function quantlab_render_ready_page(string $slug): void
             </div>
             <?php if ($related): ?>
               <aside class="related">
-                <h2>Другие роботы</h2>
+                <h2>Другие продукты</h2>
                 <ul>
                   <?php foreach ($related as $item): ?>
                     <li>
@@ -678,9 +899,32 @@ function quantlab_render_ready_page(string $slug): void
               </aside>
             <?php endif; ?>
           </div>
-          <?php quantlab_render_ready_lead_form($row, $sent); ?>
+          <?php if ($widget): ?>
+            <?php quantlab_render_ready_buy($row); ?>
+          <?php else: ?>
+            <?php quantlab_render_ready_lead_form($row, $sent); ?>
+          <?php endif; ?>
         </div>
       </article>
+      <?php if (count($images) > 1): ?>
+      <script>
+        (function () {
+          var main = document.getElementById("ready-gallery-main");
+          if (!main) return;
+          document.querySelectorAll(".ready-gallery-thumb").forEach(function (button) {
+            button.addEventListener("click", function () {
+              var src = button.getAttribute("data-src");
+              if (!src) return;
+              main.src = src;
+              document.querySelectorAll(".ready-gallery-thumb").forEach(function (item) {
+                item.classList.toggle("is-active", item === button);
+              });
+            });
+          });
+        })();
+      </script>
+      <?php endif; ?>
+      <?php if (!$widget): ?>
       <script>
         (function () {
           var form = document.querySelector(".js-ready-form");
@@ -717,6 +961,7 @@ function quantlab_render_ready_page(string $slug): void
           });
         })();
       </script>
+      <?php endif; ?>
     <?php
     quantlab_render_end();
 }

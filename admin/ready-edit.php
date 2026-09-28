@@ -10,7 +10,7 @@ $currentSlug = trim((string) ($_GET['slug'] ?? ''));
 $row = $currentSlug !== '' ? quantlab_ready_load($currentSlug) : null;
 if ($currentSlug !== '' && !$row) {
     http_response_code(404);
-    echo 'Робот не найден';
+    echo 'Продукт не найден';
     exit;
 }
 
@@ -18,10 +18,10 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quantlab_csrf_check();
     try {
-        $image = quantlab_ready_handle_image(
-            $row['image'] ?? null,
-            $_FILES['image'] ?? [],
-            !empty($_POST['remove_image'])
+        $images = quantlab_ready_collect_images(
+            $row,
+            $_FILES['photos'] ?? [],
+            (array) ($_POST['remove_images'] ?? [])
         );
         $saved = quantlab_ready_save([
             'title' => $_POST['title'] ?? '',
@@ -29,7 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'description' => $_POST['description'] ?? '',
             'price' => $_POST['price'] ?? '',
             'venue' => $_POST['venue'] ?? 'finam',
-            'image' => $image,
+            'category' => $_POST['category'] ?? 'robot',
+            'images' => $images,
+            'buy_html' => $_POST['buy_html'] ?? '',
             'keywords' => $_POST['keywords'] ?? '',
             'seo_title' => $_POST['seo_title'] ?? '',
             'seo_description' => $_POST['seo_description'] ?? '',
@@ -40,15 +42,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     } catch (Throwable $e) {
         $error = $e->getMessage();
+        $keptImages = isset($images) && is_array($images) ? $images : null;
         $row = array_merge($row ?: [], $_POST);
         $row['status'] = !empty($_POST['visible']) ? 'visible' : 'hidden';
         $row['venue'] = (string) ($_POST['venue'] ?? 'finam');
+        $row['category'] = (string) ($_POST['category'] ?? 'robot');
+        $row['buy_html'] = (string) ($_POST['buy_html'] ?? '');
+        if ($keptImages !== null) {
+            $row['images'] = $keptImages;
+        }
     }
 }
 
 $saved = isset($_GET['saved']);
 $venues = quantlab_ready_venues();
-quantlab_admin_start(($row ? 'Робот' : 'Новый робот') . ' — админка AM QuantLab');
+$categories = quantlab_ready_categories();
+$photos = quantlab_ready_images_list(is_array($row) ? ($row['images'] ?? []) : []);
+if (!$photos && is_array($row) && !empty($row['image'])) {
+    $photos = quantlab_ready_images_list([(string) $row['image']]);
+}
+quantlab_admin_start(($row ? 'Продукт' : 'Новый продукт') . ' — админка AM QuantLab');
 $slugJs = <<<'JS'
 (function () {
   var map = {а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ё:"e",ж:"zh",з:"z",и:"i",й:"j",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"c",ч:"ch",ш:"sh",щ:"sch",ъ:"",ы:"y",ь:"",э:"e",ю:"yu",я:"ya"};
@@ -73,19 +86,30 @@ $slugJs = <<<'JS'
     sync();
   });
   sync();
+  var category = document.querySelector("[name=category]");
+  var venue = document.querySelector("[name=venue]");
+  var buy = document.getElementById("buy-html-field");
+  function toggleBuy() {
+    if (!buy) return;
+    var on = (category && category.value === "mql") || (venue && venue.value === "mql");
+    buy.hidden = !on;
+  }
+  if (category) category.addEventListener("change", toggleBuy);
+  if (venue) venue.addEventListener("change", toggleBuy);
+  toggleBuy();
 })();
 JS;
 ?>
         <?= quantlab_render_crumbs([
             ['name' => 'Главная', 'path' => '/'],
             ['name' => 'Админка', 'path' => '/admin/'],
-            ['name' => 'Роботы', 'path' => '/admin/ready.php'],
+            ['name' => 'Продукты', 'path' => '/admin/ready.php'],
             ['name' => $row ? 'Правка' : 'Новый', 'path' => '/admin/ready-edit.php'],
         ]) ?>
         <div class="admin-head">
           <div>
             <p class="eyebrow">Админка</p>
-            <h1><?= $row ? 'Редактирование робота' : 'Новый робот' ?></h1>
+            <h1><?= $row ? 'Редактирование продукта' : 'Новый продукт' ?></h1>
             <?= quantlab_admin_storage_note() ?>
           </div>
           <a class="btn btn-ghost" href="/admin/ready.php">К списку</a>
@@ -112,6 +136,15 @@ JS;
             <span class="field-hint">Адрес: <strong id="slug-preview">/robots/slug/</strong></span>
           </label>
           <label>
+            Раздел
+            <select name="category">
+              <?php foreach ($categories as $key => $label): ?>
+                <option value="<?= quantlab_h($key) ?>" <?= (($row['category'] ?? 'robot') === $key) ? 'selected' : '' ?>><?= quantlab_h($label) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <span class="field-hint">Роботы идут в свой блок каталога, утилиты MQL4/MQL5 — в свой.</span>
+          </label>
+          <label>
             Площадка
             <select name="venue">
               <?php foreach ($venues as $key => $label): ?>
@@ -126,7 +159,7 @@ JS;
           </label>
           <label>
             Описание
-            <textarea name="description" rows="8" required placeholder="Что делает робот, инструмент, риск. Абзацы с пустой строки — на странице будут отдельными."><?= quantlab_h($row['description'] ?? '') ?></textarea>
+            <textarea name="description" rows="8" required placeholder="Что делает продукт, инструмент, риск. Абзацы с пустой строки — на странице будут отдельными."><?= quantlab_h($row['description'] ?? '') ?></textarea>
           </label>
           <label>
             Title для поиска
@@ -142,19 +175,28 @@ JS;
             <input type="text" name="keywords" value="<?= quantlab_h($row['keywords'] ?? '') ?>" placeholder="торговый робот, юань, мосбиржа, финам" />
           </label>
           <label>
-            Картинка робота
-            <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" />
-            <span class="field-hint">JPG, PNG, WEBP или GIF, до 5 МБ. Показывается на карточке.</span>
+            Фотографии
+            <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
+            <span class="field-hint">До 8 штук. JPG, PNG, WEBP или GIF, каждая до 5 МБ. Первая в списке — обложка карточки.</span>
           </label>
-          <?php if (!empty($row['image'])): ?>
-            <div class="cover-preview">
-              <img src="<?= quantlab_h($row['image']) ?>" alt="" />
-              <label class="check-row">
-                <input type="checkbox" name="remove_image" value="1" />
-                Удалить картинку
-              </label>
+          <?php if ($photos): ?>
+            <div class="cover-preview-list">
+              <?php foreach ($photos as $i => $path): ?>
+                <div class="cover-preview">
+                  <img src="<?= quantlab_h($path) ?>" alt="" />
+                  <label class="check-row">
+                    <input type="checkbox" name="remove_images[]" value="<?= quantlab_h($path) ?>" />
+                    Удалить<?= $i === 0 ? ' (обложка)' : '' ?>
+                  </label>
+                </div>
+              <?php endforeach; ?>
             </div>
           <?php endif; ?>
+          <label id="buy-html-field" <?= quantlab_ready_is_mql($row ?: ['category' => 'robot', 'venue' => 'finam']) ? '' : 'hidden' ?>>
+            HTML-виджет покупки
+            <textarea name="buy_html" rows="8" placeholder="<script src=&quot;...&quot;></script> или iframe виджета"><?= quantlab_h($row['buy_html'] ?? '') ?></textarea>
+            <span class="field-hint">Для MQL: и робот, и утилита. Код вставляется как есть. На сайте вместо «Оставить заявку» будет блок «Купить» с этим виджетом.</span>
+          </label>
           <label>
             Порядок
             <input type="number" name="sort_order" value="<?= quantlab_h((string) ($row['sort_order'] ?? 10)) ?>" />

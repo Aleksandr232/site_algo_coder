@@ -27,27 +27,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $items = quantlab_ready_all();
 $venues = quantlab_ready_venues();
-quantlab_admin_start('Готовые роботы — админка AM QuantLab');
+$categories = quantlab_ready_categories();
+quantlab_admin_start('Продукты — админка AM QuantLab');
 ?>
         <?= quantlab_render_crumbs([
             ['name' => 'Главная', 'path' => '/'],
             ['name' => 'Админка', 'path' => '/admin/'],
-            ['name' => 'Роботы', 'path' => '/admin/ready.php'],
+            ['name' => 'Продукты', 'path' => '/admin/ready.php'],
         ]) ?>
         <div class="admin-head">
           <div>
             <p class="eyebrow">Админка</p>
-            <h1>Готовые роботы</h1>
-            <p class="lead">Карточка на главной и отдельная страница /robots/слаг/ для поиска. Заявка приходит на почту.</p>
+            <h1>Продукты</h1>
+            <p class="lead">Разделы «Роботы» и «Утилиты MQL4/MQL5». Для MQL вместо заявки вставляется HTML-виджет покупки.</p>
             <?= quantlab_admin_storage_note() ?>
             <?= quantlab_admin_mail_note() ?>
           </div>
-          <a class="btn" href="/admin/ready-edit.php">Новый робот</a>
+          <a class="btn" href="/admin/ready-edit.php">Новый продукт</a>
         </div>
 
         <?php if (!$items): ?>
           <div class="glass pad empty-blog">
-            <p>Роботов нет. Добавьте название, описание, цену и картинку — карточка появится на сайте.</p>
+            <p>Продуктов нет. Добавьте название, раздел, описание, цену и фото — карточка появится на сайте.</p>
           </div>
         <?php else: ?>
           <div class="admin-table glass">
@@ -56,6 +57,7 @@ quantlab_admin_start('Готовые роботы — админка AM QuantLab
                 <tr>
                   <th></th>
                   <th>Название</th>
+                  <th>Раздел</th>
                   <th>Цена</th>
                   <th>Статус</th>
                   <th></th>
@@ -75,6 +77,7 @@ quantlab_admin_start('Готовые роботы — админка AM QuantLab
                       <strong><?= quantlab_h($item['title']) ?></strong><br />
                       <span class="field-hint"><?= quantlab_h($venues[$item['venue']] ?? $item['venue']) ?></span>
                     </td>
+                    <td><?= quantlab_h($categories[$item['category'] ?? 'robot'] ?? 'Роботы') ?></td>
                     <td><?= quantlab_h(quantlab_ready_price_label((string) $item['price'])) ?></td>
                     <td>
                       <span class="badge <?= $item['status'] === 'visible' ? 'badge-ok' : 'badge-warn' ?>">
@@ -104,7 +107,7 @@ quantlab_admin_start('Готовые роботы — админка AM QuantLab
                         <input type="hidden" name="action" value="<?= $item['status'] === 'visible' ? 'hide' : 'show' ?>" />
                         <button type="submit" class="linkish"><?= $item['status'] === 'visible' ? 'Скрыть' : 'Показать' ?></button>
                       </form>
-                      <form method="post" onsubmit="return confirm('Удалить робота с витрины?');">
+                      <form method="post" onsubmit="return confirm('Удалить продукт с витрины?');">
                         <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
                         <input type="hidden" name="slug" value="<?= quantlab_h($item['slug']) ?>" />
                         <input type="hidden" name="action" value="delete" />

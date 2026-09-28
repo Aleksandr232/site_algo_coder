@@ -7,7 +7,6 @@ require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . '
 quantlab_write_seo_files();
 $canonical = quantlab_enforce_canonical('robots');
 $items = quantlab_ready_visible();
-$venues = quantlab_ready_venues();
 
 $list = [];
 foreach ($items as $i => $item) {
@@ -21,8 +20,8 @@ foreach ($items as $i => $item) {
 $extra = quantlab_json_ld([
     '@context' => 'https://schema.org',
     '@type' => 'CollectionPage',
-    'name' => 'Готовые торговые роботы — AM QuantLab',
-    'description' => 'Каталог готовых торговых роботов AM QuantLab. Описание, цена и заявка на подключение.',
+    'name' => 'Продукты — роботы и утилиты MQL — AM QuantLab',
+    'description' => 'Каталог продуктов AM QuantLab: готовые роботы и утилиты MQL4/MQL5. Цена, заявка или виджет покупки.',
     'inLanguage' => 'ru-RU',
     'url' => $canonical,
     'isPartOf' => ['@id' => quantlab_org_id()],
@@ -33,9 +32,9 @@ $extra = quantlab_json_ld([
 ]);
 
 quantlab_render_start([
-    'title' => 'Готовые торговые роботы — AM QuantLab',
-    'description' => 'Готовые торговые роботы AM QuantLab под Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Цена на странице, заявка уходит на почту.',
-    'keywords' => 'готовые торговые роботы, купить торгового робота, робот для мосбиржи, робот bybit',
+    'title' => 'Продукты — роботы и утилиты MQL4/MQL5 — AM QuantLab',
+    'description' => 'Продукты AM QuantLab: готовые роботы под Финам, Тинькофф, Bybit, OKX и Binance и утилиты MQL4/MQL5. Цена на странице, заявка или виджет покупки.',
+    'keywords' => 'готовые торговые роботы, утилиты mql5, купить советник mql4, робот для мосбиржи',
     'canonical' => $canonical,
     'active' => 'robots',
     'body_class' => 'page-inner page-ready-list',
@@ -45,38 +44,18 @@ quantlab_render_start([
       <div class="container">
         <?= quantlab_render_crumbs([
             ['name' => 'Главная', 'path' => '/'],
-            ['name' => 'Роботы', 'path' => '/robots/'],
+            ['name' => 'Продукты', 'path' => '/robots/'],
         ]) ?>
         <p class="eyebrow">Каталог</p>
-        <h1>Готовые торговые роботы</h1>
-        <p class="lead">У каждого робота своя страница: описание, цена и форма заявки. Если клиент оставит почту — письмо уйдёт и ему, и нам.</p>
+        <h1>Продукты</h1>
+        <p class="lead">Два раздела: роботы с заявкой и утилиты MQL4/MQL5. Для MQL на странице стоит виджет покупки вместо формы.</p>
 
         <?php if (!$items): ?>
           <div class="glass pad empty-blog">
-            <p>Пока нет опубликованных роботов. Можно оставить заявку на кастомную разработку на <a href="/#contact">главной</a>.</p>
+            <p>Пока нет опубликованных продуктов. Можно оставить заявку на кастомную разработку на <a href="/#contact">главной</a>.</p>
           </div>
         <?php else: ?>
-          <div class="ready-grid">
-            <?php foreach ($items as $robot): ?>
-              <?php $url = quantlab_ready_url($robot['slug']); ?>
-              <article class="glass pad ready-card">
-                <?php if ($robot['image'] !== ''): ?>
-                  <a class="ready-card-cover" href="<?= quantlab_h($url) ?>">
-                    <img src="<?= quantlab_h($robot['image']) ?>" alt="<?= quantlab_h($robot['title']) ?>" />
-                  </a>
-                <?php else: ?>
-                  <a class="ready-card-cover ready-card-cover-empty" href="<?= quantlab_h($url) ?>" aria-hidden="true"></a>
-                <?php endif; ?>
-                <p class="eyebrow"><?= quantlab_h($venues[$robot['venue']] ?? $robot['venue']) ?></p>
-                <h2><a href="<?= quantlab_h($url) ?>"><?= quantlab_h($robot['title']) ?></a></h2>
-                <p><?= quantlab_h(quantlab_ready_seo_description($robot)) ?></p>
-                <div class="ready-card-foot">
-                  <strong class="ready-price"><?= quantlab_h(quantlab_ready_price_label((string) $robot['price'])) ?></strong>
-                  <a class="btn" href="<?= quantlab_h($url) ?>#order">Оставить заявку</a>
-                </div>
-              </article>
-            <?php endforeach; ?>
-          </div>
+          <?php quantlab_render_ready_catalog($items, true); ?>
         <?php endif; ?>
       </div>
 <?php

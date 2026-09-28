@@ -211,6 +211,9 @@ function quantlab_db_migrate(PDO $pdo): void
             price VARCHAR(120) NOT NULL,
             venue VARCHAR(64) NULL,
             image VARCHAR(500) NULL,
+            images TEXT NULL,
+            category VARCHAR(32) NOT NULL DEFAULT \'robot\',
+            buy_html MEDIUMTEXT NULL,
             keywords VARCHAR(1000) NULL,
             seo_title VARCHAR(500) NULL,
             seo_description VARCHAR(1000) NULL,
@@ -227,6 +230,9 @@ function quantlab_db_migrate(PDO $pdo): void
         quantlab_db_ensure_column($pdo, 'ready_robots', 'keywords', 'keywords VARCHAR(1000) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_title', 'seo_title VARCHAR(500) NULL');
         quantlab_db_ensure_column($pdo, 'ready_robots', 'seo_description', 'seo_description VARCHAR(1000) NULL');
+        quantlab_db_ensure_column($pdo, 'ready_robots', 'category', "category VARCHAR(32) NOT NULL DEFAULT 'robot'");
+        quantlab_db_ensure_column($pdo, 'ready_robots', 'images', 'images TEXT NULL');
+        quantlab_db_ensure_column($pdo, 'ready_robots', 'buy_html', 'buy_html MEDIUMTEXT NULL');
         quantlab_db_ensure_column($pdo, 'strategies', 'bybit_market', 'bybit_market VARCHAR(16) NULL');
         quantlab_db_ensure_column($pdo, 'strategies', 'since_date', 'since_date DATE NULL');
         quantlab_db_ensure_column($pdo, 'strategies', 'start_balance', 'start_balance VARCHAR(32) NULL');
