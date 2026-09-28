@@ -39,7 +39,7 @@ quantlab_admin_start('Продукты — админка AM QuantLab');
           <div>
             <p class="eyebrow">Админка</p>
             <h1>Продукты</h1>
-            <p class="lead">Разделы «Роботы» и «Утилиты MQL4/MQL5». Для MQL вместо заявки вставляется HTML-виджет покупки.</p>
+            <p class="lead">Разделы «Роботы», «Индикаторы MQL4/MQL5» и «Утилиты MQL4/MQL5». Для индикаторов и утилит вместо заявки вставляется HTML-виджет покупки.</p>
             <?= quantlab_admin_storage_note() ?>
             <?= quantlab_admin_mail_note() ?>
           </div>

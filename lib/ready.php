@@ -35,13 +35,15 @@ function quantlab_ready_categories(): array
 {
     return [
         'robot' => 'Роботы',
+        'indicator' => 'Индикаторы MQL4/MQL5',
         'mql' => 'Утилиты MQL4/MQL5',
     ];
 }
 
 function quantlab_ready_is_mql(array $row): bool
 {
-    return ($row['category'] ?? '') === 'mql' || ($row['venue'] ?? '') === 'mql';
+    $category = (string) ($row['category'] ?? '');
+    return $category === 'mql' || $category === 'indicator' || ($row['venue'] ?? '') === 'mql';
 }
 
 function quantlab_ready_has_widget(array $row): bool
@@ -608,6 +610,9 @@ function quantlab_ready_seo_title(array $row): string
         return $custom;
     }
     $title = trim((string) ($row['title'] ?? 'Продукт'));
+    if (($row['category'] ?? '') === 'indicator') {
+        return $title . ' — индикатор MQL4/MQL5 | AM QuantLab';
+    }
     if (($row['category'] ?? '') === 'mql') {
         return $title . ' — утилита MQL4/MQL5 | AM QuantLab';
     }
@@ -678,8 +683,8 @@ function quantlab_render_ready_card(array $row, array $venues): void
     $widget = quantlab_ready_has_widget($row);
     $categories = quantlab_ready_categories();
     $category = (string) ($row['category'] ?? 'robot');
-    $eyebrow = $category === 'mql'
-        ? ($categories['mql'] ?? 'Утилиты MQL4/MQL5')
+    $eyebrow = ($category === 'mql' || $category === 'indicator')
+        ? ($categories[$category] ?? 'MQL4/MQL5')
         : ($venues[$row['venue']] ?? (string) $row['venue']);
     $image = trim((string) ($row['image'] ?? ''));
     $href = quantlab_h($url) . ($widget ? '#buy' : '#order');
@@ -708,9 +713,15 @@ function quantlab_render_ready_catalog(array $items, bool $jumps = false, string
 {
     $venues = quantlab_ready_venues();
     $labels = quantlab_ready_categories();
-    $groups = ['robot' => [], 'mql' => []];
+    $groups = [];
+    foreach (array_keys($labels) as $key) {
+        $groups[$key] = [];
+    }
     foreach ($items as $item) {
-        $key = (($item['category'] ?? '') === 'mql') ? 'mql' : 'robot';
+        $key = (string) ($item['category'] ?? 'robot');
+        if (!isset($groups[$key])) {
+            $key = 'robot';
+        }
         $groups[$key][] = $item;
     }
     $tag = $heading === 'h3' ? 'h3' : 'h2';

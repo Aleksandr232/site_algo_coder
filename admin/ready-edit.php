@@ -100,7 +100,7 @@ $slugJs = <<<'JS'
   var buy = document.getElementById("buy-html-field");
   function toggleBuy() {
     if (!buy) return;
-    var on = (category && category.value === "mql") || (venue && venue.value === "mql");
+    var on = (category && (category.value === "mql" || category.value === "indicator")) || (venue && venue.value === "mql");
     buy.hidden = !on;
   }
   if (category) category.addEventListener("change", toggleBuy);
@@ -170,7 +170,7 @@ JS;
                 <option value="<?= quantlab_h($key) ?>" <?= (($row['category'] ?? 'robot') === $key) ? 'selected' : '' ?>><?= quantlab_h($label) ?></option>
               <?php endforeach; ?>
             </select>
-            <span class="field-hint">Роботы идут в свой блок каталога, утилиты MQL4/MQL5 — в свой.</span>
+            <span class="field-hint">Роботы, индикаторы и утилиты MQL4/MQL5 идут отдельными блоками каталога.</span>
           </label>
           <label>
             Площадка
@@ -231,7 +231,7 @@ JS;
           <label id="buy-html-field" <?= quantlab_ready_is_mql($row ?: ['category' => 'robot', 'venue' => 'finam']) ? '' : 'hidden' ?>>
             HTML-виджет покупки
             <textarea name="buy_html" rows="8" placeholder="<script src=&quot;...&quot;></script> или iframe виджета"><?= quantlab_h($row['buy_html'] ?? '') ?></textarea>
-            <span class="field-hint">Для MQL: и робот, и утилита. Код вставляется как есть. На сайте вместо «Оставить заявку» будет блок «Купить» с этим виджетом.</span>
+            <span class="field-hint">Для индикаторов и утилит MQL4/MQL5. Код вставляется как есть. На сайте вместо «Оставить заявку» будет блок «Купить» с этим виджетом.</span>
           </label>
           <label>
             Порядок

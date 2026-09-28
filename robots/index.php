@@ -20,8 +20,8 @@ foreach ($items as $i => $item) {
 $extra = quantlab_json_ld([
     '@context' => 'https://schema.org',
     '@type' => 'CollectionPage',
-    'name' => 'Продукты — роботы и утилиты MQL — AM QuantLab',
-    'description' => 'Каталог продуктов AM QuantLab: готовые роботы и утилиты MQL4/MQL5. Цена, заявка или виджет покупки.',
+    'name' => 'Продукты — роботы, индикаторы и утилиты MQL — AM QuantLab',
+    'description' => 'Каталог продуктов AM QuantLab: готовые роботы, индикаторы и утилиты MQL4/MQL5. Цена, заявка или виджет покупки.',
     'inLanguage' => 'ru-RU',
     'url' => $canonical,
     'isPartOf' => ['@id' => quantlab_org_id()],
@@ -32,9 +32,9 @@ $extra = quantlab_json_ld([
 ]);
 
 quantlab_render_start([
-    'title' => 'Продукты — роботы и утилиты MQL4/MQL5 — AM QuantLab',
-    'description' => 'Продукты AM QuantLab: готовые роботы под Финам, Тинькофф, Bybit, OKX и Binance и утилиты MQL4/MQL5. Цена на странице, заявка или виджет покупки.',
-    'keywords' => 'готовые торговые роботы, утилиты mql5, купить советник mql4, робот для мосбиржи',
+    'title' => 'Продукты — роботы, индикаторы и утилиты MQL4/MQL5 — AM QuantLab',
+    'description' => 'Продукты AM QuantLab: готовые роботы под Финам, Тинькофф, Bybit, OKX и Binance, индикаторы и утилиты MQL4/MQL5. Цена на странице, заявка или виджет покупки.',
+    'keywords' => 'готовые торговые роботы, индикаторы mql5, индикаторы mql4, утилиты mql5, купить советник mql4, робот для мосбиржи',
     'canonical' => $canonical,
     'active' => 'robots',
     'body_class' => 'page-inner page-ready-list',
@@ -48,7 +48,7 @@ quantlab_render_start([
         ]) ?>
         <p class="eyebrow">Каталог</p>
         <h1>Продукты</h1>
-        <p class="lead">Два раздела: роботы с заявкой и утилиты MQL4/MQL5. Для MQL на странице стоит виджет покупки вместо формы.</p>
+        <p class="lead">Три раздела: роботы с заявкой, индикаторы и утилиты MQL4/MQL5. Для индикаторов и утилит на странице стоит виджет покупки вместо формы.</p>
 
         <?php if (!$items): ?>
           <div class="glass pad empty-blog">
