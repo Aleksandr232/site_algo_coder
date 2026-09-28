@@ -895,58 +895,21 @@ function quantlab_rss_xml(): string
 
 function quantlab_robots_txt(): string
 {
-    $host = parse_url(quantlab_site_url(), PHP_URL_HOST) ?: '';
-    $deny = "Allow: /\n"
-        . "Allow: /blog/\n"
-        . "Allow: /robots/\n"
-        . "Allow: /offer/\n"
-        . "Allow: /privacy/\n"
-        . "Allow: /uploads/\n"
-        . "Allow: /favicon.ico\n"
-        . "Allow: /favicon.svg\n"
-        . "Allow: /favicon.png\n"
-        . "Allow: /favicon-16.png\n"
-        . "Allow: /favicon-32.png\n"
-        . "Allow: /favicon-48.png\n"
-        . "Allow: /favicon-96.png\n"
-        . "Allow: /favicon-120.png\n"
-        . "Allow: /favicon-512.png\n"
-        . "Allow: /apple-touch-icon.png\n"
-        . "Allow: /manifest.json\n"
-        . "Allow: /llms.txt\n"
-        . "Allow: /rss.xml\n"
-        . "Allow: /" . quantlab_indexnow_key() . ".txt\n"
-        . "Disallow: /admin/\n"
+    $deny = "Disallow: /admin/\n"
         . "Disallow: /cron/\n"
         . "Disallow: /lib/\n"
         . "Disallow: /api/\n"
         . "Disallow: /install.php\n"
         . "Disallow: /data/blog/\n"
         . "Disallow: /router.php\n";
-    $googleAgents = [
-        'Googlebot',
-        'Googlebot-Image',
-        'Google-Extended',
-        'GoogleOther',
-        'Google-CloudVertexBot',
-        'Storebot-Google',
-    ];
-    $txt = "User-agent: *\n" . $deny . "\n";
-    foreach ($googleAgents as $agent) {
-        $txt .= 'User-agent: ' . $agent . "\n" . $deny . "\n";
-    }
-    foreach (['Yandex', 'YandexBot', 'YandexFavicon', 'YandexImages', 'YandexMobileBot'] as $agent) {
-        $txt .= 'User-agent: ' . $agent . "\n" . $deny;
-        if ($agent === 'Yandex' || $agent === 'YandexBot') {
-            $txt .= "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&fbclid\n";
-        }
-        if ($host !== '' && ($agent === 'Yandex' || $agent === 'YandexBot')) {
-            $txt .= 'Host: ' . $host . "\n";
-        }
-        $txt .= "\n";
-    }
-    $txt .= 'Sitemap: ' . quantlab_abs_url('sitemap.xml') . "\n";
-    return $txt;
+    return "User-agent: *\n"
+        . $deny
+        . "\n"
+        . "User-agent: Yandex\n"
+        . $deny
+        . "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&ysclid&gclid&fbclid /\n"
+        . "\n"
+        . 'Sitemap: ' . quantlab_abs_url('sitemap.xml') . "\n";
 }
 
 function quantlab_write_seo_files(): void
