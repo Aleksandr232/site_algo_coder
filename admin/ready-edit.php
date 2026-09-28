@@ -15,6 +15,7 @@ if ($currentSlug !== '' && !$row) {
 }
 
 $error = '';
+$cover = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quantlab_csrf_check();
     try {
@@ -23,6 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_FILES['photos'] ?? [],
             (array) ($_POST['remove_images'] ?? [])
         );
+        $cover = trim((string) ($_POST['cover'] ?? ''));
+        if (!in_array($cover, $images, true)) {
+            $previous = is_array($row) ? trim((string) ($row['image'] ?? '')) : '';
+            $cover = in_array($previous, $images, true) ? $previous : ($images[0] ?? '');
+        }
         $saved = quantlab_ready_save([
             'title' => $_POST['title'] ?? '',
             'slug' => $_POST['slug'] ?? '',
@@ -30,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'price' => $_POST['price'] ?? '',
             'venue' => $_POST['venue'] ?? 'finam',
             'category' => $_POST['category'] ?? 'robot',
+            'image' => $cover,
             'images' => $images,
             'buy_html' => $_POST['buy_html'] ?? '',
             'keywords' => $_POST['keywords'] ?? '',
@@ -50,6 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row['buy_html'] = (string) ($_POST['buy_html'] ?? '');
         if ($keptImages !== null) {
             $row['images'] = $keptImages;
+            $row['image'] = in_array($cover, $keptImages, true) ? $cover : ($keptImages[0] ?? '');
         }
     }
 }
@@ -61,6 +69,7 @@ $photos = quantlab_ready_images_list(is_array($row) ? ($row['images'] ?? []) : [
 if (!$photos && is_array($row) && !empty($row['image'])) {
     $photos = quantlab_ready_images_list([(string) $row['image']]);
 }
+$cover = quantlab_ready_cover_path($photos, is_array($row) ? (string) ($row['image'] ?? '') : '');
 quantlab_admin_start(($row ? 'Продукт' : 'Новый продукт') . ' — админка AM QuantLab');
 $slugJs = <<<'JS'
 (function () {
@@ -97,6 +106,25 @@ $slugJs = <<<'JS'
   if (category) category.addEventListener("change", toggleBuy);
   if (venue) venue.addEventListener("change", toggleBuy);
   toggleBuy();
+  document.querySelectorAll('input[name="cover"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      document.querySelectorAll(".cover-preview").forEach(function (card) {
+        var input = card.querySelector('input[name="cover"]');
+        var on = input === radio;
+        card.classList.toggle("is-cover", on);
+        var badge = card.querySelector(".badge");
+        if (on && !badge) {
+          badge = document.createElement("span");
+          badge.className = "badge badge-ok";
+          badge.textContent = "Обложка";
+          var img = card.querySelector("img");
+          if (img) img.insertAdjacentElement("afterend", badge);
+        } else if (!on && badge) {
+          badge.remove();
+        }
+      });
+    });
+  });
 })();
 JS;
 ?>
@@ -177,16 +205,24 @@ JS;
           <label>
             Фотографии
             <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp,image/gif" multiple />
-            <span class="field-hint">До 8 штук. JPG, PNG, WEBP или GIF, каждая до 5 МБ. Первая в списке — обложка карточки.</span>
+            <span class="field-hint">До 8 штук. JPG, PNG, WEBP или GIF, каждая до 5 МБ. Новые снимки добавятся после сохранения. Затем отметьте, какая фотография будет обложкой карточки и страницы.</span>
           </label>
           <?php if ($photos): ?>
             <div class="cover-preview-list">
-              <?php foreach ($photos as $i => $path): ?>
-                <div class="cover-preview">
+              <?php foreach ($photos as $path): ?>
+                <?php $isCover = $path === $cover; ?>
+                <div class="cover-preview<?= $isCover ? ' is-cover' : '' ?>">
                   <img src="<?= quantlab_h($path) ?>" alt="" />
+                  <?php if ($isCover): ?>
+                    <span class="badge badge-ok">Обложка</span>
+                  <?php endif; ?>
+                  <label class="check-row">
+                    <input type="radio" name="cover" value="<?= quantlab_h($path) ?>" <?= $isCover ? 'checked' : '' ?> />
+                    Сделать обложкой
+                  </label>
                   <label class="check-row">
                     <input type="checkbox" name="remove_images[]" value="<?= quantlab_h($path) ?>" />
-                    Удалить<?= $i === 0 ? ' (обложка)' : '' ?>
+                    Удалить
                   </label>
                 </div>
               <?php endforeach; ?>

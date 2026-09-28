@@ -61,10 +61,11 @@ function quantlab_ready_normalize(array $row): array
     }
     $status = (($row['status'] ?? '') === 'hidden') ? 'hidden' : 'visible';
     $images = quantlab_ready_images_list($row['images'] ?? []);
-    $cover = trim((string) ($row['image'] ?? ''));
-    if ($cover !== '' && preg_match('#^/uploads/ready/[a-zA-Z0-9._-]+$#', $cover) && !in_array($cover, $images, true)) {
-        array_unshift($images, $cover);
+    $rawCover = trim((string) ($row['image'] ?? ''));
+    if ($rawCover !== '' && preg_match('#^/uploads/ready/[a-zA-Z0-9._-]+$#', $rawCover) && !in_array($rawCover, $images, true)) {
+        array_unshift($images, $rawCover);
     }
+    $cover = quantlab_ready_cover_path($images, $rawCover);
     $buyHtml = str_replace("\0", '', trim((string) ($row['buy_html'] ?? '')));
     return [
         'slug' => (string) ($row['slug'] ?? ''),
@@ -75,7 +76,7 @@ function quantlab_ready_normalize(array $row): array
         'price' => (string) ($row['price'] ?? ''),
         'venue' => $venue,
         'category' => $category,
-        'image' => $images[0] ?? '',
+        'image' => $cover,
         'images' => $images,
         'buy_html' => $buyHtml,
         'keywords' => (string) ($row['keywords'] ?? ''),
@@ -222,6 +223,25 @@ function quantlab_ready_delete_image(?string $path): void
     }
 }
 
+function quantlab_ready_cover_path(array $images, string $cover): string
+{
+    $cover = trim($cover);
+    if ($cover !== '' && in_array($cover, $images, true)) {
+        return $cover;
+    }
+    return $images[0] ?? '';
+}
+
+function quantlab_ready_gallery_images(array $row): array
+{
+    $images = quantlab_ready_images_list($row['images'] ?? []);
+    $cover = trim((string) ($row['image'] ?? ''));
+    if ($cover !== '' && in_array($cover, $images, true)) {
+        return array_values(array_unique(array_merge([$cover], $images)));
+    }
+    return $images;
+}
+
 function quantlab_ready_images_list($value): array
 {
     if (is_string($value)) {
@@ -350,7 +370,7 @@ function quantlab_ready_save(array $input, ?string $currentSlug = null): array
         throw new InvalidArgumentException('Выберите раздел');
     }
     $images = quantlab_ready_images_list($input['images'] ?? []);
-    $image = $images[0] ?? '';
+    $image = quantlab_ready_cover_path($images, (string) ($input['image'] ?? ''));
     $buyHtml = str_replace("\0", '', trim((string) ($input['buy_html'] ?? '')));
     if (strlen($buyHtml) > 20000) {
         throw new InvalidArgumentException('HTML виджета длиннее 20 000 символов');
@@ -782,7 +802,7 @@ function quantlab_render_ready_page(string $slug): void
     $description = quantlab_ready_seo_description($row);
     $url = quantlab_ready_url($slug);
     $keywords = trim((string) ($row['keywords'] ?? ''));
-    $images = quantlab_ready_images_list($row['images'] ?? []);
+    $images = quantlab_ready_gallery_images($row);
     $image = $images[0] ?? trim((string) ($row['image'] ?? ''));
     $venues = quantlab_ready_venues();
     $categories = quantlab_ready_categories();

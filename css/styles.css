@@ -2607,6 +2607,12 @@ button.parsed-stamp.is-loading {
   object-fit: cover;
 }
 
+.cover-preview.is-cover {
+  padding: 8px;
+  border-radius: 16px;
+  outline: 1px solid var(--accent);
+}
+
 .ready-order-meta {
   display: flex;
   flex-wrap: wrap;
