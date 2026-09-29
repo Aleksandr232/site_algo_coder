@@ -402,7 +402,7 @@ foreach ($posts as $i => $item) {
             <h2>Можно взять уже собранное</h2>
             <p>Роботы, индикаторы и утилиты MQL4/MQL5.</p>
           </div>
-          <?php quantlab_render_ready_catalog($readyRobots, false, 'h3'); ?>
+          <?php quantlab_render_ready_home($readyRobots); ?>
           <p class="home-blog-more"><a class="btn btn-ghost" href="/robots/">Все продукты</a></p>
         </div>
       </section>

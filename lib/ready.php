@@ -765,6 +765,90 @@ function quantlab_render_ready_catalog(array $items, bool $jumps = false, string
     }
 }
 
+function quantlab_render_ready_home(array $items): void
+{
+    $venues = quantlab_ready_venues();
+    $labels = quantlab_ready_categories();
+    $groups = [];
+    foreach (array_keys($labels) as $key) {
+        $groups[$key] = [];
+    }
+    foreach ($items as $item) {
+        $key = (string) ($item['category'] ?? 'robot');
+        if (!isset($groups[$key])) {
+            $key = 'robot';
+        }
+        $groups[$key][] = $item;
+    }
+    $groups = array_filter($groups);
+    if (!$groups) {
+        return;
+    }
+    $first = (string) array_key_first($groups);
+    echo '<div class="product-home" data-product-home>';
+    echo '<div class="product-tabs" role="tablist">';
+    foreach ($groups as $key => $rows) {
+        $on = $key === $first;
+        echo '<button type="button" class="product-tab' . ($on ? ' is-active' : '') . '" role="tab" aria-selected="' . ($on ? 'true' : 'false') . '" data-product-tab="' . quantlab_h((string) $key) . '">' . quantlab_h($labels[$key]) . '</button>';
+    }
+    echo '</div>';
+    foreach ($groups as $key => $rows) {
+        $pages = (int) ceil(count($rows) / 3);
+        echo '<div class="product-panel"' . ($key === $first ? '' : ' hidden') . ' data-product-panel="' . quantlab_h((string) $key) . '">';
+        echo '<div class="ready-grid">';
+        foreach ($rows as $i => $row) {
+            $page = intdiv($i, 3) + 1;
+            echo '<div class="product-slot"' . ($page > 1 ? ' hidden' : '') . ' data-slot="' . $page . '">';
+            quantlab_render_ready_card($row, $venues);
+            echo '</div>';
+        }
+        echo '</div>';
+        if ($pages > 1) {
+            echo '<nav class="product-pages" aria-label="Страницы раздела">';
+            for ($page = 1; $page <= $pages; $page++) {
+                echo '<button type="button" class="product-page' . ($page === 1 ? ' is-active' : '') . '" data-goto="' . $page . '">' . $page . '</button>';
+            }
+            echo '</nav>';
+        }
+        echo '</div>';
+    }
+    echo '</div>';
+    ?>
+    <script>
+      (function () {
+        var root = document.querySelector("[data-product-home]");
+        if (!root) return;
+        root.querySelectorAll("[data-product-tab]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            var key = button.getAttribute("data-product-tab");
+            root.querySelectorAll("[data-product-tab]").forEach(function (item) {
+              var on = item === button;
+              item.classList.toggle("is-active", on);
+              item.setAttribute("aria-selected", on ? "true" : "false");
+            });
+            root.querySelectorAll("[data-product-panel]").forEach(function (panel) {
+              panel.hidden = panel.getAttribute("data-product-panel") !== key;
+            });
+          });
+        });
+        root.querySelectorAll("[data-product-panel]").forEach(function (panel) {
+          panel.querySelectorAll("[data-goto]").forEach(function (button) {
+            button.addEventListener("click", function () {
+              var page = button.getAttribute("data-goto");
+              panel.querySelectorAll("[data-slot]").forEach(function (slot) {
+                slot.hidden = slot.getAttribute("data-slot") !== page;
+              });
+              panel.querySelectorAll("[data-goto]").forEach(function (item) {
+                item.classList.toggle("is-active", item === button);
+              });
+            });
+          });
+        });
+      })();
+    </script>
+    <?php
+}
+
 function quantlab_render_ready_buy(array $row): void
 {
     ?>

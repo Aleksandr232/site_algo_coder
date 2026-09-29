@@ -2537,6 +2537,50 @@ button.parsed-stamp.is-loading {
   margin-top: 18px;
 }
 
+.product-tabs,
+.product-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.product-tabs {
+  margin-top: 18px;
+}
+
+.product-tab,
+.product-page {
+  margin: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.product-tab.is-active,
+.product-page.is-active {
+  color: var(--text);
+  border-color: rgba(61, 255, 164, 0.45);
+  background: var(--accent-dim);
+}
+
+.product-pages {
+  margin-top: 18px;
+}
+
+.product-slot {
+  min-width: 0;
+  display: flex;
+}
+
+.product-slot .ready-card {
+  flex: 1;
+  width: 100%;
+}
+
 .ready-gallery {
   margin: 8px 0 22px;
 }
