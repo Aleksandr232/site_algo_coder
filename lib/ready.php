@@ -625,7 +625,7 @@ function quantlab_ready_seo_description(array $row): string
     if ($custom !== '') {
         return $custom;
     }
-    $desc = trim((string) ($row['description'] ?? ''));
+    $desc = quantlab_ready_plain((string) ($row['description'] ?? ''));
     $price = quantlab_ready_price_label((string) ($row['price'] ?? ''));
     $venues = quantlab_ready_venues();
     $venue = $venues[$row['venue'] ?? ''] ?? '';
@@ -658,11 +658,28 @@ function quantlab_ready_price_label(string $price): string
     return $prefix . number_format((int) $num, 0, '', ' ') . ' ₽';
 }
 
+function quantlab_ready_plain(string $text): string
+{
+    $text = trim($text);
+    if ($text === '') {
+        return '';
+    }
+    if (function_exists('quantlab_markdown')) {
+        $html = preg_replace('/<\/(p|li|h2|h3|td|th)>/i', ' ', quantlab_markdown($text)) ?? quantlab_markdown($text);
+        $plain = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return trim((string) preg_replace('/\s+/u', ' ', $plain));
+    }
+    return trim((string) preg_replace('/\s+/u', ' ', $text));
+}
+
 function quantlab_ready_description_html(string $text): string
 {
     $text = trim($text);
     if ($text === '') {
         return '<p>Описание появится позже.</p>';
+    }
+    if (function_exists('quantlab_markdown')) {
+        return quantlab_markdown($text);
     }
     $parts = preg_split("/\n\s*\n/", $text) ?: [$text];
     $html = '';

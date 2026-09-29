@@ -29,19 +29,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $previous = is_array($row) ? trim((string) ($row['image'] ?? '')) : '';
             $cover = in_array($previous, $images, true) ? $previous : ($images[0] ?? '');
         }
+        $title = (string) ($_POST['title'] ?? '');
+        $slug = (string) ($_POST['slug'] ?? '');
+        $description = (string) ($_POST['description'] ?? '');
+        $keywords = (string) ($_POST['keywords'] ?? '');
+        $seoTitle = (string) ($_POST['seo_title'] ?? '');
+        $seo = (string) ($_POST['seo_description'] ?? '');
+        $paste = trim((string) ($_POST['paste'] ?? ''));
+        $source = $paste !== '' ? $paste : $description;
+        if (function_exists('quantlab_blog_looks_like_paste') && quantlab_blog_looks_like_paste($source)) {
+            $parsed = quantlab_blog_parse_paste($source);
+            if ($parsed['title'] !== '') {
+                $title = $parsed['title'];
+            }
+            if ($parsed['slug'] !== '') {
+                $slug = $parsed['slug'];
+            }
+            if ($parsed['keywords'] !== '') {
+                $keywords = $parsed['keywords'];
+            }
+            if ($parsed['seo_description'] !== '') {
+                $seo = $parsed['seo_description'];
+            }
+            if ($parsed['body'] !== '') {
+                $description = $parsed['body'];
+            }
+        }
         $saved = quantlab_ready_save([
-            'title' => $_POST['title'] ?? '',
-            'slug' => $_POST['slug'] ?? '',
-            'description' => $_POST['description'] ?? '',
+            'title' => $title,
+            'slug' => $slug,
+            'description' => $description,
             'price' => $_POST['price'] ?? '',
             'venue' => $_POST['venue'] ?? 'finam',
             'category' => $_POST['category'] ?? 'robot',
             'image' => $cover,
             'images' => $images,
             'buy_html' => $_POST['buy_html'] ?? '',
-            'keywords' => $_POST['keywords'] ?? '',
-            'seo_title' => $_POST['seo_title'] ?? '',
-            'seo_description' => $_POST['seo_description'] ?? '',
+            'keywords' => $keywords,
+            'seo_title' => $seoTitle,
+            'seo_description' => $seo,
             'sort_order' => $_POST['sort_order'] ?? 10,
             'visible' => !empty($_POST['visible']),
         ], $row['slug'] ?? null);
@@ -51,6 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = $e->getMessage();
         $keptImages = isset($images) && is_array($images) ? $images : null;
         $row = array_merge($row ?: [], $_POST);
+        $row['title'] = $title ?? ($row['title'] ?? '');
+        $row['slug'] = $slug ?? ($row['slug'] ?? '');
+        $row['description'] = $description ?? ($row['description'] ?? '');
+        $row['keywords'] = $keywords ?? ($row['keywords'] ?? '');
+        $row['seo_title'] = $seoTitle ?? ($row['seo_title'] ?? '');
+        $row['seo_description'] = $seo ?? ($row['seo_description'] ?? '');
         $row['status'] = !empty($_POST['visible']) ? 'visible' : 'hidden';
         $row['venue'] = (string) ($_POST['venue'] ?? 'finam');
         $row['category'] = (string) ($_POST['category'] ?? 'robot');
@@ -106,6 +138,82 @@ $slugJs = <<<'JS'
   if (category) category.addEventListener("change", toggleBuy);
   if (venue) venue.addEventListener("change", toggleBuy);
   toggleBuy();
+  var labels = {
+    title: "title",
+    "заголовок": "title",
+    description: "seo",
+    "описание": "seo",
+    keywords: "keywords",
+    "ключевые слова": "keywords",
+    slug: "slug",
+    "слаг": "slug"
+  };
+  function parsePaste(raw) {
+    raw = String(raw || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+    var lines = raw.split("\n");
+    var out = { title: "", slug: "", seo: "", keywords: "", body: raw };
+    var i = 0;
+    var consumed = 0;
+    var re = /^(?:\*\*)?(Title|Description|Keywords|Slug|Заголовок|Описание|Ключевые слова|Слаг):\s*(?:\*\*)?\s*(.*)$/i;
+    while (i < lines.length) {
+      var line = lines[i].trim();
+      if (line === "") { i++; consumed = i; continue; }
+      if (/^-{3,}$/.test(line)) { i++; consumed = i; break; }
+      var m = line.match(re);
+      if (!m) break;
+      var field = labels[m[1].toLowerCase()];
+      var value = String(m[2] || "").trim().replace(/^[`*]+|[`*]+$/g, "");
+      if (field && value) {
+        if (field === "seo") out.seo = value;
+        else out[field] = value;
+      }
+      i++;
+      consumed = i;
+    }
+    var body = lines.slice(consumed).join("\n").trim();
+    if (out.title && body.indexOf("# ") === 0) {
+      var first = body.split("\n")[0].replace(/^#\s+/, "").trim();
+      if (first === out.title) body = body.replace(/^#\s+.+\n*/, "").trim();
+    }
+    if (body) out.body = body;
+    return out;
+  }
+  function looksLike(raw) {
+    return /^\s{0,3}(?:\*\*)?(Title|Description|Keywords|Slug|Заголовок|Описание|Ключевые слова|Слаг)\s*\*\*\s*:/im.test(String(raw || "").trim())
+      || /^\s{0,3}(?:\*\*)?(Title|Description|Keywords|Slug|Заголовок)\s*:/im.test(String(raw || "").trim());
+  }
+  function applyPaste() {
+    var box = document.getElementById("product-paste");
+    var desc = document.getElementById("description");
+    var raw = box && box.value.trim() ? box.value : (desc ? desc.value : "");
+    if (!looksLike(raw)) return;
+    var p = parsePaste(raw);
+    if (p.title && title) title.value = p.title;
+    if (p.slug && slug) {
+      slug.value = p.slug;
+      locked = true;
+      slug.dataset.locked = "1";
+    }
+    var seo = document.getElementById("seo_description");
+    var keywords = document.getElementById("keywords");
+    if (p.seo && seo) seo.value = p.seo;
+    if (p.keywords && keywords) keywords.value = p.keywords;
+    if (p.body && desc) desc.value = p.body;
+    if (box) box.value = "";
+    sync();
+  }
+  var pasteBtn = document.getElementById("product-parse");
+  var pasteBox = document.getElementById("product-paste");
+  if (pasteBtn) pasteBtn.addEventListener("click", applyPaste);
+  if (pasteBox) {
+    pasteBox.addEventListener("paste", function () {
+      setTimeout(function () {
+        if (looksLike(pasteBox.value)) applyPaste();
+      }, 0);
+    });
+  }
+  var saveBtn = document.querySelector(".admin-form button[type=submit]");
+  if (saveBtn) saveBtn.addEventListener("click", applyPaste);
   document.querySelectorAll('input[name="cover"]').forEach(function (radio) {
     radio.addEventListener("change", function () {
       document.querySelectorAll(".cover-preview").forEach(function (card) {
@@ -154,6 +262,14 @@ JS;
 
         <form class="glass pad form admin-form" method="post" enctype="multipart/form-data">
           <input type="hidden" name="csrf" value="<?= quantlab_h(quantlab_csrf_token()) ?>" />
+          <label class="admin-paste">
+            Вставить описание целиком
+            <textarea id="product-paste" name="paste" rows="8" placeholder="**Title:** ...&#10;**Description:** ...&#10;**Keywords:** ...&#10;**Slug:** slug-produkta&#10;&#10;---&#10;&#10;Текст со ссылками: [каталог](https://amquantlab.ru/robots/)"></textarea>
+            <span class="field-hint">Как в блоге: Title, Description, Keywords, Slug и markdown. Поля заполнятся сами. Цена, раздел и площадка остаются в форме.</span>
+          </label>
+          <p class="hero-actions" style="margin:0">
+            <button class="btn btn-ghost" type="button" id="product-parse">Разложить по полям</button>
+          </p>
           <label>
             Название
             <input id="title" type="text" name="title" required value="<?= quantlab_h($row['title'] ?? '') ?>" placeholder="Юань тренд 2-5-15" />
@@ -187,7 +303,8 @@ JS;
           </label>
           <label>
             Описание
-            <textarea name="description" rows="8" required placeholder="Что делает продукт, инструмент, риск. Абзацы с пустой строки — на странице будут отдельными."><?= quantlab_h($row['description'] ?? '') ?></textarea>
+            <textarea id="description" name="description" rows="16" required placeholder="## Подзаголовок&#10;&#10;Абзац. Ссылка: [каталог](https://amquantlab.ru/robots/)"><?= quantlab_h($row['description'] ?? '') ?></textarea>
+            <span class="field-hint">Markdown, как в статье: заголовки, списки, таблицы и ссылки.</span>
           </label>
           <label>
             Title для поиска
@@ -196,11 +313,11 @@ JS;
           </label>
           <label>
             SEO-описание
-            <textarea name="seo_description" rows="2" placeholder="150–160 символов для сниппета"><?= quantlab_h($row['seo_description'] ?? '') ?></textarea>
+            <textarea id="seo_description" name="seo_description" rows="2" placeholder="150–160 символов для сниппета"><?= quantlab_h($row['seo_description'] ?? '') ?></textarea>
           </label>
           <label>
             Keywords
-            <input type="text" name="keywords" value="<?= quantlab_h($row['keywords'] ?? '') ?>" placeholder="торговый робот, юань, мосбиржа, финам" />
+            <input id="keywords" type="text" name="keywords" value="<?= quantlab_h($row['keywords'] ?? '') ?>" placeholder="торговый робот, юань, мосбиржа, финам" />
           </label>
           <label>
             Фотографии
