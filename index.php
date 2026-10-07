@@ -711,6 +711,7 @@ foreach ($posts as $i => $item) {
               Задача
               <textarea name="message" rows="4" required placeholder="Инструмент, депозит, что должен делать робот"></textarea>
             </label>
+            <?php quantlab_turnstile_widget(); ?>
             <button class="btn" type="submit">Отправить заявку</button>
             <p class="privacy-agree">
               Отправляя заявку, вы принимаете

@@ -683,6 +683,7 @@
       } catch (err) {
         note.textContent = (err && err.message) || "Не удалось отправить заявку. Попробуйте ещё раз.";
       } finally {
+        if (window.quantlabResetTurnstile) window.quantlabResetTurnstile(form);
         if (button) button.disabled = false;
       }
     });
@@ -754,6 +755,7 @@
       } catch (err) {
         if (note) note.textContent = (err && err.message) || "Не удалось оформить. Попробуйте ещё раз.";
       } finally {
+        if (window.quantlabResetTurnstile) window.quantlabResetTurnstile(form);
         if (button) button.disabled = false;
       }
     });

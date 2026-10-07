@@ -1846,6 +1846,10 @@ button.parsed-stamp.is-loading {
   gap: 14px;
 }
 
+.form .cf-turnstile {
+  min-height: 65px;
+}
+
 .form label {
   display: grid;
   gap: 8px;
@@ -2469,6 +2473,10 @@ button.parsed-stamp.is-loading {
   align-items: start;
 }
 
+.ready-page-grid > * {
+  min-width: 0;
+}
+
 .ready-page-cover {
   margin: 8px 0 22px;
 }
@@ -2625,6 +2633,8 @@ button.parsed-stamp.is-loading {
 .product-buy {
   position: sticky;
   top: 88px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .product-buy h2 {
@@ -2632,12 +2642,20 @@ button.parsed-stamp.is-loading {
 }
 
 .product-buy-widget {
-  overflow: auto;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
-.product-buy-widget iframe,
+.product-buy-widget iframe {
+  display: block;
+  border: 0;
+  max-width: 100%;
+}
+
 .product-buy-widget img {
   max-width: 100%;
+  height: auto;
 }
 
 .cover-preview-list {

@@ -857,6 +857,80 @@ function quantlab_render_ready_buy(array $row): void
           <h2>Купить</h2>
           <div class="product-buy-widget"><?= (string) $row['buy_html'] ?></div>
         </aside>
+        <script>
+          (function () {
+            var root = document.querySelector(".product-buy-widget");
+            if (!root) return;
+            var naturalW = 0;
+            var naturalH = 0;
+            var own = false;
+            function pxAttr(node, name) {
+              var attr = parseInt(node.getAttribute(name) || "", 10);
+              if (attr > 40) return attr;
+              var style = (node.style && node.style[name]) || "";
+              var value = parseInt(style, 10);
+              return value > 40 && /px/.test(style) ? value : 0;
+            }
+            function remember(node) {
+              var w = pxAttr(node, "width");
+              var h = pxAttr(node, "height");
+              if (w > naturalW) naturalW = w;
+              if (h > naturalH) naturalH = h;
+            }
+            function pick() {
+              var iframe = root.querySelector("iframe");
+              if (iframe) return iframe;
+              var best = null;
+              var bestW = 0;
+              root.querySelectorAll("div, table, img").forEach(function (node) {
+                var w = pxAttr(node, "width");
+                if (w > bestW) {
+                  bestW = w;
+                  best = node;
+                }
+              });
+              return best;
+            }
+            function fit() {
+              var node = pick();
+              if (!node) return;
+              own = true;
+              window.setTimeout(function () { own = false; }, 0);
+              remember(node);
+              if (!naturalW) naturalW = node.scrollWidth || node.offsetWidth || 0;
+              if (!naturalH) naturalH = node.offsetHeight || 0;
+              if (naturalW < 41) return;
+              node.style.transform = "none";
+              root.style.height = "";
+              var available = root.clientWidth;
+              if (!available) return;
+              if (naturalW <= available + 1) {
+                node.style.width = "100%";
+                node.style.maxWidth = "100%";
+                node.style.transform = "";
+                return;
+              }
+              var scale = available / naturalW;
+              node.style.display = "block";
+              node.style.width = naturalW + "px";
+              node.style.maxWidth = "none";
+              if (naturalH) node.style.height = naturalH + "px";
+              node.style.transformOrigin = "top left";
+              node.style.transform = "scale(" + scale + ")";
+              if (naturalH) root.style.height = Math.ceil(naturalH * scale) + "px";
+            }
+            var timer = 0;
+            function schedule() {
+              if (own) return;
+              window.clearTimeout(timer);
+              timer = window.setTimeout(fit, 60);
+            }
+            new MutationObserver(schedule).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["width", "height", "style"] });
+            if (window.ResizeObserver) new ResizeObserver(schedule).observe(root);
+            else window.addEventListener("resize", schedule);
+            schedule();
+          })();
+        </script>
     <?php
 }
 
@@ -887,6 +961,7 @@ function quantlab_render_ready_lead_form(array $row, bool $sent = false): void
             Комментарий
             <textarea name="message" rows="3" placeholder="Счёт, площадка, когда удобно подключить"></textarea>
           </label>
+          <?php quantlab_turnstile_widget(); ?>
           <button class="btn" type="submit">Оставить заявку</button>
           <p class="privacy-agree">
             Отправляя заявку, вы принимаете
@@ -1089,7 +1164,10 @@ function quantlab_render_ready_page(string $slug): void
               .catch(function (err) {
                 if (note) note.textContent = (err && err.message) || "Не удалось отправить. Попробуйте ещё раз.";
               })
-              .then(function () { if (button) button.disabled = false; });
+              .then(function () {
+                if (window.quantlabResetTurnstile) window.quantlabResetTurnstile(form);
+                if (button) button.disabled = false;
+              });
           });
         })();
       </script>

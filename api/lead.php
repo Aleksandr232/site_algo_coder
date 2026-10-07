@@ -41,6 +41,7 @@ if (trim((string) ($_POST['website'] ?? '')) !== '') {
 }
 
 try {
+    quantlab_turnstile_assert();
     quantlab_lead_save($_POST);
     quantlab_lead_reply(true, 'Заявка сохранена', 200, $wantsJson);
 } catch (InvalidArgumentException $e) {

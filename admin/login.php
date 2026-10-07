@@ -13,11 +13,16 @@ if (quantlab_admin_logged_in()) {
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     quantlab_csrf_check();
-    if (quantlab_admin_login((string) ($_POST['password'] ?? ''))) {
-        header('Location: /admin/', true, 302);
-        exit;
+    try {
+        quantlab_turnstile_assert();
+        if (quantlab_admin_login((string) ($_POST['password'] ?? ''))) {
+            header('Location: /admin/', true, 302);
+            exit;
+        }
+        $error = 'Неверный пароль';
+    } catch (InvalidArgumentException $e) {
+        $error = $e->getMessage();
     }
-    $error = 'Неверный пароль';
 }
 
 header('Content-Type: text/html; charset=utf-8');
@@ -45,6 +50,7 @@ header('X-Robots-Tag: noindex, nofollow');
             Пароль
             <input type="password" name="password" required autocomplete="current-password" />
           </label>
+          <?php quantlab_turnstile_widget(); ?>
           <?php if ($error): ?>
             <p class="form-note" style="display:block"><?= quantlab_h($error) ?></p>
           <?php endif; ?>
