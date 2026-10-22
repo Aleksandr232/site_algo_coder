@@ -10,6 +10,16 @@ ErrorDocument 404 /404.php
   Deny from all
 </FilesMatch>
 
+<IfModule mod_php.c>
+  php_flag session.upload_progress.enabled Off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag session.upload_progress.enabled Off
+</IfModule>
+<IfModule mod_php8.c>
+  php_flag session.upload_progress.enabled Off
+</IfModule>
+
 <IfModule mod_mime.c>
   AddType image/svg+xml .svg
   AddType image/x-icon .ico

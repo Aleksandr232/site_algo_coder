@@ -107,6 +107,7 @@ function quantlab_admin_start(string $title): void
     </header>
     <main class="page-main">
       <div class="container">
+        <?= quantlab_php_security_note() ?>
     <?php
 }
 
@@ -144,6 +145,35 @@ function quantlab_admin_mail_note(): string
         return '<p class="admin-storage admin-storage-warn">Почта не ушла: ' . quantlab_h((string) $status['error']) . '</p>';
     }
     return '<p class="admin-storage">Почта: SMTP готов. Заявка уйдёт вам на ' . quantlab_h($to) . ', клиенту — если он оставил email.</p>';
+}
+
+function quantlab_php_security_note(): string
+{
+    $version = PHP_VERSION;
+    $upload = strtolower((string) ini_get('session.upload_progress.enabled'));
+    $uploadOn = in_array($upload, ['1', 'on', 'true'], true);
+    $floor = null;
+    if (version_compare($version, '8.5.0', '>=')) {
+        $floor = '8.5.12';
+    } elseif (version_compare($version, '8.4.0', '>=')) {
+        $floor = '8.4.27';
+    } elseif (version_compare($version, '8.3.0', '>=')) {
+        $floor = '8.3.36';
+    } elseif (version_compare($version, '8.2.0', '>=')) {
+        $floor = '8.2.35';
+    }
+    $patched = $floor !== null && version_compare($version, $floor, '>=');
+    if ($patched) {
+        return '';
+    }
+    $need = $floor ?? '8.2.35 или новее';
+    $text = 'PHP ' . $version . ' без патча CVE-2026-109618 и CVE-2026-109619. На хостинге нужна версия ' . $need . ', затем перезапуск php-fpm или Apache.';
+    if ($uploadOn) {
+        $text .= ' Прогресс загрузки сессии всё ещё включён: проверьте, что .user.ini доехал на сервер.';
+    } else {
+        $text .= ' Вектор upload progress на этом сайте выключен. Это временная мера, патч PHP всё равно нужен.';
+    }
+    return '<p class="admin-storage admin-storage-warn">' . quantlab_h($text) . '</p>';
 }
 
 function quantlab_admin_telegram_note(): string
