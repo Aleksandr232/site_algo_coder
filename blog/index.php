@@ -37,8 +37,8 @@ foreach ($posts as $i => $item) {
 $extra = quantlab_json_ld([
     '@context' => 'https://schema.org',
     '@type' => 'CollectionPage',
-    'name' => $page > 1 ? 'Блог AM QuantLab, страница ' . $page : 'Блог AM QuantLab',
-    'description' => 'Статьи о торговых роботах, API бирж и финтех-сервисах.',
+    'name' => $page > 1 ? 'Блог о торговых роботах, страница ' . $page : 'Блог о торговых роботах и API бирж',
+    'description' => 'Статьи о торговых роботах и официальных API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.',
     'inLanguage' => 'ru-RU',
     'url' => $canonical,
     'isPartOf' => ['@type' => 'WebSite', 'name' => 'AM QuantLab', 'url' => quantlab_abs_url('/')],
@@ -56,10 +56,12 @@ if ($page < $pages) {
 }
 
 quantlab_render_start([
-    'title' => $page > 1 ? 'Блог, страница ' . $page . ' — AM QuantLab' : 'Блог — AM QuantLab',
+    'title' => $page > 1
+        ? 'Блог о торговых роботах, страница ' . $page . ' — AM QuantLab'
+        : 'Блог о торговых роботах и API бирж — AM QuantLab',
     'description' => $page > 1
-        ? 'Статьи AM QuantLab о торговых роботах и финтехе, страница ' . $page . '.'
-        : 'Статьи AM QuantLab о торговых роботах, API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance, алгоритмах и финтех-сервисах.',
+        ? 'Страница ' . $page . '. Статьи о торговых роботах и официальных API: Финам, Тинькофф Инвестиции, Bybit, OKX и Binance.'
+        : 'Статьи о торговых роботах и официальных API Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Как устроен алгоритм и где задают риск на счёте.',
     'canonical' => $canonical,
     'active' => 'blog',
     'body_class' => 'page-inner page-blog',
@@ -72,7 +74,7 @@ quantlab_render_start([
             ['name' => 'Блог', 'path' => '/blog/'],
         ]) ?>
         <p class="eyebrow">Блог</p>
-        <h1>Статьи про роботов и финтех</h1>
+        <h1>Статьи о торговых роботах и API</h1>
         <p class="lead">Разбираем площадки, API и то, как собираем алгоритмы. Каждая статья — отдельный адрес со слагом. <a href="<?= quantlab_h(quantlab_abs_url('rss.xml')) ?>" rel="alternate" type="application/rss+xml">RSS-фид для Яндекса</a>.</p>
 
         <?php if (!$all): ?>

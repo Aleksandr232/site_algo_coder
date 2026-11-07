@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 require __DIR__ . DIRECTORY_SEPARATOR . 'lib' . DIRECTORY_SEPARATOR . 'init.php';
 
+$canonical = quantlab_enforce_canonical('/');
+
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');
 
-$title = 'AM QuantLab — торговые алгоритмы и финтех-сервисы';
+$title = 'Торговые роботы для Финам, Тинькофф и криптобирж — AM QuantLab';
 $description = 'AM QuantLab пишет торговых роботов для Финам, Тинькофф Инвестиции, Bybit, OKX и Binance. Node.js, Go, API, сервисы для финтех-продуктов.';
-$canonical = quantlab_abs_url('/');
+$shareImage = quantlab_abs_url('/img/og-share.png');
 $posts = array_slice(quantlab_blog_published(), 0, 3);
 $cases = quantlab_strategies_visible();
 $readyRobots = quantlab_ready_visible();
@@ -54,12 +56,12 @@ foreach ($posts as $i => $item) {
     <meta property="og:title" content="<?= quantlab_h($title) ?>" />
     <meta property="og:description" content="<?= quantlab_h($description) ?>" />
     <meta property="og:url" content="<?= quantlab_h($canonical) ?>" />
-    <meta property="og:image" content="<?= quantlab_h(quantlab_abs_url('/favicon-512.png')) ?>" />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
-    <meta property="og:image:alt" content="AM QuantLab" />
+    <meta property="og:image" content="<?= quantlab_h($shareImage) ?>" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Торговые роботы AM QuantLab" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="<?= quantlab_h(quantlab_abs_url('/favicon-512.png')) ?>" />
+    <meta name="twitter:image" content="<?= quantlab_h($shareImage) ?>" />
     <?= quantlab_json_ld([
         '@context' => 'https://schema.org',
         '@graph' => [

@@ -569,7 +569,15 @@ function quantlab_render_start(array $meta): void
     $type = (string) ($meta['og_type'] ?? 'website');
     $keywords = trim((string) ($meta['keywords'] ?? ''));
     $image = trim((string) ($meta['image'] ?? ''));
-    $imageAbs = $image !== '' ? quantlab_abs_url($image) : quantlab_abs_url('/favicon-512.png');
+    $imageWidth = (int) ($meta['image_width'] ?? 0);
+    $imageHeight = (int) ($meta['image_height'] ?? 0);
+    if ($image === '') {
+        $imageAbs = quantlab_abs_url('/img/og-share.png');
+        $imageWidth = $imageWidth > 0 ? $imageWidth : 1200;
+        $imageHeight = $imageHeight > 0 ? $imageHeight : 630;
+    } else {
+        $imageAbs = quantlab_abs_url($image);
+    }
     $published = trim((string) ($meta['published_at'] ?? ''));
     $modified = trim((string) ($meta['modified_at'] ?? ''));
     $active = (string) ($meta['active'] ?? '');
@@ -609,9 +617,9 @@ function quantlab_render_start(array $meta): void
     <meta property="og:description" content="<?= quantlab_h($description) ?>" />
     <meta property="og:url" content="<?= quantlab_h($canonical) ?>" />
     <meta property="og:image" content="<?= quantlab_h($imageAbs) ?>" />
-    <?php if ($image === ''): ?>
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
+    <?php if ($imageWidth > 0 && $imageHeight > 0): ?>
+    <meta property="og:image:width" content="<?= $imageWidth ?>" />
+    <meta property="og:image:height" content="<?= $imageHeight ?>" />
     <?php endif; ?>
     <meta property="og:image:alt" content="<?= quantlab_h($title) ?>" />
     <meta name="twitter:card" content="summary_large_image" />

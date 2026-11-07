@@ -777,9 +777,9 @@ function quantlab_sitemap_xml(): string
 {
     $today = gmdate('Y-m-d');
     $urls = [
-        ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0', 'image' => quantlab_abs_url('/favicon-120.png'), 'image_title' => 'AM QuantLab'],
-        ['loc' => quantlab_abs_url('/blog/'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.9'],
-        ['loc' => quantlab_abs_url('/robots/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.9'],
+        ['loc' => quantlab_abs_url('/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '1.0', 'image' => quantlab_abs_url('/img/og-share.png'), 'image_title' => 'Торговые роботы AM QuantLab'],
+        ['loc' => quantlab_abs_url('/blog/'), 'lastmod' => $today, 'changefreq' => 'daily', 'priority' => '0.9', 'image' => quantlab_abs_url('/img/og-share.png'), 'image_title' => 'Блог о торговых роботах и API'],
+        ['loc' => quantlab_abs_url('/robots/'), 'lastmod' => $today, 'changefreq' => 'weekly', 'priority' => '0.9', 'image' => quantlab_abs_url('/img/og-share.png'), 'image_title' => 'Продукты AM QuantLab'],
         ['loc' => quantlab_abs_url('/offer/'), 'lastmod' => $today, 'changefreq' => 'yearly', 'priority' => '0.4'],
         ['loc' => quantlab_abs_url('/privacy/'), 'lastmod' => $today, 'changefreq' => 'yearly', 'priority' => '0.3'],
     ];

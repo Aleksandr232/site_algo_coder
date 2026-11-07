@@ -36,6 +36,9 @@ ErrorDocument 404 /404.php
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  RewriteCond %{HTTP_HOST} ^www\.amquantlab\.ru$ [NC]
+  RewriteRule ^ https://amquantlab.ru%{REQUEST_URI} [R=301,L,QSA]
+
   RewriteRule ^lib/ - [F,L]
   RewriteRule ^data/ - [F,L]
   RewriteRule ^router\.php$ - [F,L]
