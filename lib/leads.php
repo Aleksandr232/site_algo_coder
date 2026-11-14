@@ -497,29 +497,46 @@ function quantlab_lead_notify(array $lead): void
     if (function_exists('quantlab_lead_thread_seed')) {
         quantlab_lead_thread_seed($lead);
     }
+    $mailError = '';
     if (!function_exists('quantlab_mail_enabled') || !quantlab_mail_enabled()) {
-        if (function_exists('quantlab_mail_status')) {
-            quantlab_mail_status(false, 'SMTP не настроен: в .env пустой SMTP_PASSWORD для info@amquantlab.ru');
+        $mailError = 'SMTP не настроен: в .env пустой SMTP_PASSWORD для info@amquantlab.ru';
+    } else {
+        try {
+            quantlab_lead_mail($lead);
+        } catch (Throwable $e) {
+            $mailError = $e->getMessage();
+        }
+    }
+    if ($mailError === '') {
+        try {
+            if (function_exists('quantlab_lead_ack_mail')) {
+                quantlab_lead_ack_mail($lead);
+            }
+        } catch (Throwable $e) {
+            if (function_exists('quantlab_mail_status')) {
+                quantlab_mail_status(true, 'Заявка вам ушла, клиенту нет: ' . $e->getMessage());
+            }
         }
         return;
     }
-    try {
-        quantlab_lead_mail($lead);
-    } catch (Throwable $e) {
-        if (function_exists('quantlab_mail_status')) {
-            quantlab_mail_status(false, $e->getMessage());
+    $telegramError = '';
+    if (function_exists('quantlab_telegram_send_lead')) {
+        try {
+            quantlab_telegram_send_lead($lead);
+        } catch (Throwable $e) {
+            $telegramError = $e->getMessage();
         }
+    } else {
+        $telegramError = 'модуль Telegram не подключён';
+    }
+    if (!function_exists('quantlab_mail_status')) {
         return;
     }
-    try {
-        if (function_exists('quantlab_lead_ack_mail')) {
-            quantlab_lead_ack_mail($lead);
-        }
-    } catch (Throwable $e) {
-        if (function_exists('quantlab_mail_status')) {
-            quantlab_mail_status(true, 'Заявка вам ушла, клиенту нет: ' . $e->getMessage());
-        }
+    if ($telegramError === '') {
+        quantlab_mail_status(false, $mailError . '. Заявка отправлена в Telegram.');
+        return;
     }
+    quantlab_mail_status(false, $mailError . '. Telegram: ' . $telegramError);
 }
 
 function quantlab_lead_rate_limited_db(PDO $pdo, string $ip): bool

@@ -372,6 +372,115 @@ function quantlab_telegram_curl(string $url, array $fields, bool $verifySsl): ?s
     return (string) $raw;
 }
 
+function quantlab_telegram_lead_chat_path(): string
+{
+    return dirname(__DIR__) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'telegram-lead-chat.txt';
+}
+
+function quantlab_telegram_lead_chat(): string
+{
+    $chat = trim(quantlab_env(
+        'TELEGRAM_LEAD_CHAT',
+        quantlab_env('TG_LEAD_CHAT', quantlab_env('TELEGRAM_ADMIN_CHAT'))
+    ));
+    if ($chat !== '') {
+        return $chat;
+    }
+    $path = quantlab_telegram_lead_chat_path();
+    if (is_file($path)) {
+        $saved = trim((string) file_get_contents($path));
+        if ($saved !== '') {
+            return $saved;
+        }
+    }
+    if (quantlab_telegram_bot_token() === '') {
+        return '';
+    }
+    try {
+        $data = quantlab_telegram_api('getUpdates', [
+            'limit' => 20,
+            'timeout' => 0,
+            'allowed_updates' => '["message"]',
+        ]);
+    } catch (Throwable $e) {
+        return '';
+    }
+    $found = '';
+    foreach ($data['result'] ?? [] as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+        $fromUpdate = $row['message']['chat'] ?? null;
+        if (!is_array($fromUpdate) || ($fromUpdate['type'] ?? '') !== 'private' || !isset($fromUpdate['id'])) {
+            continue;
+        }
+        $found = (string) $fromUpdate['id'];
+    }
+    if ($found !== '') {
+        $dir = dirname($path);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+        file_put_contents($path, $found, LOCK_EX);
+    }
+    return $found;
+}
+
+function quantlab_telegram_send_lead(array $lead): void
+{
+    if (quantlab_telegram_bot_token() === '') {
+        throw new RuntimeException('в .env нет TELEGRAM_BOT_TOKEN');
+    }
+    $chat = quantlab_telegram_lead_chat();
+    if ($chat === '') {
+        throw new RuntimeException('бот не знает личный чат. Напишите ему любое сообщение или задайте TELEGRAM_LEAD_CHAT');
+    }
+    $name = trim((string) ($lead['name'] ?? ''));
+    $contact = trim((string) ($lead['contact'] ?? ''));
+    $email = function_exists('quantlab_lead_email') ? trim(quantlab_lead_email($lead)) : trim((string) ($lead['email'] ?? ''));
+    $market = function_exists('quantlab_lead_market_label')
+        ? quantlab_lead_market_label((string) ($lead['market'] ?? ''))
+        : trim((string) ($lead['market'] ?? ''));
+    $message = trim((string) ($lead['message'] ?? ''));
+    $robotTitle = trim((string) ($lead['robot_title'] ?? ''));
+    $robotPrice = trim((string) ($lead['robot_price'] ?? ''));
+    $lines = [
+        $robotTitle !== '' ? 'Заказ робота с сайта' : 'Заявка с сайта',
+        'Дата: ' . date('d.m.Y H:i'),
+        'Имя: ' . $name,
+        'Контакт: ' . $contact,
+    ];
+    if ($email !== '' && $email !== $contact) {
+        $lines[] = 'Почта: ' . $email;
+    }
+    if ($market !== '') {
+        $lines[] = 'Рынок: ' . $market;
+    }
+    if ($robotTitle !== '') {
+        $lines[] = 'Робот: ' . $robotTitle;
+        if ($robotPrice !== '') {
+            $lines[] = 'Цена: ' . $robotPrice;
+        }
+    }
+    if ($message !== '') {
+        $lines[] = '';
+        $lines[] = $message;
+    }
+    $lines[] = '';
+    $lines[] = 'Почта SMTP не ушла, заявка сохранена в админке.';
+    $text = implode("\n", $lines);
+    if (function_exists('mb_strlen') && mb_strlen($text) > 4000) {
+        $text = mb_substr($text, 0, 3990) . '…';
+    } elseif (strlen($text) > 4000) {
+        $text = substr($text, 0, 3990) . '…';
+    }
+    quantlab_telegram_api('sendMessage', [
+        'chat_id' => $chat,
+        'text' => $text,
+        'disable_web_page_preview' => 'true',
+    ]);
+}
+
 function quantlab_telegram_send_article(string $slug): array
 {
     $slug = trim($slug);
